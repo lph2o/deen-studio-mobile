@@ -127,11 +127,14 @@ void _paintWave(Canvas canvas, Rect rect, double progress, Color waveColor, doub
     if (waveProgress <= 0) continue;
     final visibleWidth = rect.width * waveProgress;
     final yBase = rect.height * (0.5 + w * 0.12);
-    path.moveTo(rect.left, rect.top + yBase);
+    
+    // Arabic is RTL: start from the right edge
+    path.moveTo(rect.right, rect.top + yBase);
     for (var x = 0; x <= visibleWidth; x += 2) {
       final y = rect.top + yBase +
           math.sin(x * frequency + progress * math.pi * 2 + w) * amplitude * waveProgress;
-      path.lineTo(rect.left + x, y);
+      // Draw towards the left edge
+      path.lineTo(rect.right - x, y);
     }
     final paint = Paint()
       ..color = waveColor.withValues(alpha: 0.3 * waveProgress)
@@ -258,15 +261,16 @@ void _drawPetal(Canvas canvas, Offset pos, double alpha, Color color) {
 
 void paintRainbow(Canvas canvas, Rect rect, double progress) {
   final gradient = LinearGradient(
-    begin: Alignment.centerLeft,
-    end: Alignment.centerRight,
+    begin: Alignment.centerRight, // RTL: Start gradient from Right
+    end: Alignment.centerLeft,
     colors: const [
       Color(0xFFFF0000), Color(0xFFFF7F00), Color(0xFFFFFF00),
       Color(0xFF00FF00), Color(0xFF0000FF), Color(0xFF4B0082), Color(0xFF9400D3),
     ],
   );
+  // RTL: The sweep reveals right-to-left
   final sweepLength = progress * rect.width;
-  final sweepRect = Rect.fromLTWH(rect.left, rect.top, sweepLength, rect.height);
+  final sweepRect = Rect.fromLTRB(rect.right - sweepLength, rect.top, rect.right, rect.bottom);
   final paint = Paint()..shader = gradient.createShader(sweepRect);
   canvas.save();
   canvas.clipRect(sweepRect);
@@ -293,14 +297,16 @@ void paintQuillWriting(Canvas canvas, Rect rect, double progress) {
 void _paintCalligraphyStroke(Canvas canvas, Rect rect, double progress, Color inkColor, double strokeThickness) {
   final path = Path();
   final drawLength = rect.width * progress;
-  path.moveTo(rect.left, rect.top + rect.height * 0.5);
+  // Arabic is RTL: Start from the right edge
+  path.moveTo(rect.right, rect.top + rect.height * 0.5);
   var x = 0.0;
   while (x <= drawLength) {
     final t = x / rect.width;
     final y = rect.top + rect.height * 0.5 +
         math.sin(t * math.pi * 4) * 15 * progress +
         math.sin(t * math.pi * 8) * 5 * progress;
-    path.lineTo(rect.left + x, y);
+    // Draw towards the left edge
+    path.lineTo(rect.right - x, y);
     x += 2;
   }
   final paint = Paint()
@@ -309,9 +315,11 @@ void _paintCalligraphyStroke(Canvas canvas, Rect rect, double progress, Color in
     ..strokeWidth = strokeThickness
     ..strokeCap = StrokeCap.round;
   canvas.drawPath(path, paint);
-  // Ink drip at leading edge
+  
+  // Ink drip at leading edge (moving leftward)
   if (progress > 0.05 && progress < 0.95) {
-    final tipX = rect.left + drawLength;
+    // Current tip is at the left-most extreme of the current drawLength
+    final tipX = rect.right - drawLength;
     final tipY = rect.top + rect.height * 0.5 +
         math.sin(progress * math.pi * 4) * 15 * progress +
         math.sin(progress * math.pi * 8) * 5 * progress;
@@ -319,6 +327,7 @@ void _paintCalligraphyStroke(Canvas canvas, Rect rect, double progress, Color in
       final dropPaint = Paint()
         ..color = inkColor.withValues(alpha: 0.3 - i * 0.05)
         ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3);
+      // Trailing drips appear slightly to the right of the tip (since movement is leftward) + i*3
       canvas.drawCircle(Offset(tipX + i * 3, tipY + i * 4), 1.5 - i * 0.2, dropPaint);
     }
   }
