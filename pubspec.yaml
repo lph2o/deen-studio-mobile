@@ -98,9 +98,54 @@ flutter:
     - .env
 
   fonts:
+    - family: AlMajeed
+      fonts:
+        - asset: assets/fonts/AlMajeed.ttf
+    - family: Amiri-Quran
+      fonts:
+        - asset: assets/fonts/Amiri-Quran.ttf
+    - family: Jameel
+      fonts:
+        - asset: assets/fonts/Jameel.ttf
+    - family: KufamRegular
+      fonts:
+        - asset: assets/fonts/KufamRegular.ttf
+    - family: KufamVariable
+      fonts:
+        - asset: assets/fonts/KufamVariable.ttf
+    - family: Me
+      fonts:
+        - asset: assets/fonts/Me.ttf
+    - family: Naskh
+      fonts:
+        - asset: assets/fonts/Naskh.ttf
+    - family: Noore
+      fonts:
+        - asset: assets/fonts/Noore.ttf
+    - family: QuranFont
+      fonts:
+        - asset: assets/fonts/QuranFont.ttf
+    - family: Roboto-Medium
+      fonts:
+        - asset: assets/fonts/Roboto-Medium.ttf
+    - family: Tinos
+      fonts:
+        - asset: assets/fonts/Tinos.ttf
+    - family: UthmanTN_v2-0
+      fonts:
+        - asset: assets/fonts/UthmanTN_v2-0.ttf
+    - family: UthmanicBold
+      fonts:
+        - asset: assets/fonts/UthmanicBold.ttf
+    - family: UthmanicHafs_V20
+      fonts:
+        - asset: assets/fonts/UthmanicHafs_V20.ttf
     - family: UthmanicRegular
       fonts:
         - asset: assets/fonts/UthmanicRegular.ttf
+    - family: UthmanicRegular2
+      fonts:
+        - asset: assets/fonts/UthmanicRegular2.ttf
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

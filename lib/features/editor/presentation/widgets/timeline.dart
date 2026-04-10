@@ -22,7 +22,7 @@ const double _kSnapThreshold = 2.0;
 ///   - For generic tracks (e.g. audio): 'audio'
 const _trackGroups = [
   ('ARABE', 'arabic', null, 'text_arabic_', AppTheme.trackArabic),
-  ('PHONETIQUE', 'text', 'phonetic_', 'text_phonetic_', AppTheme.trackPhonetic),
+  ('PHONETIQUE', 'phonetic', null, 'text_phonetic_', AppTheme.trackPhonetic),
   ('TRADUCTION', 'translation', null, 'text_translation_', AppTheme.trackTranslation),
   ('TEXTE', 'text', null, 'text', AppTheme.trackText),
   ('STICKER', 'sticker', null, 'sticker', AppTheme.trackSticker),

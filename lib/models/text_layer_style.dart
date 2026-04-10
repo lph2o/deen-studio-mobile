@@ -373,20 +373,32 @@ class TextLayerStyle {
 
 class FontCatalogue {
   static const Map<String, List<String>> groups = {
-    'Populaires': ['Inter', 'Poppins', 'Montserrat', 'Roboto', 'Open Sans', 'Lato', 'DM Sans'],
+    'Populaires': ['Inter', 'Poppins', 'Montserrat', 'Roboto', 'Roboto-Medium', 'Open Sans', 'Lato', 'DM Sans'],
     'Display': ['Bebas Neue', 'Anton', 'Oswald', 'Teko', 'Staatliches', 'Alfa Slab One', 'Black Ops One', 'Righteous'],
     'Élégantes': ['Playfair Display', 'Cinzel', 'Lora', 'Merriweather', 'DM Serif Display'],
     'Manuscrites': ['Pacifico', 'Lobster', 'Dancing Script', 'Caveat', 'Permanent Marker', 'Creepster'],
-    'Techniques': ['Space Grotesk', 'Space Mono', 'JetBrains Mono'],
-    'Arabe': ['UthmanicRegular', 'Amiri', 'Scheherazade New', 'Noto Naskh Arabic', 'Cairo', 'Tajawal'],
+    'Techniques': ['Space Grotesk', 'Space Mono', 'JetBrains Mono', 'Tinos'],
+    'Arabe': [
+      'AlMajeed', 'Amiri-Quran', 'Amiri', 'Jameel', 'KufamRegular', 'KufamVariable', 
+      'Me', 'Naskh', 'Noore', 'QuranFont', 'UthmanTN_v2-0', 'UthmanicBold', 
+      'UthmanicHafs_V20', 'UthmanicRegular', 'UthmanicRegular2', 
+      'Scheherazade New', 'Noto Naskh Arabic', 'Cairo', 'Tajawal'
+    ],
     'Multilingue': ['Noto Sans', 'Quicksand'],
   };
 
   static const Set<String> arabicFonts = {
-    'UthmanicRegular', 'Amiri', 'Scheherazade New', 'Noto Naskh Arabic', 'Cairo', 'Tajawal'
+    'AlMajeed', 'Amiri-Quran', 'Amiri', 'Jameel', 'KufamRegular', 'KufamVariable', 
+    'Me', 'Naskh', 'Noore', 'QuranFont', 'UthmanTN_v2-0', 'UthmanicBold', 
+    'UthmanicHafs_V20', 'UthmanicRegular', 'UthmanicRegular2', 
+    'Scheherazade New', 'Noto Naskh Arabic', 'Cairo', 'Tajawal'
   };
 
-  static const Set<String> localFonts = {'UthmanicRegular'};
+  static const Set<String> localFonts = {
+    'AlMajeed', 'Amiri-Quran', 'Jameel', 'KufamRegular', 'KufamVariable', 'Me', 
+    'Naskh', 'Noore', 'QuranFont', 'Roboto-Medium', 'Tinos', 'UthmanTN_v2-0', 
+    'UthmanicBold', 'UthmanicHafs_V20', 'UthmanicRegular', 'UthmanicRegular2'
+  };
 
   static bool isArabic(String font) => arabicFonts.contains(font);
   static bool isLocal(String font) => localFonts.contains(font);

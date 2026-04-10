@@ -436,7 +436,7 @@ class _VideoPreviewState extends ConsumerState<VideoPreview> with TickerProvider
     final baseFontSize = style?.fontSize ?? 26;
     final fontSize = baseFontSize * scaleFactor * 1.1;
     final color = style != null ? _parseColor(style.color) : Colors.white;
-    final fontFamily = layer.fontFamily ?? 'UthmanicRegular';
+    final fontFamily = style?.fontFamily ?? layer.fontFamily ?? 'UthmanicRegular';
     final opacity = (layer.style['opacity'] as num?)?.toDouble() ?? 1.0;
     final transformY = layer.transform.y;
     final y = layer.style['y']?.toDouble() ?? (transformY * previewHeight);
@@ -679,9 +679,14 @@ class _VideoPreviewState extends ConsumerState<VideoPreview> with TickerProvider
       }
     }
 
-    return Positioned(
-      left: 16, right: 16, top: y,
-      child: _applyMask(_applyBlendMode(Opacity(opacity: opacity.clamp(0.0, 1.0), child: Text(displayText, style: TextStyle(fontSize: fontSize, color: color, height: 1.4), textAlign: TextAlign.center)), layer.blendMode), layer.mask),
+    Widget tWidget = Text(displayText, style: TextStyle(fontFamily: style?.fontFamily ?? layer.fontFamily, fontSize: fontSize, color: color, height: 1.4), textAlign: TextAlign.center);
+
+    return _buildSmartBoundingBoxWrapper(
+      layer: layer, previewWidth: previewWidth, previewHeight: previewHeight, 
+      isSelected: ref.read(editorProvider).selectedLayerId == layer.id,
+      defaultY: y,
+      defaultWidthRatio: 1.0,
+      child: _applyMask(_applyBlendMode(Opacity(opacity: opacity.clamp(0.0, 1.0), child: tWidget), layer.blendMode), layer.mask)
     );
   }
 
@@ -707,9 +712,14 @@ class _VideoPreviewState extends ConsumerState<VideoPreview> with TickerProvider
       }
     }
 
-    return Positioned(
-      left: 16, right: 16, top: y,
-      child: _applyMask(_applyBlendMode(Opacity(opacity: opacity.clamp(0.0, 1.0), child: Text(displayText, style: TextStyle(fontSize: fontSize, color: color, height: 1.4, fontStyle: FontStyle.italic), textAlign: TextAlign.center)), layer.blendMode), layer.mask),
+    Widget tWidget = Text(displayText, style: TextStyle(fontFamily: style?.fontFamily ?? layer.fontFamily, fontSize: fontSize, color: color, height: 1.4, fontStyle: FontStyle.italic), textAlign: TextAlign.center);
+
+    return _buildSmartBoundingBoxWrapper(
+      layer: layer, previewWidth: previewWidth, previewHeight: previewHeight, 
+      isSelected: ref.read(editorProvider).selectedLayerId == layer.id,
+      defaultY: y,
+      defaultWidthRatio: 1.0,
+      child: _applyMask(_applyBlendMode(Opacity(opacity: opacity.clamp(0.0, 1.0), child: tWidget), layer.blendMode), layer.mask)
     );
   }
 
@@ -975,7 +985,7 @@ class _VideoPreviewState extends ConsumerState<VideoPreview> with TickerProvider
     final style = layer.textStyle;
     final fontSize = style?.fontSize ?? 20;
     final color = style != null ? _parseColor(style.color) : Colors.white;
-    final fontFamily = layer.fontFamily ?? style?.fontFamily;
+    final fontFamily = style?.fontFamily ?? layer.fontFamily ?? 'Inter';
     final layerProgress = layer.effectiveDuration > 0
         ? ((currentTime - layer.startTime) / layer.effectiveDuration).clamp(0.0, 1.0)
         : 0.0;

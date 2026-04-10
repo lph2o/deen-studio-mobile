@@ -106,18 +106,18 @@ class EditorState {
   /// Track keys can be either raw types ('audio', 'video', 'image', 'text')
   /// or prefixed keys ('text_arabic_', 'text_phonetic_', 'text_translation_').
   bool _isLayerHidden(Layer layer) {
-    // Check for exact type match (audio, video, image, text)
+    if (layer.type == 'arabic' && hiddenTracks.contains('text_arabic_')) return true;
+    if (layer.type == 'phonetic' && hiddenTracks.contains('text_phonetic_')) return true;
+    if (layer.type == 'translation' && hiddenTracks.contains('text_translation_')) return true;
+    
+    // Check for exact type match (audio, video, image, text, etc)
     if (hiddenTracks.contains(layer.type)) return true;
-    // Check for prefixed text tracks
+    
+    // Fallback for old prefixed 'text' layers just in case they exist in older projects
     if (layer.type == 'text') {
       if (hiddenTracks.contains('text_arabic_') && layer.id.startsWith('arabic_')) return true;
       if (hiddenTracks.contains('text_phonetic_') && layer.id.startsWith('phonetic_')) return true;
       if (hiddenTracks.contains('text_translation_') && layer.id.startsWith('translation_')) return true;
-      // If generic 'text' track is hidden and layer doesn't match any prefix
-      if (hiddenTracks.contains('text') &&
-          !layer.id.startsWith('arabic_') &&
-          !layer.id.startsWith('phonetic_') &&
-          !layer.id.startsWith('translation_')) { return true; }
     }
     return false;
   }
