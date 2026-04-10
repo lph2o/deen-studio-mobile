@@ -153,7 +153,7 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
                       children: [
                         if (!state.isFullScreen)
                           Expanded(
-                            flex: state.isTimelineExpanded ? 1 : 3,
+                            flex: state.isTimelineExpanded ? 2 : 5,
                             child: const VideoPreview(),
                           ),
                         if (state.isFullScreen)
@@ -164,7 +164,7 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
 
                         if (!state.isFullScreen)
                           Expanded(
-                            flex: state.isTimelineExpanded ? 4 : 2,
+                            flex: state.isTimelineExpanded ? 5 : 2,
                             child: const Timeline(),
                           ),
                       ],

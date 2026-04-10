@@ -65,7 +65,7 @@ class _TemplatesViewState extends ConsumerState<TemplatesView> {
       // Save to Supabase
       await Supabase.instance.client
           .from('projects')
-          .insert(project.toMap())
+          .insert(project.toInsertMap())
           .select()
           .single();
 

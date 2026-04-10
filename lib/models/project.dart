@@ -536,6 +536,22 @@ class Project {
     };
   }
 
+  /// Minimal insert map — only columns guaranteed to exist in the Supabase schema.
+  /// Use this for new project creation to avoid PGRST204 errors on missing columns.
+  Map<String, dynamic> toInsertMap() {
+    return {
+      'user_id': userId,
+      'title': title,
+      'surah_id': surahId,
+      'ayah_range': ayahRange.toMap(),
+      'reciter_id': reciterId,
+      'layers': layers.map((l) => l.toMap()).toList(),
+      'status': status,
+      'aspect_ratio': aspectRatio,
+    };
+  }
+
+
   double get totalDuration {
     if (layers.isEmpty) return 0;
     return layers.map((l) => l.startTime + l.duration).reduce((a, b) => a > b ? a : b);

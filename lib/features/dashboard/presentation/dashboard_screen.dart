@@ -62,9 +62,7 @@ class _HomeView extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            HeroCreateCard(
-              onCreatePressed: () => context.push('/select-surah'),
-            ),
+            const HeroCreateCard(),
             const SizedBox(height: 40),
             
             // Middle grid/layout section

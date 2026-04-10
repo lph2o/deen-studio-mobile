@@ -23,7 +23,7 @@ import 'multicam_create_dialog.dart';
 import 'reframe_panel.dart';
 import 'export_dialog.dart';
 import '../../../pixabay/presentation/widgets/pixabay_gallery_widget.dart';
-
+import '../../../quran_studio/presentation/widgets/quran_selection_sheet.dart';
 /// ════════════════════════════════════════════════════════════
 /// EditorToolbar — Smart bottom navigation bar
 ///
@@ -417,6 +417,14 @@ class _EditorToolbarState extends ConsumerState<EditorToolbar> {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Row(
         children: [
+          _ToolbarItem(
+            icon: LucideIcons.sparkles,
+            label: 'Coran Magique',
+            onTap: () => QuranSelectionSheet.show(context),
+            color: AppTheme.accentColor,
+            isPrimary: true, // Makes it pop visually
+          ),
+          const SizedBox(width: 8),
           _ToolbarItem(
             icon: LucideIcons.type,
             label: 'Texte',
