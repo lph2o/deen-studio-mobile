@@ -9,6 +9,8 @@ import '../../../../models/project.dart';
 import '../../../../core/models/voice_effect.dart';
 import '../../../../core/models/canvas_background.dart';
 import '../../../../core/services/quran_animation_export.dart';
+import '../../../../models/text_layer_style.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../editor_state.dart';
 
 class _TextChunk {
@@ -460,7 +462,6 @@ class _VideoPreviewState extends ConsumerState<VideoPreview> with TickerProvider
     final hasWordTimings = layer.wordTimings.isNotEmpty;
     
     String displayText = layer.content;
-    final parsedText = style?.isUppercase == true ? displayText.toUpperCase() : displayText;
     List<TextSpan>? wordSpans;
     Widget? textWidget;
     double localProgress = (currentTime - layer.startTime) / layer.effectiveDuration;
@@ -473,7 +474,6 @@ class _VideoPreviewState extends ConsumerState<VideoPreview> with TickerProvider
         final activeChunk = activeChunksIter.isNotEmpty ? activeChunksIter.first : chunks.last;
 
         displayText = activeChunk.text;
-        final parsedChunkText = style?.isUppercase == true ? displayText.toUpperCase() : displayText;
         
         final chunkDuration = activeChunk.duration;
         if (chunkDuration > 0) {
@@ -694,6 +694,7 @@ class _VideoPreviewState extends ConsumerState<VideoPreview> with TickerProvider
       }
     }
 
+    final fontFamily = style?.fontFamily ?? layer.fontFamily ?? 'Inter';
     final parsedText = style?.isUppercase == true ? displayText.toUpperCase() : displayText;
     final resolvedStyle = _resolveVideoPreviewTextStyle(style, fontFamily, fontSize, color).copyWith(height: 1.4);
 
@@ -730,6 +731,7 @@ class _VideoPreviewState extends ConsumerState<VideoPreview> with TickerProvider
       }
     }
 
+    final fontFamily = style?.fontFamily ?? layer.fontFamily ?? 'Inter';
     final parsedText = style?.isUppercase == true ? displayText.toUpperCase() : displayText;
     final resolvedStyle = _resolveVideoPreviewTextStyle(style, fontFamily, fontSize, color).copyWith(height: 1.4, fontStyle: FontStyle.italic);
 
