@@ -6,3 +6,21 @@ coverage/
 *.log
 .env*
 !.env.example
+
+# Flutter/Dart/Android/iOS
+.dart_tool/
+.packages
+.pub-cache/
+.pub/
+.flutter-plugins
+.flutter-plugins-dependencies
+build/
+*.iml
+.idea/
+.vscode/
+*.ipr
+*.iws
+.symlinks/
+*.xcode
+*xcuserdata*
+*.mode1v3
