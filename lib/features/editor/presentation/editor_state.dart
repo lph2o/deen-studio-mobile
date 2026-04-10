@@ -726,6 +726,22 @@ class EditorNotifier extends Notifier<EditorState> {
     updateLayer(layer.copyWith(textStyle: newStyle));
   }
 
+  /// Applique une animation coranique (via ID) à toutes les couches de type 'arabic'
+  void applyAnimationToAllArabicLayers(String animationId) {
+    final project = state.currentProject;
+    if (project == null) return;
+    
+    final updatedLayers = project.layers.map((layer) {
+      if (layer.type == 'arabic') {
+        final currentStyle = layer.textStyle ?? const TextLayerStyle();
+        return layer.copyWith(textStyle: currentStyle.copyWith(quranAnimationId: animationId));
+      }
+      return layer;
+    }).toList();
+    
+    _mutate((p) => p.copyWith(layers: updatedLayers));
+  }
+
   /// Update the text content of a layer.
   void updateLayerContent(String layerId, String content) {
     final layer = _findLayer(layerId);
