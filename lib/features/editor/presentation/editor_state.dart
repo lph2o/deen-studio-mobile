@@ -10,6 +10,7 @@ import 'package:deen_studio_01/models/text_layer_style.dart';
 import 'package:deen_studio_01/core/models/speed_curve.dart';
 import 'package:deen_studio_01/core/services/beat_detector.dart';
 import 'package:deen_studio_01/core/services/video_stabilizer.dart';
+import 'package:video_player/video_player.dart';
 
 class EditorState {
   final Project? currentProject;
@@ -670,21 +671,36 @@ class EditorNotifier extends Notifier<EditorState> {
   }
 
   /// Add a media layer (image or video) at the current playhead position.
-  void addMediaLayer({
+  Future<void> addMediaLayer({
     required String type,
     required String content,
     double? startTime,
     double? duration,
-  }) {
+  }) async {
     final project = state.currentProject;
     if (project == null) return;
     final id = '${type}_${DateTime.now().millisecondsSinceEpoch}';
+
+    // For video layers, probe the actual file duration so the timeline is accurate
+    double resolvedDuration = duration ?? 10.0;
+    if (type == 'video' && content.isNotEmpty) {
+      try {
+        final probeController = VideoPlayerController.file(File(content));
+        await probeController.initialize();
+        final probedDuration = probeController.value.duration.inMilliseconds / 1000.0;
+        if (probedDuration > 0) resolvedDuration = probedDuration;
+        await probeController.dispose();
+      } catch (e) {
+        debugPrint('[addMediaLayer] Could not probe video duration: $e');
+      }
+    }
+
     final newLayer = Layer(
       id: id,
-      type: type, // 'image' or 'video'
+      type: type,
       content: content,
       startTime: startTime ?? state.currentTime,
-      duration: duration ?? 10.0,
+      duration: resolvedDuration,
       style: {},
     );
     _mutate((p) => p.copyWith(layers: [...p.layers, newLayer]));

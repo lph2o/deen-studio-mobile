@@ -116,30 +116,33 @@ class _VideoPreviewState extends ConsumerState<VideoPreview> with TickerProvider
     final project = state.currentProject;
     if (project == null) return;
     // Use the LAST video layer — so a newly-downloaded video always takes priority
-    final videoLayer = project.layers.where((l) => l.type == 'video' && l.content.isNotEmpty).lastOrNull;
-    if (videoLayer == null) {
-      if (mounted) setState(() => _isVideoInitialized = true);
-      return;
-    }
-    // No reload needed if same path is already loaded
-    if (_lastVideoPath == videoLayer.content && _videoController != null && _videoController!.value.isInitialized) return;
+    final videoLayer = project.layers
+        .where((l) => l.type == 'video' && l.content.isNotEmpty)
+        .lastOrNull;
+    if (videoLayer == null) return;
+    // No reload needed if same path is already loaded and working
+    if (_lastVideoPath == videoLayer.content &&
+        _videoController != null &&
+        _videoController!.value.isInitialized) return;
     try {
-      final old = _videoController;
-      _videoController = null;
-      _isVideoInitialized = false;
-      await old?.dispose();
       final file = File(videoLayer.content);
-      if (await file.exists()) {
-        final controller = VideoPlayerController.file(file);
-        await controller.initialize();
-        _lastVideoPath = videoLayer.content;
-        _videoController = controller;
-        if (mounted) setState(() => _isVideoInitialized = true);
-        debugPrint('[VideoPreview] Loaded video: ${videoLayer.content.split('/').last}');
-      } else {
+      if (!await file.exists()) {
         debugPrint('[VideoPreview] Video file not found: ${videoLayer.content}');
-        if (mounted) setState(() => _isVideoInitialized = true);
+        return;
       }
+      // Initialize the NEW controller in the background, keeping the old one visible
+      final newController = VideoPlayerController.file(file);
+      await newController.initialize();
+      // Only swap once the new controller is fully ready
+      final oldController = _videoController;
+      _lastVideoPath = videoLayer.content;
+      _videoController = newController;
+      _isVideoInitialized = true;
+      if (mounted) setState(() {});
+      debugPrint('[VideoPreview] Loaded video: ${videoLayer.content.split('/').last}');
+      // Dispose the old controller AFTER letting Flutter rebuild with the new one
+      await Future.delayed(const Duration(milliseconds: 100));
+      await oldController?.dispose();
     } catch (e) {
       debugPrint('[VideoPreview] Failed to initialize video: $e');
       if (mounted) setState(() => _isVideoInitialized = true);
@@ -366,20 +369,41 @@ class _VideoPreviewState extends ConsumerState<VideoPreview> with TickerProvider
         break;
       }
     }
-    if (videoLayer == null || videoLayer.content.isEmpty || _videoController == null || !_videoController!.value.isInitialized) {
+    if (videoLayer == null || videoLayer.content.isEmpty || !_isVideoInitialized || _videoController == null || !_videoController!.value.isInitialized) {
       return const SizedBox.shrink();
     }
+    final ctrl = _videoController!;
     final inPoint = videoLayer.inPoint ?? 0;
-    final videoPosition = inPoint + (currentTime - videoLayer.startTime);
-    final durationMs = _videoController!.value.duration.inMilliseconds;
-    final seekMs = (videoPosition * 1000).toInt();
-    if (seekMs >= 0 && seekMs < durationMs) {
-      _videoController!.seekTo(Duration(milliseconds: seekMs));
-    }
+    final videoPosition = (inPoint + (currentTime - videoLayer.startTime)).clamp(0.0, double.infinity);
+    final durationMs = ctrl.value.duration.inMilliseconds;
+    final seekMs = (videoPosition * 1000).toInt().clamp(0, durationMs > 0 ? durationMs - 1 : 0);
+    try {
+      ctrl.seekTo(Duration(milliseconds: seekMs));
+    } catch (_) {}
     final opacity = (videoLayer.style['opacity'] as num?)?.toDouble() ?? 1.0;
+    final aspectRatio = ctrl.value.aspectRatio;
+    // Safe guard: if aspectRatio is invalid, use a fallback to avoid RenderBox layout errors
+    if (aspectRatio <= 0) return const SizedBox.shrink();
     return Positioned.fill(
       child: _applyMask(
-        _applyBlendMode(Opacity(opacity: opacity, child: FittedBox(fit: BoxFit.contain, child: AspectRatio(aspectRatio: _videoController!.value.aspectRatio, child: VideoPlayer(_videoController!)))), videoLayer.blendMode),
+        _applyBlendMode(
+          Opacity(
+            opacity: opacity.clamp(0.0, 1.0),
+            child: SizedBox(
+              width: width,
+              height: height,
+              child: FittedBox(
+                fit: BoxFit.contain,
+                child: SizedBox(
+                  width: ctrl.value.size.width,
+                  height: ctrl.value.size.height,
+                  child: VideoPlayer(ctrl),
+                ),
+              ),
+            ),
+          ),
+          videoLayer.blendMode,
+        ),
         videoLayer.mask,
       ),
     );
