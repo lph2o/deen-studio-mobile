@@ -115,19 +115,29 @@ class _VideoPreviewState extends ConsumerState<VideoPreview> with TickerProvider
     final state = ref.read(editorProvider);
     final project = state.currentProject;
     if (project == null) return;
-    final videoLayer = project.layers.where((l) => l.type == 'video').firstOrNull;
-    if (videoLayer == null || videoLayer.content.isEmpty) {
+    // Use the LAST video layer — so a newly-downloaded video always takes priority
+    final videoLayer = project.layers.where((l) => l.type == 'video' && l.content.isNotEmpty).lastOrNull;
+    if (videoLayer == null) {
       if (mounted) setState(() => _isVideoInitialized = true);
       return;
     }
-    if (_lastVideoPath == videoLayer.content && _videoController != null) return;
+    // No reload needed if same path is already loaded
+    if (_lastVideoPath == videoLayer.content && _videoController != null && _videoController!.value.isInitialized) return;
     try {
-      await _videoController?.dispose();
+      final old = _videoController;
+      _videoController = null;
+      _isVideoInitialized = false;
+      await old?.dispose();
       final file = File(videoLayer.content);
       if (await file.exists()) {
-        _videoController = VideoPlayerController.file(file);
-        await _videoController!.initialize();
+        final controller = VideoPlayerController.file(file);
+        await controller.initialize();
         _lastVideoPath = videoLayer.content;
+        _videoController = controller;
+        if (mounted) setState(() => _isVideoInitialized = true);
+        debugPrint('[VideoPreview] Loaded video: ${videoLayer.content.split('/').last}');
+      } else {
+        debugPrint('[VideoPreview] Video file not found: ${videoLayer.content}');
         if (mounted) setState(() => _isVideoInitialized = true);
       }
     } catch (e) {
@@ -346,14 +356,17 @@ class _VideoPreviewState extends ConsumerState<VideoPreview> with TickerProvider
   }
 
   Widget _buildVideoLayer(List<Layer> activeLayers, double currentTime, double width, double height) {
+    // Look across ALL project layers, not just activeLayers which filters by current time.
+    // This ensures a newly downloaded video is visible even if currentTime hasn't advanced yet.
+    final allProjectLayers = ref.read(editorProvider).currentProject?.layers ?? activeLayers;
     Layer? videoLayer;
-    for (final layer in activeLayers) {
+    for (final layer in allProjectLayers) {
       if (layer.type == 'video') {
         videoLayer = layer;
         break;
       }
     }
-    if (videoLayer == null || videoLayer.content.isEmpty || !_isVideoInitialized || _videoController == null || !_videoController!.value.isInitialized) {
+    if (videoLayer == null || videoLayer.content.isEmpty || _videoController == null || !_videoController!.value.isInitialized) {
       return const SizedBox.shrink();
     }
     final inPoint = videoLayer.inPoint ?? 0;
@@ -770,9 +783,13 @@ class _VideoPreviewState extends ConsumerState<VideoPreview> with TickerProvider
   Widget build(BuildContext context) {
     final state = ref.watch(editorProvider);
 
-    // Watch for dynamically added Video layers to auto-initialize the controller
+    // Watch for any change in video layer content across the entire project (not just active layers)
     ref.listen<String?>(
-      editorProvider.select((s) => s.currentProject?.layers.where((l) => l.type == 'video').firstOrNull?.content),
+      editorProvider.select((s) {
+        // Get the most recent video layer path across ALL layers (not just active)
+        final videoLayers = s.currentProject?.layers.where((l) => l.type == 'video' && l.content.isNotEmpty).toList() ?? [];
+        return videoLayers.isNotEmpty ? videoLayers.last.content : null;
+      }),
       (previous, next) {
         if (next != null && next != _lastVideoPath) {
           WidgetsBinding.instance.addPostFrameCallback((_) => _initializeVideoController());
