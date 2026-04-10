@@ -430,6 +430,21 @@ class _VideoPreviewState extends ConsumerState<VideoPreview> with TickerProvider
       ),
     );
   }
+
+  TextStyle _resolveVideoPreviewTextStyle(TextLayerStyle? style, String fallbackFont, double fontSize, Color color) {
+    final baseStyle = style?.toFlutterTextStyle(overrideColor: color).copyWith(fontSize: fontSize) 
+        ?? TextStyle(fontFamily: fallbackFont, fontSize: fontSize, color: color, height: 1.4);
+    
+    final family = style?.fontFamily ?? fallbackFont;
+    if (FontCatalogue.isLocal(family)) return baseStyle.copyWith(fontFamily: family);
+    
+    try {
+      return GoogleFonts.getFont(family, textStyle: baseStyle);
+    } catch (_) {
+      return baseStyle.copyWith(fontFamily: family);
+    }
+  }
+
   Widget _buildArabicLayer(Layer layer, double currentTime, double previewWidth, double previewHeight) {
     final style = layer.textStyle;
     final scaleFactor = previewWidth / 360.0;
@@ -445,9 +460,11 @@ class _VideoPreviewState extends ConsumerState<VideoPreview> with TickerProvider
     final hasWordTimings = layer.wordTimings.isNotEmpty;
     
     String displayText = layer.content;
+    final parsedText = style?.isUppercase == true ? displayText.toUpperCase() : displayText;
     List<TextSpan>? wordSpans;
     Widget? textWidget;
     double localProgress = (currentTime - layer.startTime) / layer.effectiveDuration;
+    final resolvedStyle = _resolveVideoPreviewTextStyle(style, fontFamily, fontSize, color).copyWith(height: 1.6);
 
     if (hasWordTimings) {
       final chunks = _chunkWordTimings(layer.wordTimings, wordsPerChunk: 10);
@@ -456,6 +473,7 @@ class _VideoPreviewState extends ConsumerState<VideoPreview> with TickerProvider
         final activeChunk = activeChunksIter.isNotEmpty ? activeChunksIter.first : chunks.last;
 
         displayText = activeChunk.text;
+        final parsedChunkText = style?.isUppercase == true ? displayText.toUpperCase() : displayText;
         
         final chunkDuration = activeChunk.duration;
         if (chunkDuration > 0) {
@@ -516,10 +534,11 @@ class _VideoPreviewState extends ConsumerState<VideoPreview> with TickerProvider
         if (isShaderDriven) {
           final activeSpans = words.asMap().entries.map((entry) {
             final isActive = entry.key <= currentWordIndex;
+            final wordText = entry.value + (entry.key < words.length - 1 ? ' ' : '');
+            final parsedWord = style?.isUppercase == true ? wordText.toUpperCase() : wordText;
             return TextSpan(
-              text: entry.value + (entry.key < words.length - 1 ? ' ' : ''), 
-              style: TextStyle(
-                fontFamily: fontFamily, fontSize: fontSize, height: 1.6,
+              text: parsedWord, 
+              style: resolvedStyle.copyWith(
                 color: isActive ? Colors.white : Colors.transparent, // Only color the active words to mask the Shader
                 shadows: glowShadows,
               )
@@ -565,15 +584,11 @@ class _VideoPreviewState extends ConsumerState<VideoPreview> with TickerProvider
       text: TextSpan(
         children: wordSpans ?? [
           TextSpan(
-            text: displayText, 
-            style: TextStyle(
-              fontFamily: fontFamily, 
-              fontSize: fontSize, 
-              color: color, 
-              height: 1.6,
+            text: style?.isUppercase == true ? displayText.toUpperCase() : displayText, 
+            style: resolvedStyle.copyWith(
               shadows: quranAnimationId == 'ethereal_glow' 
                   ? [Shadow(color: const Color(0xFFE0B0FF).withValues(alpha: 0.8), blurRadius: (math.sin(localProgress * math.pi) * 20).clamp(0.0, 20.0))] 
-                  : null
+                  : resolvedStyle.shadows
             )
           )
         ]
@@ -679,7 +694,10 @@ class _VideoPreviewState extends ConsumerState<VideoPreview> with TickerProvider
       }
     }
 
-    Widget tWidget = Text(displayText, style: TextStyle(fontFamily: style?.fontFamily ?? layer.fontFamily, fontSize: fontSize, color: color, height: 1.4), textAlign: TextAlign.center);
+    final parsedText = style?.isUppercase == true ? displayText.toUpperCase() : displayText;
+    final resolvedStyle = _resolveVideoPreviewTextStyle(style, fontFamily, fontSize, color).copyWith(height: 1.4);
+
+    Widget tWidget = Text(parsedText, style: resolvedStyle, textAlign: TextAlign.center);
 
     return _buildSmartBoundingBoxWrapper(
       layer: layer, previewWidth: previewWidth, previewHeight: previewHeight, 
@@ -712,7 +730,10 @@ class _VideoPreviewState extends ConsumerState<VideoPreview> with TickerProvider
       }
     }
 
-    Widget tWidget = Text(displayText, style: TextStyle(fontFamily: style?.fontFamily ?? layer.fontFamily, fontSize: fontSize, color: color, height: 1.4, fontStyle: FontStyle.italic), textAlign: TextAlign.center);
+    final parsedText = style?.isUppercase == true ? displayText.toUpperCase() : displayText;
+    final resolvedStyle = _resolveVideoPreviewTextStyle(style, fontFamily, fontSize, color).copyWith(height: 1.4, fontStyle: FontStyle.italic);
+
+    Widget tWidget = Text(parsedText, style: resolvedStyle, textAlign: TextAlign.center);
 
     return _buildSmartBoundingBoxWrapper(
       layer: layer, previewWidth: previewWidth, previewHeight: previewHeight, 
@@ -1035,22 +1056,15 @@ class _VideoPreviewState extends ConsumerState<VideoPreview> with TickerProvider
         break;
     }
 
+    final parsedText = style?.isUppercase == true ? displayText.toUpperCase() : displayText;
+    final resolvedStyle = _resolveVideoPreviewTextStyle(style, fontFamily, fontSize, color).copyWith(height: 1.4);
+
     Widget contentWidget = RichText(
       text: TextSpan(
-        text: displayText,
-        style: TextStyle(
-          fontFamily: fontFamily,
-          fontSize: fontSize,
-          color: color,
-          height: 1.4,
-          fontWeight: style?.fontWeight,
-          fontStyle: style?.isItalic == true ? FontStyle.italic : FontStyle.normal,
-          shadows: style != null && style.shadowBlur > 0
-              ? [Shadow(color: _parseColor(style.shadowColor), offset: Offset(style.shadowOffsetX, style.shadowOffsetY), blurRadius: style.shadowBlur)]
-              : [],
-        ),
+        text: parsedText,
+        style: resolvedStyle,
       ),
-      textAlign: TextAlign.center,
+      textAlign: style?.textAlign ?? TextAlign.center,
       softWrap: true,
     );
 

@@ -309,17 +309,49 @@ class TextLayerStyle {
   TextStyle toFlutterTextStyle({Color? overrideColor}) {
     final fontWeightResolved = isBold ? FontWeight.w700 : fontWeight;
     final decoration = _buildDecoration();
+
+    List<Shadow>? textShadows;
+    if (shadowColor.isNotEmpty && (shadowBlur > 0 || shadowOffsetX != 0 || shadowOffsetY != 0)) {
+       textShadows = [
+         Shadow(
+           color: parseHexColor(shadowColor).withValues(alpha: opacity),
+           blurRadius: shadowBlur,
+           offset: Offset(shadowOffsetX, shadowOffsetY),
+         )
+       ];
+    }
+
+    Paint? foregroundPaint;
+    Color? finalColor;
+    
+    if (gradientStyle != null) {
+      // NOTE: For gradients, the shader bounds depend on the drawn text rect.
+      // Since toFlutterTextStyle doesn't know the exact rect, it falls back to a large rect.
+      // A more precise shader would require a ShaderMask, but this works for basic linear gradients.
+      final gradient = LinearGradient(
+        colors: gradientStyle!.colors.map(parseHexColor).toList(),
+        transform: GradientRotation(gradientStyle!.angleRadians),
+      );
+      foregroundPaint = Paint()
+        ..shader = gradient.createShader(const Rect.fromLTWH(0, 0, 1000, 100)); // approximate bounds
+    } else {
+      finalColor = overrideColor ?? parseHexColor(color).withValues(alpha: opacity);
+    }
+
     return TextStyle(
       fontFamily: _isGoogleFont(fontFamily) ? null : fontFamily,
       fontSize: fontSize,
       fontWeight: fontWeightResolved,
       fontStyle: isItalic ? FontStyle.italic : FontStyle.normal,
-      color: overrideColor ?? parseHexColor(color),
+      color: foregroundPaint == null ? finalColor : null,
+      foreground: foregroundPaint,
+      backgroundColor: backgroundColor != null ? parseHexColor(backgroundColor!).withValues(alpha: opacity) : null,
       letterSpacing: letterSpacing,
       wordSpacing: wordSpacing,
       height: lineHeight,
       decoration: decoration,
-      decorationColor: parseHexColor(color),
+      decorationColor: parseHexColor(color).withValues(alpha: opacity),
+      shadows: textShadows,
     );
   }
 
@@ -335,8 +367,7 @@ class TextLayerStyle {
   // ── Helpers ────────────────────────────────────────────────────────────────
 
   static bool _isGoogleFont(String family) {
-    const localFonts = ['UthmanicRegular'];
-    return !localFonts.contains(family);
+    return !FontCatalogue.isLocal(family);
   }
 
   static Color parseHexColor(String hex) {
