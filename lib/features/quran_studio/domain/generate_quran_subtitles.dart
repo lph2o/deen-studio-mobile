@@ -71,7 +71,9 @@ class QuranSubtitleGenerator {
     // 4. Iterate and download audio, extract durations
     for (int i = 0; i < slicedArabic.length; i++) {
       final ayahNumInSurah = slicedArabic[i]['numberInSurah'] as int;
-      final ayahArabicText = slicedArabic[i]['text'] as String;
+      final rawArabicText = slicedArabic[i]['text'] as String;
+      // Strip Basmallah from first ayah of non-Fatiha surahs — audio & translation don't include it
+      final ayahArabicText = _stripBasmallah(rawArabicText, surahNumber, ayahNumInSurah);
       final audioUrl = slicedAudio[i]['audio'] as String?;
       final ayahTranslationText = slicedTranslation?[i]['text'] as String?;
       final ayahPhoneticText = slicedTransliteration?[i]['text'] as String?;
@@ -188,5 +190,42 @@ class QuranSubtitleGenerator {
     }
 
     return timings;
+  }
+
+  /// Strips the Basmallah from the start of an ayah's Arabic text.
+  ///
+  /// The alquran.cloud API (quran-uthmani) prepends the Basmallah to the text
+  /// of the first ayah of most surahs, but the audio files and translations
+  /// do NOT include it — causing a sync mismatch.
+  ///
+  /// Rules:
+  /// - Surah 1 (Al-Fatiha): Ayah 1 IS the Basmallah — never strip.
+  /// - Surah 9 (At-Tawbah): Has no Basmallah — nothing to strip.
+  /// - All other surahs: Strip from ayah 1 if present.
+  static String _stripBasmallah(String text, int surahNumber, int ayahNumberInSurah) {
+    // Only the first ayah of a surah can have the Basmallah prepended.
+    if (ayahNumberInSurah != 1) return text;
+    // Surah 1 = the Basmallah IS the verse. Surah 9 = no Basmallah.
+    if (surahNumber == 1 || surahNumber == 9) return text;
+
+    // Common Basmallah variants in alquran.cloud API responses
+    const basmallahs = [
+      'بِسْمِ ٱللَّهِ ٱلرَّحْمَـٰنِ ٱلرَّحِيمِ ',  // uthmani with tatweel + space
+      'بِسْمِ ٱللَّهِ ٱلرَّحْمَـٰنِ ٱلرَّحِيمِ',   // uthmani with tatweel no space
+      'بِسْمِ اللَّهِ الرَّحْمَنِ الرَّحِيمِ ',     // standard with space
+      'بِسْمِ اللَّهِ الرَّحْمَنِ الرَّحِيمِ',      // standard no space
+      'بسم الله الرحمن الرحيم ',                     // simplified with space
+      'بسم الله الرحمن الرحيم',                      // simplified no space
+    ];
+
+    for (final basmallah in basmallahs) {
+      if (text.startsWith(basmallah)) {
+        final stripped = text.substring(basmallah.length).trimLeft();
+        debugPrint('[QuranSubtitleGenerator] Stripped Basmallah from S$surahNumber:A1');
+        return stripped;
+      }
+    }
+
+    return text;
   }
 }
