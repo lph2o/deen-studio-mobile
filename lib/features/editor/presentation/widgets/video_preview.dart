@@ -1126,7 +1126,7 @@ class _VideoPreviewState extends ConsumerState<VideoPreview> with TickerProvider
           ),
           // Poignée droite (Ajuster la largeur)
           Positioned(
-            right: -15 / scale, top: 0, bottom: 0,
+            right: -30 / scale, top: 0, bottom: 0,
             child: GestureDetector(
               behavior: HitTestBehavior.opaque,
               onPanUpdate: (details) {
@@ -1137,10 +1137,10 @@ class _VideoPreviewState extends ConsumerState<VideoPreview> with TickerProvider
                 );
               },
               child: SizedBox(
-                width: 30 / scale,
+                width: 60 / scale, // Large zone tactile invisible
                 child: Center(
                   child: Container(
-                    width: 6 / scale, height: 24 / scale,
+                    width: 6 / scale, height: 24 / scale, // Aspect visuel inchangé
                     decoration: BoxDecoration(color: Colors.white, border: Border.all(color: borderColor, width: 1 / scale), borderRadius: BorderRadius.circular(2)),
                   )
                 )
@@ -1149,7 +1149,7 @@ class _VideoPreviewState extends ConsumerState<VideoPreview> with TickerProvider
           ),
           // Poignée en bas à droite (Ajuster l'échelle / zoom)
           Positioned(
-            right: -10 / scale, bottom: -10 / scale,
+            right: -30 / scale, bottom: -30 / scale,
             child: GestureDetector(
               behavior: HitTestBehavior.opaque,
               onPanUpdate: (details) {
@@ -1160,10 +1160,10 @@ class _VideoPreviewState extends ConsumerState<VideoPreview> with TickerProvider
                 );
               },
               child: SizedBox(
-                width: 20 / scale, height: 20 / scale,
+                width: 60 / scale, height: 60 / scale, // Large zone tactile invisible
                 child: Center(
                   child: Container(
-                    width: 12 / scale, height: 12 / scale,
+                    width: 12 / scale, height: 12 / scale, // Aspect visuel inchangé
                     decoration: BoxDecoration(color: Colors.white, border: Border.all(color: borderColor, width: 1.5 / scale), shape: BoxShape.circle, boxShadow: const [BoxShadow(color: Colors.black26, blurRadius: 2)]),
                   )
                 )
