@@ -471,24 +471,113 @@ class _VideoPreviewState extends ConsumerState<VideoPreview> with TickerProvider
           }
           if (currentTime >= wordEnd) currentWordIndex = i + 1;
         }
+
+        final isEtherealGlow = quranAnimationId == 'ethereal_glow';
+        final glowIntensity = (math.sin(localProgress * math.pi) * 20).clamp(0.0, 20.0);
+        final glowShadows = isEtherealGlow 
+            ? [Shadow(color: const Color(0xFFE0B0FF).withValues(alpha: 0.8), blurRadius: glowIntensity)]
+            : null;
+
         final words = activeChunk.text.split(RegExp(r'\s+'));
         wordSpans = words.asMap().entries.map((entry) {
           final isActive = entry.key <= currentWordIndex;
-          return TextSpan(text: entry.value + (entry.key < words.length - 1 ? ' ' : ''), style: TextStyle(fontFamily: fontFamily, fontSize: fontSize, color: isActive ? const Color(0xFFFFD700) : color, height: 1.6));
+          return TextSpan(
+            text: entry.value + (entry.key < words.length - 1 ? ' ' : ''), 
+            style: TextStyle(
+              fontFamily: fontFamily, 
+              fontSize: fontSize, 
+              color: isActive ? const Color(0xFFFFD700) : color, 
+              height: 1.6,
+              shadows: glowShadows,
+            )
+          );
         }).toList();
       }
       }
     }
 
     Widget textWidget = RichText(
-      text: TextSpan(children: wordSpans ?? [TextSpan(text: displayText, style: TextStyle(fontFamily: fontFamily, fontSize: fontSize, color: color, height: 1.6))]),
+      text: TextSpan(
+        children: wordSpans ?? [
+          TextSpan(
+            text: displayText, 
+            style: TextStyle(
+              fontFamily: fontFamily, 
+              fontSize: fontSize, 
+              color: color, 
+              height: 1.6,
+              shadows: quranAnimationId == 'ethereal_glow' 
+                  ? [Shadow(color: const Color(0xFFE0B0FF).withValues(alpha: 0.8), blurRadius: (math.sin(localProgress * math.pi) * 20).clamp(0.0, 20.0))] 
+                  : null
+            )
+          )
+        ]
+      ),
       textAlign: TextAlign.center,
       textDirection: TextDirection.rtl,
     );
+
     if (hasQuranAnimation) {
+      final shaderAnimations = ['rainbow', 'sunset', 'aurora'];
+      final overlayAnimations = ['golden_particles', 'stardust', 'diamond_sparkle', 'blessed_rain', 'water_drops', 'autumn_leaves', 'flower_bloom', 'gentle_wind', 'light_butterflies', 'lightning', 'brush_strokes', 'ink_flow', 'quill_writing', 'living_calligraphy'];
+      
+      Widget mappedWidget = textWidget;
+
+      // 1. Shader Mask Category (Gradient sweeping physically OVER the text colors)
+      if (shaderAnimations.contains(quranAnimationId)) {
+        mappedWidget = ShaderMask(
+          blendMode: BlendMode.srcIn,
+          shaderCallback: (bounds) {
+            if (quranAnimationId == 'rainbow') {
+              final sweep = localProgress * bounds.width;
+              return const LinearGradient(
+                begin: Alignment.centerRight, end: Alignment.centerLeft,
+                colors: [Color(0xFFFF0000), Color(0xFFFF7F00), Color(0xFFFFFF00), Color(0xFF00FF00), Color(0xFF0000FF), Color(0xFF4B0082), Color(0xFF9400D3)],
+              ).createShader(Rect.fromLTRB(bounds.right - sweep, bounds.top, bounds.right, bounds.bottom));
+            } else if (quranAnimationId == 'sunset') {
+              return const LinearGradient(
+                begin: Alignment.topCenter, end: Alignment.bottomCenter,
+                colors: [Color(0xFFFF4500), Color(0xFFFF8C00), Color(0xFFFFD700)],
+              ).createShader(Rect.fromLTWH(0, 0, bounds.width, bounds.height * localProgress));
+            } else if (quranAnimationId == 'aurora') {
+              return const LinearGradient(
+                begin: Alignment.topCenter, end: Alignment.bottomCenter,
+                colors: [Color(0xFF00FF88), Color(0xFF00DDFF), Color(0xFF8800FF)],
+              ).createShader(Rect.fromLTWH(0, 0, bounds.width, bounds.height * localProgress));
+            }
+            return const LinearGradient(colors: [Colors.white, Colors.white]).createShader(bounds);
+          },
+          child: mappedWidget,
+        );
+      }
+
+      // 2. Foreground vs Background rendering of the CustomPainter
+      final isOverlay = overlayAnimations.contains(quranAnimationId);
+      final isGlow = quranAnimationId == 'ethereal_glow';
+      
       return Positioned(
         left: 0, right: 0, top: y - 40,
-        child: _applyMask(Opacity(opacity: opacity.clamp(0.0, 1.0), child: Padding(padding: const EdgeInsets.symmetric(horizontal: 16), child: CustomPaint(painter: _QuranAnimationPainter(animationId: quranAnimationId, progress: localProgress, textColor: color), child: Padding(padding: const EdgeInsets.symmetric(vertical: 20), child: textWidget)))), layer.mask),
+        child: _applyMask(
+          Opacity(
+            opacity: opacity.clamp(0.0, 1.0), 
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16), 
+              child: CustomPaint(
+                painter: isOverlay || isGlow || shaderAnimations.contains(quranAnimationId) 
+                    ? null // Let Text take precedence, Shader/Glow handles it
+                    : _QuranAnimationPainter(animationId: quranAnimationId, progress: localProgress, textColor: color),
+                foregroundPainter: isOverlay
+                    ? _QuranAnimationPainter(animationId: quranAnimationId, progress: localProgress, textColor: color)
+                    : null,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 20), 
+                  child: mappedWidget
+                ),
+              )
+            )
+          ), 
+          layer.mask
+        ),
       );
     }
     return Positioned(left: 0, right: 0, top: y, child: _applyMask(Opacity(opacity: opacity.clamp(0.0, 1.0), child: Padding(padding: const EdgeInsets.symmetric(horizontal: 16), child: textWidget)), layer.mask));
