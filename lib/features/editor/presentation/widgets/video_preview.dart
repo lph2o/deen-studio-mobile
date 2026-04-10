@@ -444,6 +444,7 @@ class _VideoPreviewState extends ConsumerState<VideoPreview> with TickerProvider
     
     String displayText = layer.content;
     List<TextSpan>? wordSpans;
+    Widget? textWidget;
     double localProgress = (currentTime - layer.startTime) / layer.effectiveDuration;
 
     if (hasWordTimings) {
@@ -473,30 +474,92 @@ class _VideoPreviewState extends ConsumerState<VideoPreview> with TickerProvider
         }
 
         final isEtherealGlow = quranAnimationId == 'ethereal_glow';
+        final isRainbow = quranAnimationId == 'rainbow';
+        final isSunset = quranAnimationId == 'sunset';
+        final isAurora = quranAnimationId == 'aurora';
+        final isShaderDriven = isRainbow || isSunset || isAurora;
+
         final glowIntensity = (math.sin(localProgress * math.pi) * 20).clamp(0.0, 20.0);
         final glowShadows = isEtherealGlow 
             ? [Shadow(color: const Color(0xFFE0B0FF).withValues(alpha: 0.8), blurRadius: glowIntensity)]
             : null;
 
         final words = activeChunk.text.split(RegExp(r'\s+'));
+        
+        // When using a shader animation, we split into TWO layers: base and active
+        // This solves the multi-line bleed by making the karaoke literally draw the shader!
         wordSpans = words.asMap().entries.map((entry) {
           final isActive = entry.key <= currentWordIndex;
+          
+          Color textColor;
+          if (isShaderDriven) {
+            textColor = isActive ? Colors.transparent : color; // Active is handled by shader overlay
+          } else {
+            textColor = isActive ? const Color(0xFFFFD700) : color; // Standard Gold karaoke
+          }
+
           return TextSpan(
             text: entry.value + (entry.key < words.length - 1 ? ' ' : ''), 
             style: TextStyle(
               fontFamily: fontFamily, 
               fontSize: fontSize, 
-              color: isActive ? const Color(0xFFFFD700) : color, 
+              color: textColor, 
               height: 1.6,
               shadows: glowShadows,
             )
           );
         }).toList();
-      }
+
+        // If shader driven, we need a secondary active span list for the ShaderMask Top Layer
+        if (isShaderDriven) {
+          final activeSpans = words.asMap().entries.map((entry) {
+            final isActive = entry.key <= currentWordIndex;
+            return TextSpan(
+              text: entry.value + (entry.key < words.length - 1 ? ' ' : ''), 
+              style: TextStyle(
+                fontFamily: fontFamily, fontSize: fontSize, height: 1.6,
+                color: isActive ? Colors.white : Colors.transparent, // Only color the active words to mask the Shader
+                shadows: glowShadows,
+              )
+            );
+          }).toList();
+          
+          textWidget = Stack(
+            alignment: Alignment.topCenter,
+            clipBehavior: Clip.none,
+            children: [
+              RichText(text: TextSpan(children: wordSpans), textAlign: TextAlign.center, textDirection: TextDirection.rtl),
+              ShaderMask(
+                blendMode: BlendMode.srcIn,
+                shaderCallback: (bounds) {
+                  if (isRainbow) {
+                    return const LinearGradient(
+                      begin: Alignment.centerRight, end: Alignment.centerLeft,
+                      colors: [Color(0xFFFF0000), Color(0xFFFF7F00), Color(0xFFFFFF00), Color(0xFF00FF00), Color(0xFF0000FF), Color(0xFF4B0082), Color(0xFF9400D3)],
+                    ).createShader(bounds);
+                  } else if (isSunset) {
+                    return const LinearGradient(
+                      begin: Alignment.topCenter, end: Alignment.bottomCenter,
+                      colors: [Color(0xFFFF4500), Color(0xFFFF8C00), Color(0xFFFFD700)],
+                    ).createShader(bounds);
+                  } else if (isAurora) {
+                    return const LinearGradient(
+                      begin: Alignment.topCenter, end: Alignment.bottomCenter,
+                      colors: [Color(0xFF00FF88), Color(0xFF00DDFF), Color(0xFF8800FF)],
+                    ).createShader(bounds);
+                  }
+                  return const LinearGradient(colors: [Colors.white, Colors.white]).createShader(bounds);
+                },
+                child: RichText(text: TextSpan(children: activeSpans), textAlign: TextAlign.center, textDirection: TextDirection.rtl),
+              )
+            ],
+          );
+        }
       }
     }
+  }
 
-    Widget textWidget = RichText(
+    textWidget ??= RichText(
       text: TextSpan(
         children: wordSpans ?? [
           TextSpan(
@@ -523,8 +586,8 @@ class _VideoPreviewState extends ConsumerState<VideoPreview> with TickerProvider
       
       Widget mappedWidget = textWidget;
 
-      // 1. Shader Mask Category (Gradient sweeping physically OVER the text colors)
-      if (shaderAnimations.contains(quranAnimationId)) {
+      // 1. Shader Mask Category - FALLBACK for texts without wordTimings (using simple sweeps)
+      if (shaderAnimations.contains(quranAnimationId) && wordSpans == null) {
         mappedWidget = ShaderMask(
           blendMode: BlendMode.srcIn,
           shaderCallback: (bounds) {
