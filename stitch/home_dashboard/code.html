@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Deen Studio | Dashboard</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;700;800&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "primary": "#a2d1bb",
+              "inverse-primary": "#3b6756",
+              "on-surface-variant": "#c0c8c3",
+              "on-tertiary-container": "#ab9d82",
+              "on-primary-fixed-variant": "#234f3f",
+              "on-secondary-fixed-variant": "#574500",
+              "on-error-container": "#ffdad6",
+              "on-tertiary": "#392f1b",
+              "surface-container": "#1e2020",
+              "surface-tint": "#a2d1bb",
+              "on-tertiary-fixed": "#231a08",
+              "outline": "#8a938d",
+              "on-primary": "#073829",
+              "on-primary-container": "#7ba894",
+              "background": "#121414",
+              "error-container": "#93000a",
+              "secondary-container": "#af8d11",
+              "primary-fixed": "#beedd7",
+              "on-surface": "#e2e2e2",
+              "surface-container-low": "#1a1c1c",
+              "secondary-fixed": "#ffe088",
+              "on-secondary-container": "#342800",
+              "surface-variant": "#333535",
+              "tertiary-fixed-dim": "#d5c5a8",
+              "surface-bright": "#383939",
+              "primary-fixed-dim": "#a2d1bb",
+              "error": "#ffb4ab",
+              "tertiary-fixed": "#f2e0c3",
+              "on-error": "#690005",
+              "secondary": "#e9c349",
+              "surface": "#121414",
+              "secondary-fixed-dim": "#e9c349",
+              "inverse-surface": "#e2e2e2",
+              "surface-container-high": "#282a2a",
+              "surface-container-highest": "#333535",
+              "on-secondary-fixed": "#241a00",
+              "on-background": "#e2e2e2",
+              "surface-dim": "#121414",
+              "on-secondary": "#3c2f00",
+              "on-tertiary-fixed-variant": "#504530",
+              "tertiary-container": "#3e3420",
+              "inverse-on-surface": "#2f3131",
+              "tertiary": "#d5c5a8",
+              "surface-container-lowest": "#0d0f0f",
+              "primary-container": "#0f3d2e",
+              "on-primary-fixed": "#002116",
+              "outline-variant": "#414944"
+            },
+            fontFamily: {
+              "headline": ["Manrope"],
+              "body": ["Inter"],
+              "label": ["Inter"]
+            },
+            borderRadius: {"DEFAULT": "1rem", "lg": "2rem", "xl": "3rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+        body { background-color: #121414; color: #e2e2e2; }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .uthmani-script {
+            font-family: serif;
+            line-height: 1.6;
+        }
+        .glass-panel {
+            background: rgba(18, 20, 20, 0.6);
+            backdrop-filter: blur(20px);
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="font-body selection:bg-primary/30">
+<!-- TopAppBar -->
+<header class="bg-[#1E2020] docked full-width top-0 z-40">
+<div class="flex justify-between items-center w-full px-5 py-4">
+<div class="flex items-center gap-4">
+<button class="text-[#A2D1BB] hover:bg-[#1E2020] transition-colors active:scale-95 duration-200">
+<span class="material-symbols-outlined" data-icon="menu">menu</span>
+</button>
+<h1 class="text-xl font-black text-[#A2D1BB] tracking-widest uppercase font-headline">Deen Studio</h1>
+</div>
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-full overflow-hidden bg-surface-container-highest flex items-center justify-center">
+<img alt="User profile photo" class="w-full h-full object-cover" data-alt="Close up portrait of a modern middle eastern man with a neat beard and professional attire, soft cinematic lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCQ2udw5qAqqMGguBPEl3Pk_1Cw5U30XYxsrngxyyRhQYJOkbasTk8Xh1iuVcSksL4O8K94kI2Bn1Yqkd3I1Ur57CnD5Xz-C2P0PisPrkgfEA0wqJ5CLBSUp9OTrEGCiHbFiVRfdFxjrCCZcge74vamBLtjI3lwd2_tqc7_VvJg3GqkI_Hi3CMlQPfp5B6z91Mz8FRXRr6Rq0D6B7nhDrLPxFzoLZyVn5rlTCY71EHeuFofMy1Qne8Nxvix_PW3QARqXVypJV44mclT"/>
+</div>
+</div>
+</div>
+</header>
+<main class="pb-32 pt-6 px-5 max-w-7xl mx-auto">
+<!-- Hero / Create Section -->
+<section class="mb-10">
+<div class="relative overflow-hidden rounded-lg bg-surface-container-low min-h-[220px] flex flex-col justify-center p-8">
+<!-- Subtle Pattern Overlay -->
+<div class="absolute inset-0 opacity-[0.03] pointer-events-none" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuBaZxDEXM8aeN4wt7KQG-uS5MJzKuKozUA6Y_Z7TmEgZM_ZwyPLjLQJCXSBVAqoOBgavVL1_viPeDIF7OeebZd5PlCdDuG9mo4KvLz4G-LVhH6mwdKWv44FnwEblKmEHwOvc0s8RXj5tvN74O69klwIpJojmpf68KgBFmkh_EueIg_Fth2xhi2meoe-uAKRHOaSUPKXtPOndXlzSfCg1CI64Hxk7T9CfcG5vjKLmp1n0HekgVVKENB6fvDkWAJcFYneZtNTlFRAYWQe');"></div>
+<div class="relative z-10 flex flex-col items-start gap-4">
+<span class="bg-primary-container text-primary px-3 py-1 rounded-full text-xs font-bold tracking-widest uppercase">Workspace</span>
+<h2 class="font-headline text-3xl font-bold tracking-tight text-on-surface max-w-md">
+                        Bring your spiritual vision <br/>to life today.
+                    </h2>
+<button class="mt-4 flex items-center gap-3 bg-gradient-to-r from-secondary to-secondary-container text-on-secondary-container px-8 py-4 rounded-lg font-bold transition-all hover:shadow-[0_0_20px_rgba(233,195,73,0.3)] active:scale-95">
+<span class="material-symbols-outlined" data-icon="add_circle" style="font-variation-settings: 'FILL' 1;">add_circle</span>
+                        Create New Project
+                    </button>
+</div>
+<!-- Decorative element -->
+<div class="absolute top-[-20%] right-[-5%] w-64 h-64 bg-primary/10 blur-[100px] rounded-full"></div>
+</div>
+</section>
+<!-- Bento Grid: Recent Projects & Quick Tools -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+<!-- Recent Projects Column -->
+<div class="md:col-span-2 space-y-6">
+<div class="flex justify-between items-end">
+<h3 class="font-headline text-xl font-bold text-on-surface">Recent Projects</h3>
+<a class="text-primary text-sm font-medium hover:underline" href="#">View all</a>
+</div>
+<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+<!-- Project Card 1 -->
+<div class="bg-surface-container-low rounded-lg p-3 group cursor-pointer hover:bg-surface-container transition-colors">
+<div class="aspect-video rounded-md overflow-hidden mb-3 relative">
+<img class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" data-alt="Interior of a magnificent mosque with sunbeams filtering through geometric windows onto a plush carpet" src="https://lh3.googleusercontent.com/aida-public/AB6AXuC9Soq5BFPMYFF0eQnJkAEwU4lAt6Ck18Kf0ON_IXSg13ksTtlH5i3QEN0QQMfmTxDrDxE3ZogRW2sMx9kNZ8AajAvieb19lDyahtd_nMouxvvGWRmJocFbSKAWBptzStDoLGiXg8HAGHC7pr-W021J-ku9hK8JtzHqieeN67I7oUvRJ9LJG2N7vr8U5nh-YG-XruY6DGNaaQbP65fqUsDovmlF6mgrCEgzcr41kHze0jVVg-MS84lTQEagRyyNmXT2pH8KoERN5T4J"/>
+<div class="absolute bottom-2 right-2 bg-black/60 px-2 py-0.5 rounded text-[10px] text-white">00:45</div>
+</div>
+<h4 class="font-medium text-sm text-on-surface truncate">Surah Al-Kahf Friday Reminder</h4>
+<p class="text-xs text-on-surface-variant mt-1">Edited 2 hours ago</p>
+</div>
+<!-- Project Card 2 -->
+<div class="bg-surface-container-low rounded-lg p-3 group cursor-pointer hover:bg-surface-container transition-colors">
+<div class="aspect-video rounded-md overflow-hidden mb-3 relative">
+<img class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" data-alt="Serene turquoise ocean waves gently lapping at white sand under a soft blue sky at sunset" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCG-S9CmpslbynKbRC2MBaiU7-U-Lr3On9ziI2x8fcvHM417UWHJw2czojlQidsajMuYrwsofTdQRG6P4tA94UkcDb4AyV9eTm4qGJsxQ_pGOMvyG2oTqf0OhToIr7CqQH2XC1KXr-Uc7Oc__e-87O3M2rMvxqIQC1pKsUFQ39wzkvcQVR2vtOcd6KNKVAkzpDqSZh-B09pG4j1YvRLcrRCBC7vys27s5GnPBwMvMYsVmScmfyZR5hlwZOuPfK0N8EIxS9JdBNjze_m"/>
+<div class="absolute bottom-2 right-2 bg-black/60 px-2 py-0.5 rounded text-[10px] text-white">01:15</div>
+</div>
+<h4 class="font-medium text-sm text-on-surface truncate">Peaceful Recitation - Nature Visuals</h4>
+<p class="text-xs text-on-surface-variant mt-1">Edited yesterday</p>
+</div>
+</div>
+</div>
+<!-- Templates Side Section -->
+<div class="space-y-6">
+<div class="flex justify-between items-end">
+<h3 class="font-headline text-xl font-bold text-on-surface">Popular Templates</h3>
+</div>
+<div class="bg-surface-container-low rounded-lg p-4 flex flex-col gap-4">
+<!-- Template Item -->
+<div class="flex items-center gap-4 p-2 rounded-md hover:bg-surface-container-highest transition-colors cursor-pointer">
+<div class="w-12 h-12 rounded bg-primary-container flex items-center justify-center">
+<span class="material-symbols-outlined text-primary" data-icon="auto_awesome">auto_awesome</span>
+</div>
+<div>
+<p class="text-sm font-semibold text-on-surface">Quran Stories</p>
+<p class="text-[11px] text-on-surface-variant">Cinematic vertical format</p>
+</div>
+</div>
+<!-- Template Item -->
+<div class="flex items-center gap-4 p-2 rounded-md hover:bg-surface-container-highest transition-colors cursor-pointer">
+<div class="w-12 h-12 rounded bg-tertiary-container flex items-center justify-center">
+<span class="material-symbols-outlined text-tertiary" data-icon="history_edu">history_edu</span>
+</div>
+<div>
+<p class="text-sm font-semibold text-on-surface">Daily Reminders</p>
+<p class="text-[11px] text-on-surface-variant">Minimal typography focus</p>
+</div>
+</div>
+<!-- Template Item -->
+<div class="flex items-center gap-4 p-2 rounded-md hover:bg-surface-container-highest transition-colors cursor-pointer">
+<div class="w-12 h-12 rounded bg-surface-container-highest flex items-center justify-center">
+<span class="material-symbols-outlined text-on-surface-variant" data-icon="more_horiz">more_horiz</span>
+</div>
+<div>
+<p class="text-sm font-semibold text-on-surface">Browse Library</p>
+<p class="text-[11px] text-on-surface-variant">50+ custom layouts</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Featured Section (Asymmetric) -->
+<section class="mb-10">
+<h3 class="font-headline text-xl font-bold text-on-surface mb-6 ml-4">Inspiration Studio</h3>
+<div class="flex flex-col md:flex-row gap-6">
+<div class="flex-1 bg-surface-container-low rounded-lg p-6 flex items-center gap-6">
+<div class="hidden sm:block w-32 h-32 rounded-lg bg-cover bg-center shrink-0" data-alt="Close up of gold calligraphy ink being applied to parchment paper with a reed pen" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuA0wWjvsXFbPHdEKIPQuGxOTxfEjOibadCMNYftXzP5KHh7yjApNeOmm6oWDMbQuNlHbW6VhJkB6MlWeCGFWrp9NqToJULEZxOSBKkxAzZPttM1jVeyiAvaKevS3vFPp7q9kxftgc7WaYQaQqZq2cMDQxA67Soxov2coQ1lUmIWMsqeFw6SBPG9z3U21Em_A1HlIW2-BQD8unnaEGYP8GJdKeGZadTKV0KInwGTqbThPR21OoQ7fNOepCHAa3tAV8GwGGNj1bZCJz2C');"></div>
+<div>
+<h4 class="font-headline text-lg font-bold text-secondary mb-2">Master Calligraphy Assets</h4>
+<p class="text-sm text-on-surface-variant leading-relaxed">Exclusive animated calligraphy overlays now available for all premium members. Elevate your verse transitions.</p>
+<button class="mt-4 text-xs font-bold text-primary tracking-widest uppercase hover:text-secondary transition-colors">Explore Assets</button>
+</div>
+</div>
+<div class="md:w-1/3 bg-[#0F3D2E] rounded-lg p-6 relative overflow-hidden">
+<div class="absolute -top-4 -right-4 w-24 h-24 bg-white/5 rounded-full blur-xl"></div>
+<h4 class="font-headline text-lg font-bold text-primary mb-2">AI Verse Matcher</h4>
+<p class="text-sm text-primary/80 leading-relaxed">Automatically find the perfect b-roll for your recitation audio using Deen-AI.</p>
+<button class="mt-4 bg-primary text-on-primary px-4 py-2 rounded-full text-xs font-bold">Try Beta</button>
+</div>
+</div>
+</section>
+</main>
+<!-- BottomNavBar -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 pb-6 pt-3 bg-[#121414]/60 backdrop-blur-xl shadow-[0_-4px_24px_rgba(226,226,226,0.06)] rounded-t-[2rem]">
+<!-- Home (Active) -->
+<button class="flex flex-col items-center justify-center bg-[#0F3D2E] text-[#A2D1BB] rounded-[1.5rem] px-6 py-2 active:scale-90 duration-300 ease-out">
+<span class="material-symbols-outlined" data-icon="home" style="font-variation-settings: 'FILL' 1;">home</span>
+<span class="font-['Inter'] text-[10px] uppercase tracking-widest font-medium mt-1">Home</span>
+</button>
+<!-- Templates -->
+<button class="flex flex-col items-center justify-center text-[#E2E2E2]/60 px-6 py-2 hover:text-[#A2D1BB] transition-all active:scale-90 duration-300 ease-out">
+<span class="material-symbols-outlined" data-icon="auto_awesome">auto_awesome</span>
+<span class="font-['Inter'] text-[10px] uppercase tracking-widest font-medium mt-1">Templates</span>
+</button>
+<!-- Projects -->
+<button class="flex flex-col items-center justify-center text-[#E2E2E2]/60 px-6 py-2 hover:text-[#A2D1BB] transition-all active:scale-90 duration-300 ease-out">
+<span class="material-symbols-outlined" data-icon="movie_edit">movie_edit</span>
+<span class="font-['Inter'] text-[10px] uppercase tracking-widest font-medium mt-1">Projects</span>
+</button>
+<!-- Profile -->
+<button class="flex flex-col items-center justify-center text-[#E2E2E2]/60 px-6 py-2 hover:text-[#A2D1BB] transition-all active:scale-90 duration-300 ease-out">
+<span class="material-symbols-outlined" data-icon="person">person</span>
+<span class="font-['Inter'] text-[10px] uppercase tracking-widest font-medium mt-1">Profile</span>
+</button>
+</nav>
+</body></html>

@@ -1,0 +1,29 @@
+{
+  "assets": {},
+  "config": {
+    "build_asset_types": [
+      "code_assets/code"
+    ],
+    "extensions": {
+      "code_assets": {
+        "android": {
+          "target_ndk_api": 24
+        },
+        "c_compiler": {
+          "ar": "/Users/alpha/Library/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/darwin-x86_64/bin/llvm-ar",
+          "cc": "/Users/alpha/Library/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/darwin-x86_64/bin/clang",
+          "ld": "/Users/alpha/Library/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/darwin-x86_64/bin/ld.lld"
+        },
+        "link_mode_preference": "dynamic",
+        "target_architecture": "arm64",
+        "target_os": "android"
+      }
+    },
+    "linking_enabled": false
+  },
+  "out_dir_shared": "/Users/alpha/Documents/DEV/deen-studio-01/.dart_tool/hooks_runner/shared/objective_c/build/",
+  "out_file": "/Users/alpha/Documents/DEV/deen-studio-01/.dart_tool/hooks_runner/objective_c/4d143f08adf3d114d6241d85e6e27be9/output.json",
+  "package_name": "objective_c",
+  "package_root": "/Users/alpha/.pub-cache/hosted/pub.dev/objective_c-9.3.0/",
+  "user_defines": {}
+}

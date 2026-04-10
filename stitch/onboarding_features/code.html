@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;700;800&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            "primary": "#a2d1bb",
+            "inverse-primary": "#3b6756",
+            "on-surface-variant": "#c0c8c3",
+            "on-tertiary-container": "#ab9d82",
+            "on-primary-fixed-variant": "#234f3f",
+            "on-secondary-fixed-variant": "#574500",
+            "on-error-container": "#ffdad6",
+            "on-tertiary": "#392f1b",
+            "surface-container": "#1e2020",
+            "surface-tint": "#a2d1bb",
+            "on-tertiary-fixed": "#231a08",
+            "outline": "#8a938d",
+            "on-primary": "#073829",
+            "on-primary-container": "#7ba894",
+            "background": "#121414",
+            "error-container": "#93000a",
+            "secondary-container": "#af8d11",
+            "primary-fixed": "#beedd7",
+            "on-surface": "#e2e2e2",
+            "surface-container-low": "#1a1c1c",
+            "secondary-fixed": "#ffe088",
+            "on-secondary-container": "#342800",
+            "surface-variant": "#333535",
+            "tertiary-fixed-dim": "#d5c5a8",
+            "surface-bright": "#383939",
+            "primary-fixed-dim": "#a2d1bb",
+            "error": "#ffb4ab",
+            "tertiary-fixed": "#f2e0c3",
+            "on-error": "#690005",
+            "secondary": "#e9c349",
+            "surface": "#121414",
+            "secondary-fixed-dim": "#e9c349",
+            "inverse-surface": "#e2e2e2",
+            "surface-container-high": "#282a2a",
+            "surface-container-highest": "#333535",
+            "on-secondary-fixed": "#241a00",
+            "on-background": "#e2e2e2",
+            "surface-dim": "#121414",
+            "on-secondary": "#3c2f00",
+            "on-tertiary-fixed-variant": "#504530",
+            "tertiary-container": "#3e3420",
+            "inverse-on-surface": "#2f3131",
+            "tertiary": "#d5c5a8",
+            "surface-container-lowest": "#0d0f0f",
+            "primary-container": "#0f3d2e",
+            "on-primary-fixed": "#002116",
+            "outline-variant": "#414944"
+          },
+          fontFamily: {
+            "headline": ["Manrope"],
+            "body": ["Inter"],
+            "label": ["Inter"]
+          },
+          borderRadius: {"DEFAULT": "1rem", "lg": "2rem", "xl": "3rem", "full": "9999px"},
+        },
+      },
+    }
+  </script>
+<style>
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+    }
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 4px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-track {
+      background: #121414;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: #333535;
+      border-radius: 10px;
+    }
+  </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-background font-body min-h-screen flex flex-col">
+<!-- Suppression of Nav Shells as this is Onboarding -->
+<main class="flex-grow flex flex-col items-center justify-start px-6 pt-12 pb-24 max-w-2xl mx-auto w-full">
+<!-- Progress Indicator -->
+<div class="w-full flex gap-2 mb-12">
+<div class="h-1 flex-grow bg-secondary rounded-full"></div>
+<div class="h-1 flex-grow bg-secondary rounded-full"></div>
+<div class="h-1 flex-grow bg-surface-variant rounded-full"></div>
+<div class="h-1 flex-grow bg-surface-variant rounded-full"></div>
+</div>
+<!-- Header Section (Intentional Asymmetry) -->
+<div class="w-full mb-10 text-left">
+<h1 class="font-headline font-extrabold text-4xl lg:text-5xl text-on-background tracking-tight mb-4">
+        Choose reciters and verses.
+      </h1>
+<p class="text-on-surface-variant text-lg max-w-md leading-relaxed">
+        Personalize your experience by selecting the voices that move you and the chapters that inspire you.
+      </p>
+</div>
+<!-- Feature Card: Audio Waveform Illustration -->
+<div class="w-full aspect-[21/9] bg-surface-container rounded-lg mb-8 relative overflow-hidden flex items-center justify-center group">
+<!-- Decorative Backdrop Pattern -->
+<div class="absolute inset-0 opacity-[0.03] pointer-events-none" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuBVJ1m6vq4tZ__GiJ7p1OdvRECWhugsXL-3f1g_MtiGNkyGC7iEJbAxPLORjoxaezH3iBvRK85-smvklJ51MJOrHXUno07HphylFjKHTbw1DpnTBTlro6aqjiR7EJKdSlg8c1YZ14CG3xJLaB2BqJJhblLtr0oOQeGUuu65_vPpJqX7WJDKkiFVz4EtDYy5TrmP_P1FpNk045hwF4vpDL1dB80oG4VcqALAlwGrTU03PGw-vgHpFVVueAh6WAqmXH77qIC0xuY7JMQL');"></div>
+<!-- Animated Waveform Mockup -->
+<div class="flex items-end gap-1.5 h-24">
+<div class="w-1.5 bg-primary rounded-full h-8 opacity-40"></div>
+<div class="w-1.5 bg-primary-container rounded-full h-12"></div>
+<div class="w-1.5 bg-primary rounded-full h-20 opacity-80"></div>
+<div class="w-1.5 bg-secondary rounded-full h-14"></div>
+<div class="w-1.5 bg-primary rounded-full h-24"></div>
+<div class="w-1.5 bg-primary-container rounded-full h-16"></div>
+<div class="w-1.5 bg-secondary rounded-full h-10"></div>
+<div class="w-1.5 bg-primary rounded-full h-20"></div>
+<div class="w-1.5 bg-primary-container rounded-full h-12 opacity-60"></div>
+<div class="w-1.5 bg-primary rounded-full h-6 opacity-40"></div>
+</div>
+<!-- Label Overlay -->
+<div class="absolute bottom-4 left-6 flex items-center gap-2">
+<span class="material-symbols-outlined text-secondary text-sm">equalizer</span>
+<span class="font-label text-[10px] uppercase tracking-[0.2em] text-on-surface-variant font-semibold">Audio Precision</span>
+</div>
+</div>
+<!-- Reciter Selection Grid -->
+<div class="w-full space-y-4 mb-12">
+<div class="flex justify-between items-center px-1">
+<h2 class="font-headline font-bold text-lg text-primary">World-Renowned Reciters</h2>
+<button class="text-secondary text-sm font-medium hover:underline">View All</button>
+</div>
+<div class="grid grid-cols-1 gap-3">
+<!-- Reciter Item 1 -->
+<label class="flex items-center justify-between p-4 rounded-lg bg-surface-container-low hover:bg-surface-container transition-all cursor-pointer group relative">
+<input checked="" class="hidden peer" type="checkbox"/>
+<div class="flex items-center gap-4">
+<div class="w-14 h-14 rounded-full bg-surface-container-highest overflow-hidden">
+<img alt="Close up of a wise man with traditional headwear, serene expression" class="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-500" data-alt="Close up portrait of a wise middle eastern man with a serene expression and traditional white headwear in warm soft lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuC6AyjdM5MjMVGp1f0zVxtnsP3WmWNrCbv5EwzYib_7uUyXewBcjXL7KfhgKPQMeCtFzHgeE0eyzcZ2u6uJXGdPKQbqGk7V2qtvApSC1STE7PhUsl_Z5gtQtfdTAqkgAX2eCaxlH3X1jrOCDySduevD0h0ulAYQvW_ILqlKDg_HAR-0yZbL1bUr6DWxvhoapolX4_aVlf4ef52uT1l3Z0dPoZrondh0Qrnfygg67bh4PeWwHZPtNbLIi7TFuXY6L-nXoJtCJ1oCtoVK"/>
+</div>
+<div>
+<p class="font-headline font-bold text-on-surface">Mishary Rashid Alafasy</p>
+<p class="text-sm text-on-surface-variant">Melodic &amp; Soulful</p>
+</div>
+</div>
+<div class="w-6 h-6 rounded-full border-2 border-outline-variant peer-checked:bg-secondary peer-checked:border-secondary flex items-center justify-center transition-colors">
+<span class="material-symbols-outlined text-on-secondary text-base peer-checked:block hidden">check</span>
+</div>
+</label>
+<!-- Reciter Item 2 -->
+<label class="flex items-center justify-between p-4 rounded-lg bg-surface-container-low hover:bg-surface-container transition-all cursor-pointer group">
+<input class="hidden peer" type="checkbox"/>
+<div class="flex items-center gap-4">
+<div class="w-14 h-14 rounded-full bg-surface-container-highest overflow-hidden">
+<img alt="Portrait of a scholarly man in dark clothing" class="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-500" data-alt="Professional studio portrait of a scholarly man with a neat beard and thoughtful eyes, warm ambient lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDD37eipG_B1KJKaoJC-DEimv0WhrLE-Br_mWqW3kDuF_uLhZvu5QAQzw9FIaHu82FzwO8CR5IxxO-oFREuf6nE0bdYEx6IWBR0CyLuGyl2hRicqHu_YOrH0h3jNiJspgN2BmpgpQ7t13FyO-2pmGt2PpKRS-w25leNyFeTD4fb4kK5R9SuRRFvBCG51xs21ylx6ouUIM2hNK5-W6CdiA3lefc9Yl4RePH3SDJaEzAFaOQiC77ePZiRP1aF-y-WbCSu75ZwbWWJRABb"/>
+</div>
+<div>
+<p class="font-headline font-bold text-on-surface">Abdul Rahman Al-Sudais</p>
+<p class="text-sm text-on-surface-variant">Powerful &amp; Rhythmic</p>
+</div>
+</div>
+<div class="w-6 h-6 rounded-full border-2 border-outline-variant peer-checked:bg-secondary peer-checked:border-secondary flex items-center justify-center transition-colors">
+<span class="material-symbols-outlined text-on-secondary text-base peer-checked:block hidden">check</span>
+</div>
+</label>
+<!-- Reciter Item 3 -->
+<label class="flex items-center justify-between p-4 rounded-lg bg-surface-container-low hover:bg-surface-container transition-all cursor-pointer group">
+<input class="hidden peer" type="checkbox"/>
+<div class="flex items-center gap-4">
+<div class="w-14 h-14 rounded-full bg-surface-container-highest overflow-hidden">
+<img alt="Man in traditional robes looking peaceful" class="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-500" data-alt="Candid portrait of a man in traditional robes, looking peaceful against a blurred architectural background of a mosque" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAEYAVOe_L5-xTURsBwdeJOulTnKhAHtf4nlHAfxxgykLkrvTOIDN9-4FcwnJwbqe3-r3ytK6A_iW3c8fBXkVZ4wURjZB0dL_Jt_b6FKm_hP4NWc2SOL9F7UbuHhKMl0YNGkx-kstIJuvFGmiz2jz5h1MXY4gRIDi1qaczXvJiI6oAB5RpWKNEChMvk_B1hj4X_llmXKb_dSSrzCpnO0HiRBRP4WrjQe3Hs2e6V6yoxMvZgwwszuFilEqqWUBz1g2vz8ub9bgCN2Lzt"/>
+</div>
+<div>
+<p class="font-headline font-bold text-on-surface">Maher Al-Muaiqly</p>
+<p class="text-sm text-on-surface-variant">Calm &amp; Clear</p>
+</div>
+</div>
+<div class="w-6 h-6 rounded-full border-2 border-outline-variant peer-checked:bg-secondary peer-checked:border-secondary flex items-center justify-center transition-colors">
+<span class="material-symbols-outlined text-on-secondary text-base peer-checked:block hidden">check</span>
+</div>
+</label>
+</div>
+</div>
+<!-- Verse Selection Preview -->
+<div class="w-full mb-12">
+<div class="bg-surface-container-highest/20 rounded-xl p-6 relative overflow-hidden">
+<div class="absolute top-0 right-0 p-4 opacity-10">
+<span class="material-symbols-outlined text-6xl">menu_book</span>
+</div>
+<p class="font-headline font-bold text-on-surface mb-2">Favorite Verses</p>
+<div class="flex flex-wrap gap-2">
+<span class="px-3 py-1 bg-primary-container text-on-primary-container text-xs rounded-full border border-primary/10">Al-Fatihah</span>
+<span class="px-3 py-1 bg-surface-container-high text-on-surface-variant text-xs rounded-full border border-outline-variant/10">Al-Baqarah</span>
+<span class="px-3 py-1 bg-primary-container text-on-primary-container text-xs rounded-full border border-primary/10">Ar-Rahman</span>
+<span class="px-3 py-1 bg-surface-container-high text-on-surface-variant text-xs rounded-full border border-outline-variant/10">Ya-Sin</span>
+</div>
+</div>
+</div>
+<!-- CTA Section -->
+<div class="w-full mt-auto">
+<button class="w-full py-5 rounded-lg bg-gradient-to-r from-primary to-primary-container text-on-primary font-headline font-extrabold text-lg shadow-2xl shadow-primary/10 flex items-center justify-center gap-3 active:scale-95 transition-transform">
+        Next
+        <span class="material-symbols-outlined">arrow_forward</span>
+</button>
+<p class="text-center text-on-tertiary-container text-xs mt-6 opacity-60 tracking-widest uppercase">Step 2 of 4</p>
+</div>
+</main>
+<!-- Visual Polish: Gradient Orbs for Depth -->
+<div class="fixed top-[-10%] right-[-10%] w-[40%] h-[40%] bg-primary/5 rounded-full blur-[120px] -z-10 pointer-events-none"></div>
+<div class="fixed bottom-[-5%] left-[-5%] w-[30%] h-[30%] bg-secondary/5 rounded-full blur-[100px] -z-10 pointer-events-none"></div>
+</body></html>

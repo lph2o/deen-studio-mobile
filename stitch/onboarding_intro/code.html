@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Deen Studio - Onboarding</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;700;800&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "primary": "#a2d1bb",
+              "inverse-primary": "#3b6756",
+              "on-surface-variant": "#c0c8c3",
+              "on-tertiary-container": "#ab9d82",
+              "on-primary-fixed-variant": "#234f3f",
+              "on-secondary-fixed-variant": "#574500",
+              "on-error-container": "#ffdad6",
+              "on-tertiary": "#392f1b",
+              "surface-container": "#1e2020",
+              "surface-tint": "#a2d1bb",
+              "on-tertiary-fixed": "#231a08",
+              "outline": "#8a938d",
+              "on-primary": "#073829",
+              "on-primary-container": "#7ba894",
+              "background": "#121414",
+              "error-container": "#93000a",
+              "secondary-container": "#af8d11",
+              "primary-fixed": "#beedd7",
+              "on-surface": "#e2e2e2",
+              "surface-container-low": "#1a1c1c",
+              "secondary-fixed": "#ffe088",
+              "on-secondary-container": "#342800",
+              "surface-variant": "#333535",
+              "tertiary-fixed-dim": "#d5c5a8",
+              "surface-bright": "#383939",
+              "primary-fixed-dim": "#a2d1bb",
+              "error": "#ffb4ab",
+              "tertiary-fixed": "#f2e0c3",
+              "on-error": "#690005",
+              "secondary": "#e9c349",
+              "surface": "#121414",
+              "secondary-fixed-dim": "#e9c349",
+              "inverse-surface": "#e2e2e2",
+              "surface-container-high": "#282a2a",
+              "surface-container-highest": "#333535",
+              "on-secondary-fixed": "#241a00",
+              "on-background": "#e2e2e2",
+              "surface-dim": "#121414",
+              "on-secondary": "#3c2f00",
+              "on-tertiary-fixed-variant": "#504530",
+              "tertiary-container": "#3e3420",
+              "inverse-on-surface": "#2f3131",
+              "tertiary": "#d5c5a8",
+              "surface-container-lowest": "#0d0f0f",
+              "primary-container": "#0f3d2e",
+              "on-primary-fixed": "#002116",
+              "outline-variant": "#414944"
+            },
+            fontFamily: {
+              "headline": ["Manrope"],
+              "body": ["Inter"],
+              "label": ["Inter"]
+            },
+            borderRadius: {"DEFAULT": "1rem", "lg": "2rem", "xl": "3rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .uthmani-script {
+            font-family: serif;
+            line-height: 1.8;
+        }
+        .islamic-pattern {
+            background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M30 0l2.5 12.5L45 15l-12.5 2.5L30 30l-2.5-12.5L15 15l12.5-2.5z' fill='%23e2e2e2' fill-opacity='0.03' fill-rule='evenodd'/%3E%3C/svg%3E");
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-background font-body min-h-screen flex flex-col overflow-hidden selection:bg-primary/30">
+<!-- Top Navigation (Shell suppressed for onboarding, only Brand shown for identity) -->
+<header class="flex justify-center items-center w-full px-5 py-8">
+<h1 class="text-xl font-black text-primary tracking-widest font-headline">DEEN STUDIO</h1>
+</header>
+<main class="flex-1 flex flex-col items-center justify-center px-6 relative islamic-pattern">
+<!-- Hero Visual Area -->
+<div class="w-full max-w-md aspect-[4/5] relative mb-12">
+<!-- Background Ambient Glow -->
+<div class="absolute inset-0 bg-primary/5 blur-[80px] rounded-full"></div>
+<!-- Floating Device Frame (Asymmetric Placement) -->
+<div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[280px] h-[560px] bg-surface-container rounded-[3rem] shadow-2xl border-[6px] border-surface-container-highest overflow-hidden transform -rotate-3 hover:rotate-0 transition-transform duration-700">
+<!-- Phone Screen Content -->
+<div class="h-full flex flex-col bg-surface-dim">
+<!-- Status Bar -->
+<div class="h-6 flex justify-between px-6 items-end">
+<div class="text-[10px] text-on-surface/40">9:41</div>
+<div class="flex gap-1">
+<div class="w-2 h-2 rounded-full bg-on-surface/20"></div>
+<div class="w-2 h-2 rounded-full bg-on-surface/20"></div>
+</div>
+</div>
+<!-- Video Preview Area -->
+<div class="flex-1 p-4 flex flex-col justify-center items-center text-center">
+<div class="w-full aspect-video rounded-lg overflow-hidden bg-surface-container-lowest mb-6 shadow-inner flex items-center justify-center p-4">
+<p class="uthmani-script text-primary text-xl leading-relaxed">
+                                بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ
+                            </p>
+</div>
+<div class="space-y-2 w-full">
+<div class="h-1 bg-surface-container-highest rounded-full w-3/4 mx-auto"></div>
+<div class="h-1 bg-surface-container-highest rounded-full w-1/2 mx-auto"></div>
+</div>
+</div>
+<!-- Timeline Component (Glassmorphism) -->
+<div class="p-4 bg-surface/60 backdrop-blur-xl rounded-t-xl">
+<div class="flex items-center justify-between mb-3">
+<span class="text-[10px] text-on-surface/60 font-medium uppercase tracking-tighter">00:12 / 00:45</span>
+<span class="material-symbols-outlined text-secondary text-sm">settings_input_component</span>
+</div>
+<div class="h-12 bg-surface-container-lowest rounded-sm relative overflow-hidden flex items-center px-1 gap-1">
+<div class="h-8 w-16 bg-primary-container rounded-sm border-l-2 border-primary"></div>
+<div class="h-8 w-24 bg-surface-container-high rounded-sm opacity-50"></div>
+<div class="h-8 w-12 bg-surface-container-high rounded-sm opacity-30"></div>
+<!-- Playhead -->
+<div class="absolute left-1/3 top-0 bottom-0 w-0.5 bg-secondary shadow-[0_0_8px_rgba(233,195,73,0.5)] z-10"></div>
+</div>
+</div>
+</div>
+</div>
+<!-- Floating Tool Icons (Glass Cards) -->
+<div class="absolute top-20 -right-4 bg-surface-container/80 backdrop-blur-md p-3 rounded-xl shadow-xl flex items-center gap-3 border border-outline-variant/10">
+<span class="material-symbols-outlined text-secondary" data-icon="auto_awesome" style="font-variation-settings: 'FILL' 1;">auto_awesome</span>
+<div class="flex flex-col">
+<span class="text-[10px] text-on-surface/40 font-medium">EFFECTS</span>
+<span class="text-xs font-bold text-on-surface">Golden Glow</span>
+</div>
+</div>
+<div class="absolute bottom-32 -left-8 bg-surface-container/80 backdrop-blur-md p-3 rounded-xl shadow-xl flex items-center gap-3 border border-outline-variant/10">
+<span class="material-symbols-outlined text-primary" data-icon="menu_book">menu_book</span>
+<div class="flex flex-col">
+<span class="text-[10px] text-on-surface/40 font-medium">SOURCE</span>
+<span class="text-xs font-bold text-on-surface">Surah Al-Fatihah</span>
+</div>
+</div>
+</div>
+<!-- Copy & CTA Area -->
+<div class="w-full max-w-lg text-center space-y-6">
+<div class="space-y-2">
+<h2 class="text-4xl md:text-5xl font-extrabold font-headline tracking-tight text-on-surface leading-tight">
+                    Create Quranic <br/>
+<span class="text-transparent bg-clip-text bg-gradient-to-r from-primary to-secondary">videos easily.</span>
+</h2>
+<p class="text-on-surface-variant max-w-xs mx-auto text-sm leading-relaxed">
+                    A professional studio for spiritual content creators, designed for focus and inspiration.
+                </p>
+</div>
+<div class="pt-8">
+<button class="group relative inline-flex items-center justify-center px-12 py-4 font-bold text-on-primary transition-all duration-300 bg-gradient-to-br from-primary to-inverse-primary rounded-full hover:scale-105 active:scale-95 shadow-lg shadow-primary/10">
+<span class="relative tracking-widest text-sm uppercase">Next</span>
+<span class="material-symbols-outlined ml-2 transition-transform group-hover:translate-x-1" data-icon="arrow_forward">arrow_forward</span>
+</button>
+</div>
+</div>
+</main>
+<!-- Background Decoration -->
+<div class="fixed bottom-0 left-0 w-full h-1/3 bg-gradient-to-t from-primary/5 to-transparent pointer-events-none"></div>
+<!-- Onboarding Indicators -->
+<footer class="py-10 flex justify-center items-center gap-2">
+<div class="w-8 h-1.5 bg-primary rounded-full"></div>
+<div class="w-1.5 h-1.5 bg-surface-container-highest rounded-full"></div>
+<div class="w-1.5 h-1.5 bg-surface-container-highest rounded-full"></div>
+</footer>
+</body></html>

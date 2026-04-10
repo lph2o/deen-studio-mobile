@@ -1,0 +1,224 @@
+<html class="dark"><head>
+<meta charset="utf-8"/>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;700;800&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            "primary": "#a2d1bb",
+            "inverse-primary": "#3b6756",
+            "on-surface-variant": "#c0c8c3",
+            "on-tertiary-container": "#ab9d82",
+            "on-primary-fixed-variant": "#234f3f",
+            "on-secondary-fixed-variant": "#574500",
+            "on-error-container": "#ffdad6",
+            "on-tertiary": "#392f1b",
+            "surface-container": "#1e2020",
+            "surface-tint": "#a2d1bb",
+            "on-tertiary-fixed": "#231a08",
+            "outline": "#8a938d",
+            "on-primary": "#073829",
+            "on-primary-container": "#7ba894",
+            "background": "#121414",
+            "error-container": "#93000a",
+            "secondary-container": "#af8d11",
+            "primary-fixed": "#beedd7",
+            "on-surface": "#e2e2e2",
+            "surface-container-low": "#1a1c1c",
+            "secondary-fixed": "#ffe088",
+            "on-secondary-container": "#342800",
+            "surface-variant": "#333535",
+            "tertiary-fixed-dim": "#d5c5a8",
+            "surface-bright": "#383939",
+            "primary-fixed-dim": "#a2d1bb",
+            "error": "#ffb4ab",
+            "tertiary-fixed": "#f2e0c3",
+            "on-error": "#690005",
+            "secondary": "#e9c349",
+            "surface": "#121414",
+            "secondary-fixed-dim": "#e9c349",
+            "inverse-surface": "#e2e2e2",
+            "surface-container-high": "#282a2a",
+            "surface-container-highest": "#333535",
+            "on-secondary-fixed": "#241a00",
+            "on-background": "#e2e2e2",
+            "surface-dim": "#121414",
+            "on-secondary": "#3c2f00",
+            "on-tertiary-fixed-variant": "#504530",
+            "tertiary-container": "#3e3420",
+            "inverse-on-surface": "#2f3131",
+            "tertiary": "#d5c5a8",
+            "surface-container-lowest": "#0d0f0f",
+            "primary-container": "#0f3d2e",
+            "on-primary-fixed": "#002116",
+            "outline-variant": "#414944"
+          },
+          fontFamily: {
+            "headline": ["Manrope"],
+            "body": ["Inter"],
+            "label": ["Inter"]
+          },
+          borderRadius: {"DEFAULT": "1rem", "lg": "2rem", "xl": "3rem", "full": "9999px"},
+        },
+      },
+    }
+  </script>
+<style>
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+    }
+    .arabic-text {
+      line-height: 1.8;
+      font-size: 1.25em;
+    }
+    ::-webkit-scrollbar {
+      display: none;
+    }
+  </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-background font-body select-none overflow-hidden h-screen flex flex-col">
+<!-- TopAppBar Component -->
+<header class="bg-[#121414] dark:bg-[#121414] flex justify-between items-center w-full px-5 py-4 z-50">
+<div class="flex items-center gap-4">
+<button class="hover:bg-[#1E2020] transition-colors p-2 rounded-full active:scale-95 duration-200">
+<span class="material-symbols-outlined text-[#A2D1BB] dark:text-[#A2D1BB]">arrow_back</span>
+</button>
+<h1 class="font-['Manrope'] font-bold text-lg tracking-tight text-[#E2E2E2]">Surah Ar-Rahman Edit</h1>
+</div>
+<div class="flex items-center gap-3">
+<button class="bg-[#0F3D2E] text-[#A2D1BB] px-6 py-2 rounded-full font-headline font-bold text-sm tracking-wide hover:opacity-90 active:scale-95 duration-200">
+        EXPORT
+      </button>
+<div class="w-10 h-10 rounded-full bg-surface-container overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="Professional studio portrait of a young man with soft lighting on a neutral grey background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBx-6hS7ig3wZvCirwgMFIM26HM256qL-ecSKPTAZ12vaMmvycmjpKBi5GbjeTpf4-LeB7cjqN2bnYntWGRnt4tfAsD-0luin5osWnlBNzZOe5_68zb2QiV5gmYcScO4qxs4q-owsLe4eCwVt7GMSp1Akf2bIrELXgar4i4HV3zG3RdSJ1kpNlwJBMt36HkqH14V6kzgGRuCMMA9ckV9DLsf1VSVc43YJFasnPwn53ssBW5dqmf5ATmUe5DcuBoqzG7AhSgqH4wJFHq"/>
+</div>
+</div>
+</header>
+<main class="flex-grow flex flex-col overflow-hidden px-4 md:px-8 gap-6">
+<!-- Video Preview Section -->
+<section class="flex-shrink-0 flex justify-center mt-2 relative">
+<div class="w-full max-w-4xl aspect-video bg-surface-container-lowest rounded-lg overflow-hidden shadow-2xl relative group">
+<!-- Video Content Placeholder -->
+<div class="absolute inset-0 w-full h-full bg-cover bg-center" data-alt="Cinematic wide shot of misty mountains at dawn with soft orange glow hitting the peaks and deep green valleys" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuAoskakZbLqJZEqMPPpXA4Ny7b-rH2_Rn1Fo7hoRTc9PldNzBHDmGVKnYLht2CYtWTLS8ydG41rLL6zOv1B6nGSPk6oPNpca7TGm4VIsWGzgNosHyGZRrNKi6TWon2FU13p9hHwBS3nUrd4mOuezKkXcejvcJYLo8qCLc1byMOedIEIpgKVTBTHREfSxsNJ0s6SnPjJJEit7tRUED187ARPe6l5qTmZI7GDCizYbJQ3W3IFilxnq00Z1bUt1SlSt7R2biGIS_H2iCoT')">
+<div class="absolute inset-0 bg-black/30 backdrop-blur-[2px]"></div>
+</div>
+<!-- Quranic Overlay -->
+<div class="absolute inset-0 flex flex-col items-center justify-center text-center p-8 space-y-6">
+<div class="space-y-4">
+<h2 class="font-headline text-3xl md:text-5xl text-white drop-shadow-lg arabic-text" dir="rtl">
+              فَبِأَيِّ آلَاء رَبِّكُمَا تُكَذِّبَانِ
+            </h2>
+<p class="font-body text-lg md:text-xl text-primary font-medium tracking-wide drop-shadow-md">
+              Lequel donc des bienfaits de votre Seigneur nierez-vous ?
+            </p>
+</div>
+</div>
+<!-- Preview Controls Overlay -->
+<div class="absolute bottom-4 left-0 right-0 flex justify-center items-center gap-8 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+<button class="text-white hover:text-primary transition-colors"><span class="material-symbols-outlined text-3xl">skip_previous</span></button>
+<button class="w-14 h-14 bg-secondary rounded-full flex items-center justify-center text-on-secondary shadow-lg active:scale-90 transition-transform">
+<span class="material-symbols-outlined text-4xl" style="font-variation-settings: 'FILL' 1;">play_arrow</span>
+</button>
+<button class="text-white hover:text-primary transition-colors"><span class="material-symbols-outlined text-3xl">skip_next</span></button>
+</div>
+</div>
+</section>
+<!-- Timeline Editor Section -->
+<section class="flex-grow flex flex-col min-h-0 bg-surface-container rounded-t-lg overflow-hidden relative">
+<!-- Timeline Header/Time -->
+<div class="flex items-center justify-between px-6 py-3 bg-surface-container-high border-b border-outline-variant/10">
+<span class="text-xs font-mono text-on-surface-variant tracking-widest">00:12:45 / 03:20:00</span>
+<div class="flex gap-4">
+<button class="text-on-surface-variant hover:text-primary transition-colors"><span class="material-symbols-outlined text-xl">undo</span></button>
+<button class="text-on-surface-variant hover:text-primary transition-colors"><span class="material-symbols-outlined text-xl">redo</span></button>
+</div>
+</div>
+<!-- Tracks Canvas -->
+<div class="flex-grow overflow-x-auto relative scroll-smooth cursor-grab active:cursor-grabbing py-8">
+<!-- Playhead Line -->
+<div class="absolute top-0 bottom-0 left-1/3 w-[2px] bg-secondary z-30 shadow-[0_0_8px_rgba(233,195,73,0.6)]">
+<div class="absolute -top-1 -left-1.5 w-4 h-4 bg-secondary rounded-full"></div>
+</div>
+<div class="flex flex-col gap-3 min-w-max px-[33.33%]">
+<!-- Text Track (Arabic) -->
+<div class="flex items-center gap-4 group">
+<div class="w-20 text-[10px] uppercase tracking-tighter text-on-surface-variant/60 font-bold">Arabic</div>
+<div class="h-10 w-64 bg-primary-container/40 rounded-sm border-l-4 border-primary flex items-center px-3 relative">
+<span class="text-[10px] text-primary truncate">فَبِأَيِّ آلَاء رَبِّكُمَا تُكَذِّبَانِ</span>
+</div>
+</div>
+<!-- Text Track (Translation) -->
+<div class="flex items-center gap-4 group">
+<div class="w-20 text-[10px] uppercase tracking-tighter text-on-surface-variant/60 font-bold">Trans</div>
+<div class="h-10 w-64 bg-tertiary-container/30 rounded-sm border-l-4 border-tertiary flex items-center px-3 translate-x-2">
+<span class="text-[10px] text-tertiary truncate">Lequel donc des bienfaits...</span>
+</div>
+</div>
+<!-- Main Video Track -->
+<div class="flex items-center gap-4 group">
+<div class="w-20 text-[10px] uppercase tracking-tighter text-on-surface-variant/60 font-bold">Video</div>
+<div class="flex gap-1">
+<div class="h-16 w-32 bg-surface-container-highest rounded-sm overflow-hidden relative border border-outline-variant/10">
+<img class="w-full h-full object-cover opacity-60" data-alt="Mountain landscape clip thumbnail" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDHmXxKyjUZD1zOvc1X0oA0e25Ii4embXZ9CrfqEXuxZ_3YFN-T1-q51pB90RfUIciIfaIadihdhGvhDXahV6sgT9Zm2P4UOSSfrTv8tHjbFPg995vh0a4SZAuhH1A51CGzcYSyfDevxQFUhAwE-B9j_dq1BuCARn217A_e8Yc_i2ry9QgMmXxN8ALXBs0cMKM5kpwKL-2skFSorKHQi1tEbyVj2a9N4WsPEr3H1XTLxONMcwscatuT_sfQXrdGikk5x2UuXXqzShL3"/>
+</div>
+<div class="h-16 w-48 bg-surface-container-highest rounded-sm overflow-hidden relative border border-outline-variant/10">
+<img class="w-full h-full object-cover opacity-80 border-l-2 border-primary" data-alt="Aerial view of forest landscape thumbnail" src="https://lh3.googleusercontent.com/aida-public/AB6AXuC-qH8nC8ODNh0g9P5_mBEo0eYHlAie6Jy9wDDQMhZ1UQmvbsrr8G8crPIpuF9NPB3967iysHPQ1BW28OQC5J41kVXBl_ThnAeLdVsZcdjX8h-0tSw6juIRisNtm7B8pl-ipsPdAEGJb7Xch-TO1Tvbxw2gbeuDZ0wUwNauXZCLSiQqcszzNuQr1TBGAsNmi2euobZoPZKlgdxXN2Eky-gSsg_8KBEVJqe7KmBM2HjnVjb0Bio-epM2KU8S7kNb0QdvPzg2yo_a6cA1"/>
+<div class="absolute inset-0 ring-2 ring-primary ring-inset opacity-40"></div>
+</div>
+<div class="h-16 w-24 bg-surface-container-highest rounded-sm overflow-hidden relative border border-outline-variant/10">
+<img class="w-full h-full object-cover opacity-60" data-alt="Golden sunrise in misty meadows thumbnail" src="https://lh3.googleusercontent.com/aida-public/AB6AXuB45fjqfcbwnFqrSTbdeR8T4YGqmsRSqYnnuKEs0lpAFzbmhbZbAStYDTxJ3_9zVonlYYj9DnGHBt5vA6o4dK0JZHsToM_5miazPBuzLJkF8ctNdca1aiiGAP0ArZ2fmxhbSvjPgtNtDuDGbBAUq81UP1F9wEMEDHESsDY2M269jhe0OfL3_Y83ediFc1vOypDf6TuLxFCPP9O-0hVRGAQP4JyUZWRuQ8oCttdS4wPJyUsGX9nPgBuMLLzHb7WO-e67y6FwUiAms2V1"/>
+</div>
+</div>
+</div>
+<!-- Audio Track -->
+<div class="flex items-center gap-4 group">
+<div class="w-20 text-[10px] uppercase tracking-tighter text-on-surface-variant/60 font-bold">Audio</div>
+<div class="h-10 w-96 bg-primary-container/20 rounded-sm flex items-center relative overflow-hidden">
+<!-- Waveform Mockup -->
+<div class="flex items-end gap-[1px] h-full w-full px-2 opacity-50">
+<div class="bg-primary/40 w-1 h-3"></div><div class="bg-primary/40 w-1 h-5"></div><div class="bg-primary/40 w-1 h-8"></div><div class="bg-primary/40 w-1 h-4"></div>
+<div class="bg-primary/40 w-1 h-6"></div><div class="bg-primary/40 w-1 h-2"></div><div class="bg-primary/40 w-1 h-7"></div><div class="bg-primary/40 w-1 h-5"></div>
+<div class="bg-primary/40 w-1 h-9"></div><div class="bg-primary/40 w-1 h-3"></div><div class="bg-primary/40 w-1 h-6"></div><div class="bg-primary/40 w-1 h-4"></div>
+<div class="bg-primary/40 w-1 h-8"></div><div class="bg-primary/40 w-1 h-2"></div><div class="bg-primary/40 w-1 h-5"></div><div class="bg-primary/40 w-1 h-7"></div>
+<div class="bg-primary/40 w-1 h-4"></div><div class="bg-primary/40 w-1 h-6"></div><div class="bg-primary/40 w-1 h-3"></div><div class="bg-primary/40 w-1 h-8"></div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+</main>
+<!-- Bottom Toolbar / Toolbar Component -->
+<div class="bg-[#121414]/60 backdrop-blur-xl dark:bg-[#121414]/60 fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 pb-8 pt-3 shadow-[0_-4px_24px_rgba(226,226,226,0.06)] rounded-t-[2rem]">
+<button class="flex flex-col items-center justify-center text-[#E2E2E2]/60 px-4 py-2 hover:text-[#A2D1BB] transition-all active:scale-90 duration-300">
+<span class="material-symbols-outlined text-2xl mb-1">content_cut</span>
+<span class="font-['Inter'] text-[10px] uppercase tracking-widest font-medium">Trim</span>
+</button>
+<button class="flex flex-col items-center justify-center bg-[#0F3D2E] text-[#A2D1BB] rounded-[1.5rem] px-6 py-2 transition-all active:scale-90 duration-300">
+<span class="material-symbols-outlined text-2xl mb-1">title</span>
+<span class="font-['Inter'] text-[10px] uppercase tracking-widest font-medium">Text</span>
+</button>
+<button class="flex flex-col items-center justify-center text-[#E2E2E2]/60 px-4 py-2 hover:text-[#A2D1BB] transition-all active:scale-90 duration-300">
+<span class="material-symbols-outlined text-2xl mb-1">music_note</span>
+<span class="font-['Inter'] text-[10px] uppercase tracking-widest font-medium">Audio</span>
+</button>
+<button class="flex flex-col items-center justify-center text-[#E2E2E2]/60 px-4 py-2 hover:text-[#A2D1BB] transition-all active:scale-90 duration-300">
+<span class="material-symbols-outlined text-2xl mb-1">auto_awesome</span>
+<span class="font-['Inter'] text-[10px] uppercase tracking-widest font-medium">Effects</span>
+</button>
+<button class="flex flex-col items-center justify-center text-[#E2E2E2]/60 px-4 py-2 hover:text-[#A2D1BB] transition-all active:scale-90 duration-300">
+<span class="material-symbols-outlined text-2xl mb-1">layers</span>
+<span class="font-['Inter'] text-[10px] uppercase tracking-widest font-medium">Overlay</span>
+</button>
+</div>
+</body></html>

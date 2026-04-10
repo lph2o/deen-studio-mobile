@@ -1,0 +1,82 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    // Collection: users
+    // Document ID: {userId}
+    // Fields:
+    //   - uid: string (required, immutable)
+    //   - email: string (required, email format)
+    //   - displayName: string (optional)
+    //   - photoURL: string (optional, uri format)
+    //   - createdAt: timestamp (required, immutable)
+    //   - role: string (required, enum: ['user', 'admin'])
+    //
+    // Collection: projects
+    // Document ID: {projectId}
+    // Fields:
+    //   - userId: string (required, immutable)
+    //   - title: string (required, min: 1, max: 100)
+    //   - surahId: number (required)
+    //   - ayahRange: map (required)
+    //   - reciterId: string (required)
+    //   - layers: list (required)
+    //   - createdAt: timestamp (required, immutable)
+    //   - updatedAt: timestamp (required)
+    //   - status: string (required, enum: ['draft', 'rendering', 'completed'])
+    //   - exportUrl: string (optional, uri format)
+    // ===============================================================
+
+    // Helper Functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isDocOwner() {
+      return isAuthenticated() && request.auth.uid == resource.data.userId;
+    }
+
+    function isValidEmail(email) {
+      return email is string && email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    }
+
+    function isValidUser(data) {
+      return data.keys().hasAll(['uid', 'email', 'createdAt', 'role']) &&
+             data.uid == request.auth.uid &&
+             isValidEmail(data.email) &&
+             data.role in ['user', 'admin'];
+    }
+
+    function isValidProject(data) {
+      return data.keys().hasAll(['userId', 'title', 'surahId', 'reciterId', 'createdAt', 'status']) &&
+             data.userId == request.auth.uid &&
+             data.title is string && data.title.size() > 0 && data.title.size() <= 100 &&
+             data.status in ['draft', 'rendering', 'completed'];
+    }
+
+    // User Rules
+    match /users/{userId} {
+      allow read: if isOwner(userId);
+      allow create: if isOwner(userId) && isValidUser(request.resource.data);
+      allow update: if isOwner(userId) && isValidUser(request.resource.data) && 
+                    request.resource.data.role == resource.data.role &&
+                    request.resource.data.createdAt == resource.data.createdAt;
+    }
+
+    // Project Rules
+    match /projects/{projectId} {
+      allow read: if isDocOwner();
+      allow create: if isAuthenticated() && isValidProject(request.resource.data);
+      allow update: if isDocOwner() && isValidProject(request.resource.data) &&
+                    request.resource.data.userId == resource.data.userId &&
+                    request.resource.data.createdAt == resource.data.createdAt;
+      allow delete: if isDocOwner();
+    }
+  }
+}

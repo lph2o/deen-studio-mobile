@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "primary-container": "#3d15db",
+                    "on-secondary-fixed-variant": "#433c8b",
+                    "on-secondary-container": "#b6afff",
+                    "on-error-container": "#ffdad6",
+                    "outline-variant": "#474556",
+                    "on-tertiary-fixed-variant": "#891e00",
+                    "on-background": "#e5e0ef",
+                    "secondary-fixed-dim": "#c6c0ff",
+                    "on-error": "#690005",
+                    "on-primary-fixed": "#150066",
+                    "error-container": "#93000a",
+                    "surface-variant": "#35333e",
+                    "primary-fixed-dim": "#c6c0ff",
+                    "primary-fixed": "#e4dfff",
+                    "on-primary-container": "#b6afff",
+                    "tertiary-fixed-dim": "#ffb4a2",
+                    "error": "#ffb4ab",
+                    "surface-dim": "#13121c",
+                    "surface": "#13121c",
+                    "surface-tint": "#c6c0ff",
+                    "secondary-fixed": "#e4dfff",
+                    "secondary-container": "#453e8d",
+                    "on-tertiary-container": "#ffa087",
+                    "on-secondary-fixed": "#16065f",
+                    "background": "#13121c",
+                    "on-surface": "#e5e0ef",
+                    "inverse-surface": "#e5e0ef",
+                    "surface-container": "#201e29",
+                    "surface-container-highest": "#35333e",
+                    "on-primary-fixed-variant": "#3a0ed9",
+                    "outline": "#928ea2",
+                    "surface-container-low": "#1b1a24",
+                    "on-secondary": "#2c2373",
+                    "surface-container-high": "#2a2933",
+                    "primary": "#c6c0ff",
+                    "inverse-primary": "#543bf0",
+                    "surface-container-lowest": "#0e0d17",
+                    "tertiary-container": "#8d1f00",
+                    "surface-bright": "#393843",
+                    "secondary": "#c6c0ff",
+                    "on-primary": "#2700a1",
+                    "tertiary-fixed": "#ffdbd2",
+                    "tertiary": "#ffb4a2",
+                    "on-tertiary": "#611200",
+                    "inverse-on-surface": "#312f3a",
+                    "on-surface-variant": "#c8c4d9",
+                    "on-tertiary-fixed": "#3c0800"
+            },
+            "borderRadius": {
+                    "DEFAULT": "1rem",
+                    "lg": "2rem",
+                    "xl": "3rem",
+                    "full": "9999px"
+            },
+            "fontFamily": {
+                    "headline": ["Manrope"],
+                    "body": ["Inter"],
+                    "label": ["Inter"]
+            }
+          },
+        }
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .uthmani-script {
+            line-height: 1.6;
+        }
+        .glass-panel {
+            background: rgba(120, 117, 130, 0.6);
+            backdrop-filter: blur(20px);
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-background font-body selection:bg-primary-container selection:text-white pb-32">
+<!-- TopAppBar -->
+<header class="fixed top-0 w-full z-50 bg-[#787582]/60 backdrop-blur-xl flex items-center justify-between px-6 py-4 w-full">
+<div class="flex items-center gap-4">
+<button class="text-[#634eff] hover:bg-[#634eff]/10 transition-colors p-2 rounded-full scale-95 duration-200 transition-transform">
+<span class="material-symbols-outlined">menu</span>
+</button>
+<h1 class="font-['Manrope'] font-bold text-2xl bg-gradient-to-r from-[#634eff] to-[#746dbf] bg-clip-text text-transparent">Al-Qalam</h1>
+</div>
+<div class="flex items-center gap-2">
+<button class="text-[#634eff] hover:bg-[#634eff]/10 transition-colors p-2 rounded-full scale-95 duration-200 transition-transform">
+<span class="material-symbols-outlined">account_circle</span>
+</button>
+</div>
+</header>
+<main class="pt-24 px-6 md:px-12 max-w-7xl mx-auto">
+<!-- Hero Section / Editorial Title -->
+<section class="mb-12">
+<div class="flex flex-col md:flex-row md:items-end justify-between gap-6">
+<div class="max-w-2xl">
+<h2 class="font-headline text-5xl font-extrabold tracking-tight mb-4 text-on-surface">Creative <span class="text-secondary italic">Templates</span></h2>
+<p class="text-on-surface-variant text-lg leading-relaxed">Curated visual landscapes for Quranic expression. Each template is designed to honor the sacred text through cinematic artistry.</p>
+</div>
+<!-- Filter Chips -->
+<div class="flex flex-wrap gap-3 mb-2">
+<button class="px-6 py-2 rounded-full bg-gradient-to-br from-[#634eff] to-[#746dbf] text-white font-medium shadow-[0_0_15px_rgba(99,78,255,0.3)] transition-all">All</button>
+<button class="px-6 py-2 rounded-full bg-surface-container-high text-on-surface-variant hover:bg-surface-bright transition-all">Quran</button>
+<button class="px-6 py-2 rounded-full bg-surface-container-high text-on-surface-variant hover:bg-surface-bright transition-all">Reminders</button>
+<button class="px-6 py-2 rounded-full bg-surface-container-high text-on-surface-variant hover:bg-surface-bright transition-all">Story</button>
+</div>
+</div>
+</section>
+<!-- Templates Grid (Bento Style) -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+<!-- Template Card 1 (Large) -->
+<div class="lg:col-span-2 relative group overflow-hidden rounded-lg bg-surface-container-low border border-outline-variant/10">
+<div class="aspect-video w-full relative">
+<img alt="cinematic recitation" class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" data-alt="dramatic cinematic view of a misty mountain range at dawn with golden sunlight breaking through clouds, peaceful atmosphere" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCUB4k2TDgvmH03EK6K4nmphlHCcn68jr3V99UyJW-5vYTWhb1hl6ADe9l_5iLgtCwOgsUghSuP_rKN314yDSHXnn2ZkQfI1aXOYsFxr-26U8_fOrjPi1A2EYZYxEAhiuMXAv-OhDQAHtrflYvA39JwoqUxYFf9naKbXekrZJ9mjVlSgwQpkkxgMlUAqO__olbwo31-2wTVPB9KY2z29ya44_17Xs01e5Bs1B1UZ1bc09A2Cc-4XbXYay02JHsbgx0332T2I2vp4OOM"/>
+<div class="absolute inset-0 bg-gradient-to-t from-surface-dim via-transparent to-transparent opacity-80"></div>
+<div class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+<div class="w-16 h-16 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center border border-white/30">
+<span class="material-symbols-outlined text-white text-4xl" style="font-variation-settings: 'FILL' 1;">play_arrow</span>
+</div>
+</div>
+</div>
+<div class="p-8 absolute bottom-0 left-0 w-full">
+<div class="flex items-center gap-3 mb-2">
+<span class="px-3 py-1 text-[10px] uppercase tracking-widest bg-tertiary-container text-on-tertiary-container rounded-full font-bold">Featured</span>
+<span class="text-secondary text-sm">4K Resolution</span>
+</div>
+<h3 class="font-headline text-3xl font-bold text-white mb-2">Cinematic Recitation</h3>
+<p class="text-on-surface-variant/80 max-w-md">Ethereal mountain landscapes with dynamic typography for deep spiritual connection.</p>
+</div>
+</div>
+<!-- Template Card 2 -->
+<div class="relative group overflow-hidden rounded-lg bg-surface-container-low border border-outline-variant/10">
+<div class="aspect-[4/5] w-full relative">
+<img alt="daily reminder" class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" data-alt="close-up of golden calligraphy ink being applied to parchment with soft warm lighting and elegant bokeh" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDDmyxcxbHqPz1W2DtcSVmXSxIu4rZEAt9UDwjRPaMh-wN6y9B4x0FOXR-ahAKVr0ckoCXpsaEbSfFL7vBZaUGEp3jpcKtCuNP92b9gNUmDLSTQ4rmdSov_P9e_mvcraZm1LwilbN2RPmLTVx3a_VJVtsZvwvPsW6bEozIKdqwgC84Fhbrxg2xuLC5jgbUPn0E9QFQNizM-zV9_cemJlMt5fRcESeV90cje7NbEBigJhKfcdg0IZNSImdXjWq5og7dvMDFSLN4sAu0a"/>
+<div class="absolute inset-0 bg-gradient-to-t from-surface-dim to-transparent opacity-70"></div>
+<div class="absolute top-4 right-4 bg-surface-container/60 backdrop-blur-md p-2 rounded-full">
+<span class="material-symbols-outlined text-[#634eff]">bookmark</span>
+</div>
+<div class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+<div class="w-12 h-12 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center border border-white/30">
+<span class="material-symbols-outlined text-white text-3xl" style="font-variation-settings: 'FILL' 1;">play_arrow</span>
+</div>
+</div>
+</div>
+<div class="p-6">
+<h3 class="font-headline text-xl font-bold text-white">Daily Reminder</h3>
+<div class="flex items-center justify-between mt-2">
+<span class="text-on-surface-variant text-sm">Minimalist • Editorial</span>
+<span class="text-tertiary font-bold text-sm">9:16</span>
+</div>
+</div>
+</div>
+<!-- Template Card 3 -->
+<div class="relative group overflow-hidden rounded-lg bg-surface-container-low border border-outline-variant/10">
+<div class="aspect-square w-full relative">
+<img alt="dua of the day" class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" data-alt="soft focused image of prayer beads on a rich wooden surface with dust motes dancing in a single beam of light" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCqxcBA8pJLCrtRKrTMr1PECmAaKMaeKKjleJtlhsqDu6u2aarbjaYS1ovzNxAxn07rAH7zal0fkdwxWhpdBaiSb00e8tTX70DXgAVtVMDtkSt8eC3vpaax7ZxJvUW8lVhWREAlzpcV_xuLvJeInPX2MZ0vQB_iYVcrADYJlqX1EWFmHzYofixr_U_vnqtNLGXdMPQw7i2GuZ2zr3WbpT-DpU8mswXePbQb4mywP5DsYIxgxUqf5rPgaWbGND_ECb52g9y4U8FBl_4F"/>
+<div class="absolute inset-0 bg-gradient-to-t from-surface-dim to-transparent opacity-70"></div>
+<div class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+<div class="w-12 h-12 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center border border-white/30">
+<span class="material-symbols-outlined text-white text-3xl" style="font-variation-settings: 'FILL' 1;">play_arrow</span>
+</div>
+</div>
+</div>
+<div class="p-6">
+<h3 class="font-headline text-xl font-bold text-white">Dua of the Day</h3>
+<div class="flex items-center justify-between mt-2">
+<span class="text-on-surface-variant text-sm">Calligraphy • Meditation</span>
+<span class="text-tertiary font-bold text-sm">1:1</span>
+</div>
+</div>
+</div>
+<!-- Template Card 4 -->
+<div class="relative group overflow-hidden rounded-lg bg-surface-container-low border border-outline-variant/10">
+<div class="aspect-square w-full relative">
+<img alt="nature reflections" class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" data-alt="tranquil lake reflecting ancient trees under a twilight sky with subtle purple and emerald hues" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDbuPJI1j8R5hQ2IRVbt4d8W6M7vCFprw7FBmpHKhbpBtYuaimuZ21rGEKONvy91ZU7d6XGp6VEtwYtMnGuWxAsYbBo_9QMFdeaih057lddJrX7DNz2f_Bi2z1OAlDkIELAEtTfL4uB4U_WxBwWve6uGxvo-RMcNvSBECZm68XLg2KKpaJVVj8-08HskIfEZ96KvFyFpvDhgsc6tVA_OcMUT2oy74ZEBHi-WSQJuDcShEtIjZmmoA6af0kzeLsteTK65NNJyDXS1nc8"/>
+<div class="absolute inset-0 bg-gradient-to-t from-surface-dim to-transparent opacity-70"></div>
+<div class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+<div class="w-12 h-12 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center border border-white/30">
+<span class="material-symbols-outlined text-white text-3xl" style="font-variation-settings: 'FILL' 1;">play_arrow</span>
+</div>
+</div>
+</div>
+<div class="p-6">
+<h3 class="font-headline text-xl font-bold text-white">Nature Reflections</h3>
+<div class="flex items-center justify-between mt-2">
+<span class="text-on-surface-variant text-sm">Nature • Serene</span>
+<span class="text-tertiary font-bold text-sm">16:9</span>
+</div>
+</div>
+</div>
+<!-- Template Card 5 -->
+<div class="relative group overflow-hidden rounded-lg bg-surface-container-low border border-outline-variant/10">
+<div class="aspect-square w-full relative">
+<img alt="geometric patterns" class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" data-alt="abstract 3d islamic geometric patterns with metallic gold edges and deep green matte surfaces" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAIfDWrXHTj_uyZWx82THdb1HADCKdgAtL8EHo0Buou6hnFMJW4wPuETDnWscbeK2Xz2icdx6tjGdJorXIPz9tk1pu7bkHEvKR2Roo4y77WvIIOhwkyIJPhTTV8_y796Mww_bA9cXhsExufizKkgP9l6OXdZAVXzTpABD28dIqaPFmOOWfC8Y9FGqAroQDGxnuHRVjfUkuDC-3pskO4kmT3N9zCr-JBWaSw8kyL2oGfhL1qvbUz3vV6e1EWSrbW5HHTXi-FNfVJZd9J"/>
+<div class="absolute inset-0 bg-gradient-to-t from-surface-dim to-transparent opacity-70"></div>
+<div class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+<div class="w-12 h-12 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center border border-white/30">
+<span class="material-symbols-outlined text-white text-3xl" style="font-variation-settings: 'FILL' 1;">play_arrow</span>
+</div>
+</div>
+</div>
+<div class="p-6">
+<h3 class="font-headline text-xl font-bold text-white">Sacred Geometry</h3>
+<div class="flex items-center justify-between mt-2">
+<span class="text-on-surface-variant text-sm">Abstract • Premium</span>
+<span class="text-tertiary font-bold text-sm">1:1</span>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- BottomNavBar -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 pb-6 pt-2 bg-[#787582]/60 backdrop-blur-xl rounded-t-[2rem] shadow-[0_-4px_40px_rgba(226,226,226,0.06)]">
+<a class="flex flex-col items-center justify-center text-[#E2E2E2]/60 p-3 hover:text-[#634eff] transition-all scale-110 active:scale-90 transition-transform duration-300" href="#">
+<span class="material-symbols-outlined">home</span>
+<span class="font-['Inter'] text-[11px] uppercase tracking-widest mt-1">Home</span>
+</a>
+<a class="flex flex-col items-center justify-center bg-gradient-to-br from-[#634eff] to-[#746dbf] text-white rounded-full p-3 shadow-[0_0_15px_rgba(99,78,255,0.4)] scale-110 active:scale-90 transition-transform duration-300" href="#">
+<span class="material-symbols-outlined">dashboard_customize</span>
+<span class="font-['Inter'] text-[11px] uppercase tracking-widest mt-1">Templates</span>
+</a>
+<a class="flex flex-col items-center justify-center text-[#E2E2E2]/60 p-3 hover:text-[#634eff] transition-all scale-110 active:scale-90 transition-transform duration-300" href="#">
+<span class="material-symbols-outlined">video_library</span>
+<span class="font-['Inter'] text-[11px] uppercase tracking-widest mt-1">Projects</span>
+</a>
+<a class="flex flex-col items-center justify-center text-[#E2E2E2]/60 p-3 hover:text-[#634eff] transition-all scale-110 active:scale-90 transition-transform duration-300" href="#">
+<span class="material-symbols-outlined">person</span>
+<span class="font-['Inter'] text-[11px] uppercase tracking-widest mt-1">Profile</span>
+</a>
+</nav>
+</body></html>

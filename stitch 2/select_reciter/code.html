@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Select Reciter | Deen Studio</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&amp;family=Inter:wght@300;400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "primary-container": "#3d15db",
+                    "on-secondary-fixed-variant": "#433c8b",
+                    "on-secondary-container": "#b6afff",
+                    "on-error-container": "#ffdad6",
+                    "outline-variant": "#474556",
+                    "on-tertiary-fixed-variant": "#891e00",
+                    "on-background": "#e5e0ef",
+                    "secondary-fixed-dim": "#c6c0ff",
+                    "on-error": "#690005",
+                    "on-primary-fixed": "#150066",
+                    "error-container": "#93000a",
+                    "surface-variant": "#35333e",
+                    "primary-fixed-dim": "#c6c0ff",
+                    "primary-fixed": "#e4dfff",
+                    "on-primary-container": "#b6afff",
+                    "tertiary-fixed-dim": "#ffb4a2",
+                    "error": "#ffb4ab",
+                    "surface-dim": "#13121c",
+                    "surface": "#13121c",
+                    "surface-tint": "#c6c0ff",
+                    "secondary-fixed": "#e4dfff",
+                    "secondary-container": "#453e8d",
+                    "on-tertiary-container": "#ffa087",
+                    "on-secondary-fixed": "#16065f",
+                    "background": "#13121c",
+                    "on-surface": "#e5e0ef",
+                    "inverse-surface": "#e5e0ef",
+                    "surface-container": "#201e29",
+                    "surface-container-highest": "#35333e",
+                    "on-primary-fixed-variant": "#3a0ed9",
+                    "outline": "#928ea2",
+                    "surface-container-low": "#1b1a24",
+                    "on-secondary": "#2c2373",
+                    "surface-container-high": "#2a2933",
+                    "primary": "#c6c0ff",
+                    "inverse-primary": "#543bf0",
+                    "surface-container-lowest": "#0e0d17",
+                    "tertiary-container": "#8d1f00",
+                    "surface-bright": "#393843",
+                    "secondary": "#c6c0ff",
+                    "on-primary": "#2700a1",
+                    "tertiary-fixed": "#ffdbd2",
+                    "tertiary": "#ffb4a2",
+                    "on-tertiary": "#611200",
+                    "inverse-on-surface": "#312f3a",
+                    "on-surface-variant": "#c8c4d9",
+                    "on-tertiary-fixed": "#3c0800"
+            },
+            "borderRadius": {
+                    "DEFAULT": "1rem",
+                    "lg": "2rem",
+                    "xl": "3rem",
+                    "full": "9999px"
+            },
+            "fontFamily": {
+                    "headline": ["Manrope"],
+                    "body": ["Inter"],
+                    "label": ["Inter"]
+            }
+          },
+        }
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .uthmani-script {
+            font-family: serif;
+            line-height: 1.6;
+        }
+        .editorial-asymmetry {
+            margin-left: 2.75rem;
+            margin-right: 4rem;
+        }
+        .ghost-border {
+            border: 1px solid rgba(146, 142, 162, 0.15);
+        }
+        .glass-panel {
+            background: rgba(120, 117, 130, 0.6);
+            backdrop-filter: blur(20px);
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-background font-body min-h-screen pb-32 overflow-x-hidden">
+<!-- Top Navigation Shell -->
+<header class="fixed top-0 w-full z-50 bg-[#787582]/60 backdrop-blur-xl dark:bg-[#787582]/60 flex items-center justify-between px-6 py-4 w-full">
+<div class="flex items-center gap-4">
+<button class="text-[#634eff] dark:text-[#634eff] hover:bg-[#634eff]/10 transition-colors p-2 rounded-full scale-95 duration-200 transition-transform">
+<span class="material-symbols-outlined">menu</span>
+</button>
+<h1 class="font-['Manrope'] font-bold text-2xl bg-gradient-to-r from-[#634eff] to-[#746dbf] bg-clip-text text-transparent">Al-Qalam</h1>
+</div>
+<div class="flex items-center gap-2">
+<button class="text-[#634eff] dark:text-[#634eff] hover:bg-[#634eff]/10 transition-colors p-2 rounded-full scale-95 duration-200 transition-transform">
+<span class="material-symbols-outlined">account_circle</span>
+</button>
+</div>
+</header>
+<main class="pt-24 max-w-4xl mx-auto px-6">
+<!-- Editorial Header Section -->
+<section class="mt-12 mb-16 editorial-asymmetry">
+<p class="text-tertiary font-label tracking-[0.2em] uppercase text-xs mb-4">Voice of the Sanctuary</p>
+<h2 class="font-headline font-extrabold text-4xl md:text-5xl text-on-surface leading-tight tracking-tighter">
+                Select Your <br/>
+<span class="text-secondary">Master Reciter</span>
+</h2>
+<p class="text-on-surface-variant mt-6 text-lg max-w-md leading-relaxed opacity-80">
+                Choose the soul that will guide your creation. Each voice carries the weight of centuries of tradition.
+            </p>
+</section>
+<!-- Reciters List (Bento-lite Layout) -->
+<div class="grid grid-cols-1 gap-4">
+<!-- Active/Featured Selection -->
+<div class="group relative bg-surface-container-high rounded-lg p-6 flex items-center justify-between transition-all duration-300 hover:bg-surface-bright outline-variant/20 border border-transparent hover:border-primary/20">
+<div class="flex items-center gap-6">
+<div class="relative">
+<div class="w-20 h-20 rounded-full overflow-hidden border-2 border-primary ring-4 ring-primary/10">
+<img class="w-full h-full object-cover" data-alt="Close-up portrait of Mishary Rashid Alafasy in traditional white clothing with a calm expression against a soft-lit studio background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuA97yl8i_U_NCMaEZYfIWsb5T_eesMmCwQhRzZCV5YwwvBnCzEVxzIWcjccHxPjNQTgrVJBzvR6FBKishp3G-QgQdBmzYUmJKDkOcqYgl1Ci_0dduFwqKiHGO946nxLUSTlTN_tqZ3HRSPJRySgnGzCUqRyXr3GGqoltDRbfvJYWrnU0jn7xUoKpvJbuhHEcNxRHD5mfKVo03wU9UMsNk0iUHdni7cA7dlizLFddtsEtCJFiqwJjO37pbo3kZaOYnSsoLlr4iPx6N72"/>
+</div>
+<div class="absolute -bottom-1 -right-1 bg-primary text-on-primary w-6 h-6 rounded-full flex items-center justify-center shadow-lg">
+<span class="material-symbols-outlined text-xs" style="font-variation-settings: 'FILL' 1;">check</span>
+</div>
+</div>
+<div>
+<h3 class="font-headline font-bold text-xl text-on-surface">Mishary Rashid Alafasy</h3>
+<p class="text-tertiary-fixed-dim text-sm mt-1 flex items-center gap-2">
+<span class="material-symbols-outlined text-[14px]">music_note</span> 
+                            Distinctive, melodic clarity
+                        </p>
+</div>
+</div>
+<div class="flex items-center gap-3">
+<button class="w-12 h-12 rounded-full glass-panel text-on-surface flex items-center justify-center hover:scale-110 transition-transform">
+<span class="material-symbols-outlined" data-weight="fill">play_arrow</span>
+</button>
+<button class="bg-gradient-to-br from-primary to-primary-container text-on-primary px-6 py-3 rounded-md font-bold text-sm shadow-[0_0_20px_rgba(99,78,255,0.3)]">
+                        Select
+                    </button>
+</div>
+</div>
+<!-- Standard List Items -->
+<div class="bg-surface-container-low rounded-lg p-5 flex items-center justify-between hover:bg-surface-container transition-colors group">
+<div class="flex items-center gap-5">
+<div class="w-16 h-16 rounded-full overflow-hidden grayscale group-hover:grayscale-0 transition-all">
+<img class="w-full h-full object-cover" data-alt="Dignified portrait of Abdul Rahman Al-Sudais wearing the traditional red and white shemagh, warm lighting, high-end editorial style" src="https://lh3.googleusercontent.com/aida-public/AB6AXuA05Ufs9F78saTbc4ZCxJZhD0t550WvuD6f-R6AY4g5OIF3NutFQFkCRj4oLeK8clWTMXGT3sbS-8DrFP9YyaVxBFbDKkKGRm7Ca9eSBCIw-vfiQP7cERqY5IsL8Vjlntakwqzl1rP-Dt8ODpsP1p9j9tzNBGMzi5LVK8-oT2YQolqUB1EZW1wmb3YgKtWAXNnGmxYYJjkekyZPlHP8yIHHHarvBwX8iPAHq6vE3XDN3Cxe6Yz1wJg0vpN4np37DxPASJVTh5nVShQu"/>
+</div>
+<div>
+<h3 class="font-headline font-semibold text-lg text-on-surface">Abdul Rahman Al-Sudais</h3>
+<p class="text-on-surface-variant text-sm mt-1 opacity-60">Imam of Masjid al-Haram</p>
+</div>
+</div>
+<div class="flex items-center gap-3">
+<button class="w-10 h-10 rounded-full border border-outline-variant/30 text-on-surface-variant flex items-center justify-center hover:bg-surface-container-highest transition-colors">
+<span class="material-symbols-outlined text-sm">play_arrow</span>
+</button>
+<button class="text-primary font-bold text-sm px-4 py-2 hover:bg-primary/10 rounded-full transition-colors">
+                        Select
+                    </button>
+</div>
+</div>
+<div class="bg-surface-container-low rounded-lg p-5 flex items-center justify-between hover:bg-surface-container transition-colors group">
+<div class="flex items-center gap-5">
+<div class="w-16 h-16 rounded-full overflow-hidden grayscale group-hover:grayscale-0 transition-all">
+<img class="w-full h-full object-cover" data-alt="Studio portrait of Maher Al-Muaiqly with a focused and serene gaze, soft warm bokeh background, professional lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAZ9zX9APfj5sSZkE5OFURvpEaU3j7GUH928hUrYZv0Y2qD2Ysnbz0EeEIp698ZlpoF_Ul8TVYdSlLp5wq_T5owKSbMqeKzccc9d_hN-Q0nhl7K6hhqDDm7lGC9CulvZYQZnEg7bQTOuNLyWDNr1S1eNg44a-2mQKmr1kamvs3zDrAxp1KDCCM2XaQMuSMl46aCtzWhEZUZj7_qmFuMI5gu8hZTCuaF3o2OPKWa7seOSMCTqIKMh74LdaXjzam8HyvY0TXsfJ05fqS7"/>
+</div>
+<div>
+<h3 class="font-headline font-semibold text-lg text-on-surface">Maher Al-Muaiqly</h3>
+<p class="text-on-surface-variant text-sm mt-1 opacity-60">Deep, resonant baritone</p>
+</div>
+</div>
+<div class="flex items-center gap-3">
+<button class="w-10 h-10 rounded-full border border-outline-variant/30 text-on-surface-variant flex items-center justify-center hover:bg-surface-container-highest transition-colors">
+<span class="material-symbols-outlined text-sm">play_arrow</span>
+</button>
+<button class="text-primary font-bold text-sm px-4 py-2 hover:bg-primary/10 rounded-full transition-colors">
+                        Select
+                    </button>
+</div>
+</div>
+<div class="bg-surface-container-low rounded-lg p-5 flex items-center justify-between hover:bg-surface-container transition-colors group">
+<div class="flex items-center gap-5">
+<div class="w-16 h-16 rounded-full overflow-hidden grayscale group-hover:grayscale-0 transition-all">
+<img class="w-full h-full object-cover" data-alt="Close-up of Saud Al-Shuraim in a contemplative pose, soft cinematic shadows, high contrast editorial photography" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAuH6LcB82ZK9LNTny_s7Hchy2P8Bf2ujTrGfF_8oJTlUgSSejcj6y3CDlzGn2P_2Rvs0L1rv8FO-HJc55da79VLgm8LVMp27OoXU3ghC8ckeDnUus9BgaNEpb4mGb67S651lYAjpzKwq76YcVxw-c8nDoLeV1Hma_XskxOk7M2EsbHw9u2-i-GtozgIjTTN6OnjVvnc5aCRaq4YDPSQD5BrvzYBlV2RnBlAhNHLQrilHFI2FD-24PPGUGcQO8AU113W-d2fn6_ZAnf"/>
+</div>
+<div>
+<h3 class="font-headline font-semibold text-lg text-on-surface">Saud Al-Shuraim</h3>
+<p class="text-on-surface-variant text-sm mt-1 opacity-60">Traditional Hijazi style</p>
+</div>
+</div>
+<div class="flex items-center gap-3">
+<button class="w-10 h-10 rounded-full border border-outline-variant/30 text-on-surface-variant flex items-center justify-center hover:bg-surface-container-highest transition-colors">
+<span class="material-symbols-outlined text-sm">play_arrow</span>
+</button>
+<button class="text-primary font-bold text-sm px-4 py-2 hover:bg-primary/10 rounded-full transition-colors">
+                        Select
+                    </button>
+</div>
+</div>
+</div>
+<!-- Footnote / Arabic Detail -->
+<section class="mt-16 text-center opacity-40">
+<p class="uthmani-script text-3xl mb-4 text-on-surface-variant">وَرَتِّلِ الْقُرْآنَ تَرْتِيلًا</p>
+<p class="font-label text-[10px] tracking-widest uppercase">"And recite the Quran with measured recitation"</p>
+</section>
+</main>
+<!-- Bottom Navigation Shell -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 pb-6 pt-2 bg-[#787582]/60 backdrop-blur-xl dark:bg-[#787582]/60 rounded-t-[2rem] shadow-[0_-4px_40px_rgba(226,226,226,0.06)]">
+<div class="flex flex-col items-center justify-center text-[#E2E2E2]/60 p-3 hover:text-[#634eff] transition-all scale-110 active:scale-90 transition-transform duration-300">
+<span class="material-symbols-outlined" data-icon="home">home</span>
+<span class="font-['Inter'] text-[11px] uppercase tracking-widest mt-1">Home</span>
+</div>
+<div class="flex flex-col items-center justify-center bg-gradient-to-br from-[#634eff] to-[#746dbf] text-white rounded-full p-3 shadow-[0_0_15px_rgba(99,78,255,0.4)] scale-110 active:scale-90 transition-transform duration-300">
+<span class="material-symbols-outlined" data-icon="dashboard_customize">dashboard_customize</span>
+<span class="font-['Inter'] text-[11px] uppercase tracking-widest mt-1">Templates</span>
+</div>
+<div class="flex flex-col items-center justify-center text-[#E2E2E2]/60 p-3 hover:text-[#634eff] transition-all scale-110 active:scale-90 transition-transform duration-300">
+<span class="material-symbols-outlined" data-icon="video_library">video_library</span>
+<span class="font-['Inter'] text-[11px] uppercase tracking-widest mt-1">Projects</span>
+</div>
+<div class="flex flex-col items-center justify-center text-[#E2E2E2]/60 p-3 hover:text-[#634eff] transition-all scale-110 active:scale-90 transition-transform duration-300">
+<span class="material-symbols-outlined" data-icon="person">person</span>
+<span class="font-['Inter'] text-[11px] uppercase tracking-widest mt-1">Profile</span>
+</div>
+</nav>
+</body></html>

@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&amp;family=Manrope:wght@400;500;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+                  "primary-container": "#3d15db",
+                  "on-secondary-fixed-variant": "#433c8b",
+                  "on-secondary-container": "#b6afff",
+                  "on-error-container": "#ffdad6",
+                  "outline-variant": "#474556",
+                  "on-tertiary-fixed-variant": "#891e00",
+                  "on-background": "#e5e0ef",
+                  "secondary-fixed-dim": "#c6c0ff",
+                  "on-error": "#690005",
+                  "on-primary-fixed": "#150066",
+                  "error-container": "#93000a",
+                  "surface-variant": "#35333e",
+                  "primary-fixed-dim": "#c6c0ff",
+                  "primary-fixed": "#e4dfff",
+                  "on-primary-container": "#b6afff",
+                  "tertiary-fixed-dim": "#ffb4a2",
+                  "error": "#ffb4ab",
+                  "surface-dim": "#13121c",
+                  "surface": "#13121c",
+                  "surface-tint": "#c6c0ff",
+                  "secondary-fixed": "#e4dfff",
+                  "secondary-container": "#453e8d",
+                  "on-tertiary-container": "#ffa087",
+                  "on-secondary-fixed": "#16065f",
+                  "background": "#13121c",
+                  "on-surface": "#e5e0ef",
+                  "inverse-surface": "#e5e0ef",
+                  "surface-container": "#201e29",
+                  "surface-container-highest": "#35333e",
+                  "on-primary-fixed-variant": "#3a0ed9",
+                  "outline": "#928ea2",
+                  "surface-container-low": "#1b1a24",
+                  "on-secondary": "#2c2373",
+                  "surface-container-high": "#2a2933",
+                  "primary": "#c6c0ff",
+                  "inverse-primary": "#543bf0",
+                  "surface-container-lowest": "#0e0d17",
+                  "tertiary-container": "#8d1f00",
+                  "surface-bright": "#393843",
+                  "secondary": "#c6c0ff",
+                  "on-primary": "#2700a1",
+                  "tertiary-fixed": "#ffdbd2",
+                  "tertiary": "#ffb4a2",
+                  "on-tertiary": "#611200",
+                  "inverse-on-surface": "#312f3a",
+                  "on-surface-variant": "#c8c4d9",
+                  "on-tertiary-fixed": "#3c0800"
+          },
+          "borderRadius": {
+                  "DEFAULT": "1rem",
+                  "lg": "2rem",
+                  "xl": "3rem",
+                  "full": "9999px"
+          },
+          "fontFamily": {
+                  "headline": ["Manrope"],
+                  "body": ["Inter"],
+                  "label": ["Inter"]
+          }
+        },
+      },
+    }
+  </script>
+<style>
+    .arabic-script {
+      font-size: 1.25rem;
+      line-height: 2.2;
+      direction: rtl;
+    }
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 4px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: #474556;
+      border-radius: 10px;
+    }
+  </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-background font-body selection:bg-primary-container selection:text-white">
+<!-- Top Navigation Bar -->
+<header class="fixed top-0 w-full z-50 bg-[#787582]/60 backdrop-blur-xl dark:bg-[#787582]/60 flex items-center justify-between px-6 py-4 w-full">
+<div class="flex items-center gap-4">
+<button class="material-symbols-outlined text-[#634eff] hover:bg-[#634eff]/10 transition-colors p-2 rounded-full">arrow_back</button>
+<h1 class="font-['Manrope'] font-bold text-2xl bg-gradient-to-r from-[#634eff] to-[#746dbf] bg-clip-text text-transparent">Al-Qalam</h1>
+</div>
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-[#634eff] hover:bg-[#634eff]/10 transition-colors p-2 rounded-full">account_circle</span>
+</div>
+</header>
+<main class="pt-24 pb-32 min-h-screen px-4 md:px-12 max-w-5xl mx-auto">
+<!-- Surah Header Section -->
+<section class="mb-12">
+<div class="flex flex-col md:flex-row md:items-end justify-between gap-6">
+<div class="space-y-2">
+<p class="text-secondary font-label tracking-widest text-xs uppercase">Select Verses</p>
+<h2 class="font-headline font-extrabold text-4xl md:text-5xl text-on-surface tracking-tight">Surah Al-Kahf</h2>
+<p class="text-on-surface-variant font-light text-lg">The Cave • 110 Verses • Meccan</p>
+</div>
+<div class="bg-surface-container-low p-6 rounded-lg flex flex-col gap-4 min-w-[280px]">
+<div class="flex justify-between items-center">
+<span class="text-sm font-label text-on-surface-variant">Range Selection</span>
+<span class="text-primary font-bold text-lg">1 — 10</span>
+</div>
+<div class="relative w-full h-2 bg-surface-variant rounded-full">
+<div class="absolute h-full bg-primary rounded-full left-0 w-1/3"></div>
+<div class="absolute w-4 h-4 bg-white rounded-full -top-1 left-0 shadow-lg border-2 border-primary"></div>
+<div class="absolute w-4 h-4 bg-white rounded-full -top-1 left-1/3 shadow-lg border-2 border-primary"></div>
+</div>
+<div class="flex justify-between text-[10px] text-outline tracking-tighter">
+<span>VERSE 1</span>
+<span>VERSE 110</span>
+</div>
+</div>
+</div>
+</section>
+<!-- Verse List (Editorial Bento-ish Layout) -->
+<div class="grid grid-cols-1 gap-6 mb-12">
+<!-- Verse Item 1 -->
+<div class="group relative overflow-hidden bg-surface-container rounded-lg p-8 transition-all hover:bg-surface-container-high">
+<div class="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
+<span class="material-symbols-outlined text-8xl">auto_stories</span>
+</div>
+<div class="flex flex-col md:flex-row gap-8 items-start relative z-10">
+<div class="flex-shrink-0 w-12 h-12 rounded-full bg-surface-container-lowest flex items-center justify-center border border-outline-variant/20">
+<span class="font-headline font-bold text-primary">1</span>
+</div>
+<div class="flex-grow space-y-6">
+<p class="arabic-script text-right text-on-surface leading-loose" lang="ar">الْحَمْدُ لِلَّهِ الَّذِي أَنزَلَ عَلَىٰ عَبْدِهِ الْكِتَابَ وَلَمْ يَجْعَل لَّهُ عِوَجًا</p>
+<div class="space-y-2 max-w-2xl">
+<p class="text-on-surface-variant leading-relaxed">All praise is due to Allah, who has sent down upon His Servant the Book and has not made therein any deviance.</p>
+</div>
+</div>
+<div class="flex-shrink-0">
+<input checked="" class="w-6 h-6 rounded-md bg-surface-container-highest border-outline-variant text-primary focus:ring-primary-container transition-all" type="checkbox"/>
+</div>
+</div>
+</div>
+<!-- Verse Item 2 -->
+<div class="group relative overflow-hidden bg-surface-container rounded-lg p-8 transition-all hover:bg-surface-container-high border-l-4 border-primary/40">
+<div class="flex flex-col md:flex-row gap-8 items-start relative z-10">
+<div class="flex-shrink-0 w-12 h-12 rounded-full bg-primary-container flex items-center justify-center shadow-[0_0_15px_rgba(99,78,255,0.3)]">
+<span class="font-headline font-bold text-white">2</span>
+</div>
+<div class="flex-grow space-y-6">
+<p class="arabic-script text-right text-on-surface leading-loose" lang="ar">قَيِّمًا لِّيُنذِرَ بَأْسًا شَدِيدًا مِّن لَّدُنْهُ وَيُبَشِّرَ الْمُؤْمِنِينَ الَّذِينَ يَعْمَلُونَ الصَّالِحَاتِ أَنَّ لَهُمْ أَجْرًا حَسَنًا</p>
+<div class="space-y-2 max-w-2xl">
+<p class="text-on-surface-variant leading-relaxed">[He has made it] straight, to warn of severe punishment from Him and to give good tidings to the believers who do righteous deeds that they will have a good reward.</p>
+</div>
+</div>
+<div class="flex-shrink-0">
+<input checked="" class="w-6 h-6 rounded-md bg-surface-container-highest border-outline-variant text-primary focus:ring-primary-container" type="checkbox"/>
+</div>
+</div>
+</div>
+<!-- Verse Item 3 -->
+<div class="group relative overflow-hidden bg-surface-container rounded-lg p-8 transition-all hover:bg-surface-container-high">
+<div class="flex flex-col md:flex-row gap-8 items-start relative z-10">
+<div class="flex-shrink-0 w-12 h-12 rounded-full bg-surface-container-lowest flex items-center justify-center border border-outline-variant/20">
+<span class="font-headline font-bold text-primary">3</span>
+</div>
+<div class="flex-grow space-y-6">
+<p class="arabic-script text-right text-on-surface leading-loose" lang="ar">مَّاكِثِينَ فِيهِ أَبَدًا</p>
+<div class="space-y-2 max-w-2xl">
+<p class="text-on-surface-variant leading-relaxed">In which they will remain forever.</p>
+</div>
+</div>
+<div class="flex-shrink-0">
+<input checked="" class="w-6 h-6 rounded-md bg-surface-container-highest border-outline-variant text-primary focus:ring-primary-container" type="checkbox"/>
+</div>
+</div>
+</div>
+<!-- Verse Item 4 (Visual Divider/Quote) -->
+<div class="relative py-12 px-8 bg-gradient-to-br from-primary-container/10 to-transparent rounded-lg border border-primary/10">
+<div class="max-w-3xl mx-auto text-center space-y-4">
+<span class="material-symbols-outlined text-primary text-4xl">format_quote</span>
+<h3 class="font-headline italic text-2xl text-on-surface">"Whoever recites Surah Al-Kahf on Friday, it will illuminate him with light from one Friday to the next."</h3>
+</div>
+</div>
+<!-- Verse Item 10 (Last of range) -->
+<div class="group relative overflow-hidden bg-surface-container rounded-lg p-8 transition-all hover:bg-surface-container-high">
+<div class="flex flex-col md:flex-row gap-8 items-start relative z-10">
+<div class="flex-shrink-0 w-12 h-12 rounded-full bg-surface-container-lowest flex items-center justify-center border border-outline-variant/20">
+<span class="font-headline font-bold text-primary">10</span>
+</div>
+<div class="flex-grow space-y-6">
+<p class="arabic-script text-right text-on-surface leading-loose" lang="ar">إِذْ أَوَى الْفِتْيَةُ إِلَى الْكَهْفِ فَقَالُوا رَبَّنَا آتِنَا مِن لَّدُنكَ رَحْمَةً وَهَيِّئْ لَنَا مِنْ أَمْرِنَا رَشَدًا</p>
+<div class="space-y-2 max-w-2xl">
+<p class="text-on-surface-variant leading-relaxed">[Mention] when the youths retreated to the cave and said, "Our Lord, grant us from Yourself mercy and prepare for us from our affair right guidance."</p>
+</div>
+</div>
+<div class="flex-shrink-0">
+<input checked="" class="w-6 h-6 rounded-md bg-surface-container-highest border-outline-variant text-primary focus:ring-primary-container" type="checkbox"/>
+</div>
+</div>
+</div>
+</div>
+<!-- Selection Summary -->
+<div class="bg-surface-container-high/40 backdrop-blur-md rounded-lg p-8 flex flex-col md:flex-row items-center justify-between gap-6 border border-outline-variant/10">
+<div class="flex items-center gap-6">
+<div class="flex -space-x-3">
+<div class="w-12 h-12 rounded-full bg-primary-container border-4 border-background flex items-center justify-center text-xs font-bold text-white">1</div>
+<div class="w-12 h-12 rounded-full bg-secondary-container border-4 border-background flex items-center justify-center text-xs font-bold text-white">2</div>
+<div class="w-12 h-12 rounded-full bg-surface-variant border-4 border-background flex items-center justify-center text-xs font-bold text-on-surface-variant">...</div>
+<div class="w-12 h-12 rounded-full bg-primary-container border-4 border-background flex items-center justify-center text-xs font-bold text-white">10</div>
+</div>
+<div>
+<p class="font-headline font-bold text-on-surface">10 Ayahs Selected</p>
+<p class="text-sm text-on-surface-variant">Estimated Video Duration: 2:45</p>
+</div>
+</div>
+<button class="w-full md:w-auto bg-gradient-to-br from-[#634eff] to-[#746dbf] text-white px-10 py-4 rounded-full font-headline font-bold tracking-wide shadow-[0_0_20px_rgba(99,78,255,0.4)] hover:scale-105 active:scale-95 transition-all">
+        Continue to Editor
+      </button>
+</div>
+</main>
+<!-- Bottom Nav Bar -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 pb-6 pt-2 bg-[#787582]/60 backdrop-blur-xl dark:bg-[#787582]/60 rounded-t-[2rem] shadow-[0_-4px_40px_rgba(226,226,226,0.06)]">
+<a class="flex flex-col items-center justify-center text-[#E2E2E2]/60 p-3 hover:text-[#634eff] transition-all scale-110 active:scale-90 duration-300" href="#">
+<span class="material-symbols-outlined" data-icon="home">home</span>
+<span class="font-['Inter'] text-[11px] uppercase tracking-widest mt-1">Home</span>
+</a>
+<a class="flex flex-col items-center justify-center bg-gradient-to-br from-[#634eff] to-[#746dbf] text-white rounded-full p-3 shadow-[0_0_15px_rgba(99,78,255,0.4)] scale-110 active:scale-90 duration-300" href="#">
+<span class="material-symbols-outlined" data-icon="dashboard_customize">dashboard_customize</span>
+<span class="font-['Inter'] text-[11px] uppercase tracking-widest mt-1">Templates</span>
+</a>
+<a class="flex flex-col items-center justify-center text-[#E2E2E2]/60 p-3 hover:text-[#634eff] transition-all scale-110 active:scale-90 duration-300" href="#">
+<span class="material-symbols-outlined" data-icon="video_library">video_library</span>
+<span class="font-['Inter'] text-[11px] uppercase tracking-widest mt-1">Projects</span>
+</a>
+<a class="flex flex-col items-center justify-center text-[#E2E2E2]/60 p-3 hover:text-[#634eff] transition-all scale-110 active:scale-90 duration-300" href="#">
+<span class="material-symbols-outlined" data-icon="person">person</span>
+<span class="font-['Inter'] text-[11px] uppercase tracking-widest mt-1">Profile</span>
+</a>
+</nav>
+</body></html>

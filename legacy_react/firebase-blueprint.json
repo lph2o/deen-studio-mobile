@@ -1,0 +1,69 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile information",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "displayName": { "type": "string" },
+        "photoURL": { "type": "string", "format": "uri" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "role": { "type": "string", "enum": ["user", "admin"] }
+      },
+      "required": ["uid", "email", "createdAt"]
+    },
+    "Project": {
+      "title": "Project",
+      "description": "A Quranic video project",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "title": { "type": "string" },
+        "surahId": { "type": "integer" },
+        "ayahRange": {
+          "type": "object",
+          "properties": {
+            "start": { "type": "integer" },
+            "end": { "type": "integer" }
+          }
+        },
+        "reciterId": { "type": "string" },
+        "layers": {
+          "type": "array",
+          "items": { "$ref": "Layer" }
+        },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" },
+        "status": { "type": "string", "enum": ["draft", "rendering", "completed"] },
+        "exportUrl": { "type": "string", "format": "uri" }
+      },
+      "required": ["userId", "title", "surahId", "reciterId", "createdAt"]
+    },
+    "Layer": {
+      "title": "Layer",
+      "description": "A track layer in the video timeline",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "type": { "type": "string", "enum": ["video", "audio", "text"] },
+        "startTime": { "type": "number" },
+        "duration": { "type": "number" },
+        "content": { "type": "object" },
+        "style": { "type": "object" }
+      }
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profiles"
+    },
+    "/projects/{projectId}": {
+      "schema": "Project",
+      "description": "User video projects"
+    }
+  }
+}

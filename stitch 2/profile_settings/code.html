@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;700;800&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+            "primary-container": "#3d15db",
+            "on-secondary-fixed-variant": "#433c8b",
+            "on-secondary-container": "#b6afff",
+            "on-error-container": "#ffdad6",
+            "outline-variant": "#474556",
+            "on-tertiary-fixed-variant": "#891e00",
+            "on-background": "#e5e0ef",
+            "secondary-fixed-dim": "#c6c0ff",
+            "on-error": "#690005",
+            "on-primary-fixed": "#150066",
+            "error-container": "#93000a",
+            "surface-variant": "#35333e",
+            "primary-fixed-dim": "#c6c0ff",
+            "primary-fixed": "#e4dfff",
+            "on-primary-container": "#b6afff",
+            "tertiary-fixed-dim": "#ffb4a2",
+            "error": "#ffb4ab",
+            "surface-dim": "#13121c",
+            "surface": "#13121c",
+            "surface-tint": "#c6c0ff",
+            "secondary-fixed": "#e4dfff",
+            "secondary-container": "#453e8d",
+            "on-tertiary-container": "#ffa087",
+            "on-secondary-fixed": "#16065f",
+            "background": "#13121c",
+            "on-surface": "#e5e0ef",
+            "inverse-surface": "#e5e0ef",
+            "surface-container": "#201e29",
+            "surface-container-highest": "#35333e",
+            "on-primary-fixed-variant": "#3a0ed9",
+            "outline": "#928ea2",
+            "surface-container-low": "#1b1a24",
+            "on-secondary": "#2c2373",
+            "surface-container-high": "#2a2933",
+            "primary": "#c6c0ff",
+            "inverse-primary": "#543bf0",
+            "surface-container-lowest": "#0e0d17",
+            "tertiary-container": "#8d1f00",
+            "surface-bright": "#393843",
+            "secondary": "#c6c0ff",
+            "on-primary": "#2700a1",
+            "tertiary-fixed": "#ffdbd2",
+            "tertiary": "#ffb4a2",
+            "on-tertiary": "#611200",
+            "inverse-on-surface": "#312f3a",
+            "on-surface-variant": "#c8c4d9",
+            "on-tertiary-fixed": "#3c0800"
+          },
+          "borderRadius": {
+            "DEFAULT": "1rem",
+            "lg": "2rem",
+            "xl": "3rem",
+            "full": "9999px"
+          },
+          "fontFamily": {
+            "headline": ["Manrope"],
+            "body": ["Inter"],
+            "label": ["Inter"]
+          }
+        },
+      },
+    }
+  </script>
+<style>
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24;
+    }
+    .glass-effect {
+      background: rgba(120, 117, 130, 0.6);
+      backdrop-filter: blur(20px);
+    }
+    body {
+      background-color: #13121c;
+      font-family: 'Inter', sans-serif;
+    }
+  </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-background min-h-screen pb-32">
+<!-- TopAppBar -->
+<header class="bg-[#787582]/60 backdrop-blur-xl dark:bg-[#787582]/60 fixed top-0 w-full z-50 flex items-center justify-between px-6 py-4 w-full">
+<div class="flex items-center gap-4">
+<button class="hover:bg-[#634eff]/10 transition-colors p-2 rounded-full scale-95 duration-200 transition-transform">
+<span class="material-symbols-outlined text-[#634eff] dark:text-[#634eff]">menu</span>
+</button>
+<h1 class="font-['Manrope'] font-bold text-2xl bg-gradient-to-r from-[#634eff] to-[#746dbf] bg-clip-text text-transparent">Al-Qalam</h1>
+</div>
+<div class="flex items-center gap-2">
+<button class="hover:bg-[#634eff]/10 transition-colors p-2 rounded-full scale-95 duration-200 transition-transform">
+<span class="material-symbols-outlined text-[#634eff] dark:text-[#634eff]">account_circle</span>
+</button>
+</div>
+</header>
+<main class="pt-24 px-6 max-w-2xl mx-auto">
+<!-- Profile Header Section -->
+<section class="mt-8 mb-10 flex flex-col items-center text-center">
+<div class="relative group">
+<div class="w-32 h-32 rounded-full p-1 bg-gradient-to-br from-primary to-secondary-container mb-4">
+<img class="w-full h-full object-cover rounded-full border-4 border-surface" data-alt="close-up portrait of a thoughtful young man in high-end studio lighting with a soft bokeh background of spiritual geometry" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDx_idliF88221Tqiqb2pldHPuSIDOZ5BFSbg9yZMtldLAnZ7YribHhkjA5EhjqcfPI4TfEPM20G9D4jTkRhB_by1JVSkwMPDL0RGTqZP7LfntIaj4QVB8RpXmLH8Nq33t6moPHnx7tFJnFy2pwdLULl3Vy9FcsbokZ8NJTBGpePKDhgRiHCEtSNoRjom7sHhJ0FYj__BwMn3ug3--IiLNN0rskLqapGz57kXJkGKBwUzMRT9qmA13bVhy_G99UmC9V9z7SfQETRzU6"/>
+</div>
+<div class="absolute bottom-4 right-0 bg-primary-container text-white text-[10px] font-bold px-3 py-1 rounded-full shadow-lg">
+          PRO
+        </div>
+</div>
+<h2 class="font-headline font-extrabold text-3xl tracking-tight text-on-surface mb-1">Ahmed Al-Farsi</h2>
+<p class="font-body text-on-surface-variant text-sm tracking-wide opacity-80 uppercase">Content Creator • Digital Sanctuary</p>
+</section>
+<!-- Settings Grid (Editorial Bento-ish Layout) -->
+<div class="grid grid-cols-1 gap-4">
+<!-- Saved Projects Card -->
+<button class="flex items-center justify-between p-6 bg-surface-container-low rounded-lg hover:bg-surface-container transition-all group">
+<div class="flex items-center gap-5">
+<div class="w-12 h-12 flex items-center justify-center bg-surface-container-highest rounded-full group-hover:scale-110 transition-transform duration-300">
+<span class="material-symbols-outlined text-primary text-2xl">video_library</span>
+</div>
+<div class="text-left">
+<span class="block font-headline font-bold text-lg text-on-surface">Saved Projects</span>
+<span class="block font-body text-xs text-on-surface-variant opacity-60">12 Edited Videos</span>
+</div>
+</div>
+<span class="material-symbols-outlined text-outline">chevron_right</span>
+</button>
+<!-- Favorites Section -->
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+<button class="flex items-center gap-4 p-6 bg-surface-container-low rounded-lg hover:bg-surface-container transition-all group">
+<div class="w-10 h-10 flex items-center justify-center bg-secondary-container/30 rounded-full">
+<span class="material-symbols-outlined text-secondary text-xl">mic</span>
+</div>
+<span class="font-headline font-semibold text-on-surface">Favorite Reciters</span>
+</button>
+<button class="flex items-center gap-4 p-6 bg-surface-container-low rounded-lg hover:bg-surface-container transition-all group">
+<div class="w-10 h-10 flex items-center justify-center bg-secondary-container/30 rounded-full">
+<span class="material-symbols-outlined text-secondary text-xl">language</span>
+</div>
+<span class="font-headline font-semibold text-on-surface">App Language</span>
+</button>
+</div>
+<!-- Theme Selection -->
+<div class="p-6 bg-surface-container-low rounded-lg flex items-center justify-between">
+<div class="flex items-center gap-5">
+<div class="w-12 h-12 flex items-center justify-center bg-surface-container-highest rounded-full">
+<span class="material-symbols-outlined text-primary text-2xl">dark_mode</span>
+</div>
+<div class="text-left">
+<span class="block font-headline font-bold text-lg text-on-surface">Theme</span>
+<span class="block font-body text-xs text-on-surface-variant opacity-60">Currently Dark Mode</span>
+</div>
+</div>
+<div class="bg-surface-container-highest p-1 rounded-full flex gap-1">
+<button class="p-2 rounded-full text-outline transition-colors"><span class="material-symbols-outlined">light_mode</span></button>
+<button class="p-2 rounded-full bg-primary-container text-white shadow-md transition-all"><span class="material-symbols-outlined">dark_mode</span></button>
+</div>
+</div>
+<!-- Support -->
+<button class="flex items-center justify-between p-6 bg-surface-container-low rounded-lg hover:bg-surface-container transition-all">
+<div class="flex items-center gap-5">
+<div class="w-12 h-12 flex items-center justify-center bg-surface-container-highest rounded-full">
+<span class="material-symbols-outlined text-tertiary text-2xl">help</span>
+</div>
+<div class="text-left">
+<span class="block font-headline font-bold text-lg text-on-surface">Help &amp; Support</span>
+<span class="block font-body text-xs text-on-surface-variant opacity-60">FAQs and Contact</span>
+</div>
+</div>
+<span class="material-symbols-outlined text-outline">open_in_new</span>
+</button>
+<!-- Logout Button -->
+<button class="mt-8 mb-12 w-full py-4 rounded-lg font-headline font-bold text-error border border-error/20 hover:bg-error/5 transition-all flex items-center justify-center gap-3 group">
+<span class="material-symbols-outlined group-hover:translate-x-1 transition-transform">logout</span>
+        Sign Out
+      </button>
+</div>
+</main>
+<!-- BottomNavBar -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 pb-6 pt-2 bg-[#787582]/60 backdrop-blur-xl dark:bg-[#787582]/60 rounded-t-[2rem] shadow-[0_-4px_40px_rgba(226,226,226,0.06)]">
+<a class="flex flex-col items-center justify-center text-[#E2E2E2]/60 p-3 hover:text-[#634eff] transition-all scale-110 active:scale-90 transition-transform duration-300" href="#">
+<span class="material-symbols-outlined mb-1">home</span>
+<span class="font-['Inter'] text-[11px] uppercase tracking-widest">Home</span>
+</a>
+<a class="flex flex-col items-center justify-center text-[#E2E2E2]/60 p-3 hover:text-[#634eff] transition-all scale-110 active:scale-90 transition-transform duration-300" href="#">
+<span class="material-symbols-outlined mb-1">dashboard_customize</span>
+<span class="font-['Inter'] text-[11px] uppercase tracking-widest">Templates</span>
+</a>
+<a class="flex flex-col items-center justify-center text-[#E2E2E2]/60 p-3 hover:text-[#634eff] transition-all scale-110 active:scale-90 transition-transform duration-300" href="#">
+<span class="material-symbols-outlined mb-1">video_library</span>
+<span class="font-['Inter'] text-[11px] uppercase tracking-widest">Projects</span>
+</a>
+<a class="flex flex-col items-center justify-center bg-gradient-to-br from-[#634eff] to-[#746dbf] text-white rounded-full p-3 shadow-[0_0_15px_rgba(99,78,255,0.4)] scale-110 active:scale-90 transition-transform duration-300" href="#">
+<span class="material-symbols-outlined mb-1" style="font-variation-settings: 'FILL' 1;">person</span>
+<span class="font-['Inter'] text-[11px] uppercase tracking-widest">Profile</span>
+</a>
+</nav>
+</body></html>

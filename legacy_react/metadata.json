@@ -1,0 +1,9 @@
+{
+  "name": "Deen Studio",
+  "description": "A professional Quran-focused video editing studio for spiritual content creators.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone",
+    "geolocation"
+  ]
+}
