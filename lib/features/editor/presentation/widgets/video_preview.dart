@@ -459,7 +459,7 @@ class _VideoPreviewState extends ConsumerState<VideoPreview> with TickerProvider
           localProgress = ((currentTime - activeChunk.start) / chunkDuration).clamp(0.0, 1.0);
         }
 
-      if (!hasQuranAnimation && activeChunk.wordTimings != null) {
+      if (activeChunk.wordTimings != null) {
         final chunkTimings = activeChunk.wordTimings!;
         int currentWordIndex = 0;
         for (int i = 0; i < chunkTimings.length; i++) {

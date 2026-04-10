@@ -157,8 +157,9 @@ class QuranSubtitleGenerator {
     return clips;
   }
 
-  /// Calculate word-by-word timing by splitting Arabic text into words
-  /// and distributing the ayah duration proportionally by character count.
+  /// Calculate word-by-word timing dynamically.
+  /// Uses a specialized Tajweed-aware heuristic to distribute ayah duration based on 
+  /// Arabic reading rules (Madd, Shaddah, Waqf) rather than a naive character count.
   List<Map<String, dynamic>> _calculateWordTimings(
     String ayahText,
     double ayahStartTime,
@@ -167,16 +168,21 @@ class QuranSubtitleGenerator {
     final words = ayahText.split(RegExp(r'\s+')).where((w) => w.trim().isNotEmpty).toList();
     if (words.isEmpty) return [];
 
-    // Count total characters (including spaces for better distribution)
-    final totalChars = ayahText.length;
-    if (totalChars == 0) return [];
+    // Calculate the Tajweed-based temporal weight of each word
+    final wordWeights = words.map((w) => _calculateWordWeight(w)).toList();
+    final totalWeight = wordWeights.fold(0.0, (sum, w) => sum + w);
+
+    if (totalWeight <= 0) return [];
 
     double currentTime = ayahStartTime;
     final timings = <Map<String, dynamic>>[];
 
-    for (final word in words) {
-      // Distribute time proportionally by word length
-      final wordDuration = (word.length / totalChars) * ayahDuration;
+    for (int i = 0; i < words.length; i++) {
+      final word = words[i];
+      final weight = wordWeights[i];
+      
+      // Distribute time proportionally by Tajweed weight
+      final wordDuration = (weight / totalWeight) * ayahDuration;
       final wordStart = currentTime;
       final wordEnd = wordStart + wordDuration;
 
@@ -190,6 +196,55 @@ class QuranSubtitleGenerator {
     }
 
     return timings;
+  }
+
+  /// Advanced heuristic for Quranic word timing distribution.
+  /// Calculates a weight for each word predicting its relative audio duration.
+  double _calculateWordWeight(String word) {
+    double weight = 0.0;
+    
+    for (int i = 0; i < word.length; i++) {
+      final char = word[i];
+      
+      // Harakat (short vowels) and sukun do not take extra time relative to the consonant
+      if (['َ', 'ُ', 'ِ', 'ْ', 'ً', 'ٌ', 'ٍ', 'ۡ'].contains(char)) continue;
+      
+      // Tajweed Stop/Pause Marks (Waqf) — the reciter physically pauses here
+      if (['ۖ', 'ۗ', 'ۚ', 'ۛ', 'ۙ', 'ۘ', '۩', 'ۜ'].contains(char)) {
+        weight += 4.0;
+        continue;
+      }
+      
+      // Maddah Lazim/Muttasil (elongation marker ~) implies 4-6 beats!
+      if (char == 'ٓ') {
+        weight += 3.5;
+        continue;
+      }
+      
+      // Dagger Alif or Alif Maddah (implies at least 2 beats Madd Tabi'i)
+      if (['ٰ', 'آ', 'ٱ'].contains(char)) {
+        weight += 2.0;
+        continue;
+      }
+      
+      // Shaddah (doubles the consonant articulation time)
+      if (char == 'ّ') {
+        weight += 1.5;
+        continue;
+      }
+      
+      // Heavy timing letters (often forms of Madd Tabi'i if unvoweled)
+      if (['ا', 'و', 'ي', 'ى'].contains(char)) {
+        weight += 1.5;
+        continue;
+      }
+
+      // Base consonants
+      weight += 1.0;
+    }
+    
+    // Guarantee minimal weight even for tiny structural words (e.g. "بِ", "وَ")
+    return weight < 1.0 ? 1.0 : weight;
   }
 
   /// Strips the Basmallah from the start of an ayah's Arabic text.
