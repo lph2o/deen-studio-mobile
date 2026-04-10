@@ -228,7 +228,9 @@ class _VideoPreviewState extends ConsumerState<VideoPreview> with TickerProvider
       if (voiceEffect.id != 'none') speed *= voiceEffect.speed;
     }
     await _audioPlayer.setSpeed(speed.clamp(0.25, 4.0));
-    if (state.isPlaying) {
+    // RACE CONDITION FIX: Capture the freshest state after all previous async yields
+    final currentIsPlaying = ref.read(editorProvider).isPlaying;
+    if (currentIsPlaying) {
       final isReady = _audioPlayer.processingState == ProcessingState.ready || _audioPlayer.processingState == ProcessingState.completed;
       if (isReady && !_audioPlayer.playing) { await _audioPlayer.play(); }
     } else {
@@ -618,32 +620,41 @@ class _VideoPreviewState extends ConsumerState<VideoPreview> with TickerProvider
       final isOverlay = overlayAnimations.contains(quranAnimationId);
       final isGlow = quranAnimationId == 'ethereal_glow';
       
-      return Positioned(
-        left: 0, right: 0, top: y - 40,
-        child: _applyMask(
-          Opacity(
-            opacity: opacity.clamp(0.0, 1.0), 
+      final wrapperChild = Opacity(
+        opacity: opacity.clamp(0.0, 1.0), 
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16), 
+          child: CustomPaint(
+            painter: isOverlay || isGlow || shaderAnimations.contains(quranAnimationId) 
+                ? null // Let Text take precedence, Shader/Glow handles it
+                : _QuranAnimationPainter(animationId: quranAnimationId, progress: localProgress, textColor: color),
+            foregroundPainter: isOverlay
+                ? _QuranAnimationPainter(animationId: quranAnimationId, progress: localProgress, textColor: color)
+                : null,
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16), 
-              child: CustomPaint(
-                painter: isOverlay || isGlow || shaderAnimations.contains(quranAnimationId) 
-                    ? null // Let Text take precedence, Shader/Glow handles it
-                    : _QuranAnimationPainter(animationId: quranAnimationId, progress: localProgress, textColor: color),
-                foregroundPainter: isOverlay
-                    ? _QuranAnimationPainter(animationId: quranAnimationId, progress: localProgress, textColor: color)
-                    : null,
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 20), 
-                  child: mappedWidget
-                ),
-              )
-            )
-          ), 
-          layer.mask
-        ),
+              padding: const EdgeInsets.symmetric(vertical: 20), 
+              child: mappedWidget
+            ),
+          )
+        )
+      );
+      
+      return _buildSmartBoundingBoxWrapper(
+        layer: layer, previewWidth: previewWidth, previewHeight: previewHeight, 
+        isSelected: ref.read(editorProvider).selectedLayerId == layer.id,
+        defaultY: y - 40,
+        defaultWidthRatio: 1.0,
+        child: _applyMask(wrapperChild, layer.mask)
       );
     }
-    return Positioned(left: 0, right: 0, top: y, child: _applyMask(Opacity(opacity: opacity.clamp(0.0, 1.0), child: Padding(padding: const EdgeInsets.symmetric(horizontal: 16), child: textWidget)), layer.mask));
+    
+    return _buildSmartBoundingBoxWrapper(
+      layer: layer, previewWidth: previewWidth, previewHeight: previewHeight, 
+      isSelected: ref.read(editorProvider).selectedLayerId == layer.id,
+      defaultY: y,
+      defaultWidthRatio: 1.0,
+      child: _applyMask(Opacity(opacity: opacity.clamp(0.0, 1.0), child: Padding(padding: const EdgeInsets.symmetric(horizontal: 16), child: textWidget)), layer.mask)
+    );
   }
 
   Widget _buildTranslationLayer(Layer layer, double currentTime, double previewWidth, double previewHeight, List<Layer> activeLayers) {
@@ -969,13 +980,12 @@ class _VideoPreviewState extends ConsumerState<VideoPreview> with TickerProvider
         ? ((currentTime - layer.startTime) / layer.effectiveDuration).clamp(0.0, 1.0)
         : 0.0;
     final opacity = (layer.style['opacity'] as num?)?.toDouble() ?? 1.0;
-    final x = layer.style['x']?.toDouble() ?? previewWidth / 2;
-    final y = layer.style['y']?.toDouble() ?? previewHeight / 2;
     String displayText = layer.content;
     final animation = layer.style['animation'] as String? ?? 'fade';
     double animOpacity = opacity;
     Offset slideOffset = Offset.zero;
-    double scale = 1.0;
+    double animScale = 1.0;
+    double? customWidth = layer.style['width']?.toDouble();
 
     switch (animation) {
       case 'fade':
@@ -1006,14 +1016,152 @@ class _VideoPreviewState extends ConsumerState<VideoPreview> with TickerProvider
         if (layerProgress < 0.3) slideOffset = Offset(0, previewHeight * (1.0 - layerProgress / 0.3));
         break;
       case 'scaleIn':
-        if (layerProgress < 0.3) scale = 0.5 + 0.5 * (layerProgress / 0.3);
-        break;
+        if (layerProgress < 0.3) animScale = 0.5 + 0.5 * (layerProgress / 0.3);
       case 'bounceIn':
         if (layerProgress < 0.4) {
           final t = layerProgress / 0.4;
-          scale = 1.0 + 0.2 * math.sin(t * math.pi * 2) * (1.0 - t);
+          animScale = 1.0 + 0.2 * math.sin(t * math.pi * 2) * (1.0 - t);
         }
         break;
+    }
+
+    Widget contentWidget = RichText(
+      text: TextSpan(
+        text: displayText,
+        style: TextStyle(
+          fontFamily: fontFamily,
+          fontSize: fontSize,
+          color: color,
+          height: 1.4,
+          fontWeight: style?.fontWeight,
+          fontStyle: style?.isItalic == true ? FontStyle.italic : FontStyle.normal,
+          shadows: style != null && style.shadowBlur > 0
+              ? [Shadow(color: _parseColor(style.shadowColor), offset: Offset(style.shadowOffsetX, style.shadowOffsetY), blurRadius: style.shadowBlur)]
+              : [],
+        ),
+      ),
+      textAlign: TextAlign.center,
+      softWrap: true,
+    );
+
+    // Si on a une largeur custom, on l'utilise, sinon on s'adapte au texte
+    Widget sizedContent = ConstrainedBox(
+      constraints: BoxConstraints(maxWidth: previewWidth * 0.85),
+      child: customWidth != null 
+          ? SizedBox(width: customWidth, child: contentWidget)
+          : IntrinsicWidth(child: contentWidget),
+    );
+
+    return _buildSmartBoundingBoxWrapper(
+      layer: layer,
+      previewWidth: previewWidth,
+      previewHeight: previewHeight,
+      isSelected: isSelected,
+      defaultX: previewWidth / 2,
+      defaultY: previewHeight / 2,
+      child: _applyMask(
+        _applyBlendMode(
+          Transform.translate(
+            offset: slideOffset,
+            child: Transform.scale(
+              scale: animScale,
+              child: Opacity(
+                opacity: animOpacity.clamp(0.0, 1.0),
+                child: sizedContent,
+              ),
+            ),
+          ),
+          layer.blendMode,
+        ),
+        layer.mask,
+      ),
+    );
+  }
+
+  /// Universal interactive wrapper for any text layer (Arabic, Translation, Normal Text)
+  Widget _buildSmartBoundingBoxWrapper({
+    required Layer layer,
+    required double previewWidth,
+    required double previewHeight,
+    required bool isSelected,
+    required Widget child,
+    double defaultX = 0,
+    double defaultY = 0,
+    double defaultWidthRatio = 0.85,
+  }) {
+    final x = layer.style['x']?.toDouble() ?? defaultX;
+    final y = layer.style['y']?.toDouble() ?? defaultY;
+    final scale = layer.style['scale']?.toDouble() ?? 1.0;
+    final customWidth = layer.style['width']?.toDouble();
+    
+    Widget sizedContent = ConstrainedBox(
+      constraints: BoxConstraints(maxWidth: previewWidth * defaultWidthRatio),
+      child: customWidth != null 
+          ? SizedBox(width: customWidth, child: child)
+          : IntrinsicWidth(child: child),
+    );
+
+    if (isSelected) {
+      final borderColor = const Color(0xFF2196F3);
+      sizedContent = Stack(
+        clipBehavior: Clip.none,
+        alignment: Alignment.center,
+        children: [
+          Container(
+            decoration: BoxDecoration(
+              border: Border.all(color: borderColor.withValues(alpha: 0.85), width: 1.5 / scale),
+              borderRadius: BorderRadius.circular(3 / scale),
+            ),
+            child: sizedContent,
+          ),
+          // Poignée droite (Ajuster la largeur)
+          Positioned(
+            right: -15 / scale, top: 0, bottom: 0,
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onPanUpdate: (details) {
+                double newW = (customWidth ?? previewWidth * defaultWidthRatio) + (details.delta.dx / scale);
+                newW = newW.clamp(50.0, previewWidth);
+                ref.read(editorProvider.notifier).updateLayer(
+                  layer.copyWith(style: {...layer.style, 'width': newW})
+                );
+              },
+              child: SizedBox(
+                width: 30 / scale,
+                child: Center(
+                  child: Container(
+                    width: 6 / scale, height: 24 / scale,
+                    decoration: BoxDecoration(color: Colors.white, border: Border.all(color: borderColor, width: 1 / scale), borderRadius: BorderRadius.circular(2)),
+                  )
+                )
+              ),
+            ),
+          ),
+          // Poignée en bas à droite (Ajuster l'échelle / zoom)
+          Positioned(
+            right: -10 / scale, bottom: -10 / scale,
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onPanUpdate: (details) {
+                double newScale = scale + (details.delta.dx * 0.01) + (details.delta.dy * 0.01);
+                newScale = newScale.clamp(0.2, 5.0);
+                ref.read(editorProvider.notifier).updateLayer(
+                  layer.copyWith(style: {...layer.style, 'scale': newScale})
+                );
+              },
+              child: SizedBox(
+                width: 20 / scale, height: 20 / scale,
+                child: Center(
+                  child: Container(
+                    width: 12 / scale, height: 12 / scale,
+                    decoration: BoxDecoration(color: Colors.white, border: Border.all(color: borderColor, width: 1.5 / scale), shape: BoxShape.circle, boxShadow: const [BoxShadow(color: Colors.black26, blurRadius: 2)]),
+                  )
+                )
+              ),
+            ),
+          ),
+        ],
+      );
     }
 
     return Positioned(
@@ -1032,56 +1180,21 @@ class _VideoPreviewState extends ConsumerState<VideoPreview> with TickerProvider
           if (_draggingLayerId != layer.id) return;
           final dx = details.globalPosition.dx - _dragStart.dx;
           final dy = details.globalPosition.dy - _dragStart.dy;
-          final newX = (_layerStartOffset.dx + dx).clamp(0.0, previewWidth - 10);
-          final newY = (_layerStartOffset.dy + dy).clamp(0.0, previewHeight - 10);
+          final newX = (_layerStartOffset.dx + dx).clamp(-previewWidth, previewWidth * 2);
+          final newY = (_layerStartOffset.dy + dy).clamp(-previewHeight, previewHeight * 2);
           final updated = layer.copyWith(
             style: {...layer.style, 'x': newX, 'y': newY},
           );
           ref.read(editorProvider.notifier).updateLayer(updated);
         },
         onPanEnd: (_) => _draggingLayerId = null,
-        child: _applyMask(
-          _applyBlendMode(
-            Transform.translate(
-              offset: slideOffset,
-              child: Transform.scale(
-                scale: scale,
-                child: Opacity(
-                  opacity: animOpacity.clamp(0.0, 1.0),
-                  child: ConstrainedBox(
-                    constraints: BoxConstraints(maxWidth: previewWidth * 0.85),
-                    child: Text(
-                      displayText,
-                      style: TextStyle(
-                        fontFamily: fontFamily,
-                        fontSize: fontSize,
-                        color: color,
-                        fontWeight: style?.fontWeight,
-                        fontStyle: style?.isItalic == true ? FontStyle.italic : FontStyle.normal,
-                        shadows: style != null && style.shadowBlur > 0
-                            ? [Shadow(
-                                color: _parseColor(style.shadowColor),
-                                offset: Offset(style.shadowOffsetX, style.shadowOffsetY),
-                                blurRadius: style.shadowBlur,
-                              )]
-                            : [],
-                      ),
-                      textAlign: TextAlign.center,
-                      softWrap: true,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-            layer.blendMode,
-          ),
-          layer.mask,
+        child: Transform.scale(
+          scale: scale,
+          child: sizedContent,
         ),
       ),
     );
   }
-
-  /// Builds selection handles (corners + border) over the selected layer.
   List<Widget> _buildSelectionOverlay(
     List<Layer> activeLayers,
     String selectedId,
@@ -1093,12 +1206,7 @@ class _VideoPreviewState extends ConsumerState<VideoPreview> with TickerProvider
     if (selected.type == 'video' || selected.type == 'audio') return [];
 
     double left, top, width, height;
-    if (selected.type == 'text' || selected.type == 'arabic' || selected.type == 'translation') {
-      left = (selected.style['x']?.toDouble() ?? previewWidth / 2) - 4;
-      top = (selected.style['y']?.toDouble() ?? previewHeight / 2) - 4;
-      width = math.min(previewWidth * 0.85, previewWidth - left);
-      height = (selected.textStyle?.fontSize ?? 20) * 2.2;
-    } else if (selected.type == 'image') {
+    if (selected.type == 'image') {
       left = (selected.style['x']?.toDouble() ?? 0) - 4;
       top = (selected.style['y']?.toDouble() ?? 0) - 4;
       width = (selected.style['width']?.toDouble() ?? previewWidth) + 8;

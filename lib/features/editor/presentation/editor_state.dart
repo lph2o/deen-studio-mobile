@@ -742,6 +742,32 @@ class EditorNotifier extends Notifier<EditorState> {
     _mutate((p) => p.copyWith(layers: updatedLayers));
   }
 
+  /// Applique les mesures spatiales (x, y, width, scale) d'une couche source vers toutes les couches du même type.
+  void applyMetricsToSameTypeLayers(String layerId) {
+    final project = state.currentProject;
+    if (project == null) return;
+    
+    final sourceLayer = _findLayer(layerId);
+    if (sourceLayer == null) return;
+    
+    final metricsToSync = ['x', 'y', 'width', 'scale'];
+    
+    final updatedLayers = project.layers.map((layer) {
+      if (layer.id != sourceLayer.id && layer.type == sourceLayer.type) {
+        final newStyle = Map<String, dynamic>.from(layer.style);
+        for (final k in metricsToSync) {
+          if (sourceLayer.style.containsKey(k)) {
+            newStyle[k] = sourceLayer.style[k];
+          }
+        }
+        return layer.copyWith(style: newStyle);
+      }
+      return layer;
+    }).toList();
+    
+    _mutate((p) => p.copyWith(layers: updatedLayers));
+  }
+
   /// Update the text content of a layer.
   void updateLayerContent(String layerId, String content) {
     final layer = _findLayer(layerId);

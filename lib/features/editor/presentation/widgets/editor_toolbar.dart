@@ -642,6 +642,22 @@ class _EditorToolbarState extends ConsumerState<EditorToolbar> {
               color: AppTheme.onSurface,
             ),
             const SizedBox(width: 8),
+            _ToolbarItem(
+              icon: Icons.sync_alt_rounded,
+              label: 'Sync Pos.',
+              onTap: () {
+                ref.read(editorProvider.notifier).applyMetricsToSameTypeLayers(layer.id);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Position synchronisée sur tous les textes de ce type'),
+                    backgroundColor: AppTheme.primaryColor,
+                    duration: Duration(seconds: 2),
+                  ),
+                );
+              },
+              color: AppTheme.primaryColor,
+            ),
+            const SizedBox(width: 8),
           ],
 
           // Video-specific tools
