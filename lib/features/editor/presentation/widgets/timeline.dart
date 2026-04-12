@@ -4,7 +4,6 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme.dart';
-import '../../../../core/ui/design_system.dart';
 import '../../../../models/project.dart';
 import '../editor_state.dart';
 
@@ -102,12 +101,12 @@ class _TimelineState extends ConsumerState<Timeline> {
                               .setDraggingTimeline(false);
                         } else if (notification is ScrollUpdateNotification &&
                             notification.dragDetails != null) {
-                          final newTime = _hScrollController.offset / pxPerSec;
+                          final newTime = (_hScrollController.offset / pxPerSec)
+                              .clamp(0.0, totalDuration);
+                          ref.read(playbackTimeProvider).value = newTime;
                           ref
                               .read(editorProvider.notifier)
-                              .setCurrentTime(
-                                newTime.clamp(0.0, totalDuration),
-                              );
+                              .setCurrentTime(newTime);
                         }
                         return true;
                       },
@@ -434,12 +433,10 @@ class _ClipItem extends StatefulWidget {
   final bool isAudioTrack;
   final bool isRippleMode;
   final double Function() getPlayheadTime;
-  final String? reciterId;
   final VoidCallback onTap;
   final void Function(double) onDragEnd;
   final void Function({double? startDelta, double? endDelta}) onTrim;
   final List<Layer> allClips;
-  final List<dynamic> allTrackGroups;
   final List<Layer> projectLayers;
 
   const _ClipItem({
@@ -455,9 +452,7 @@ class _ClipItem extends StatefulWidget {
     required this.onTap,
     required this.onDragEnd,
     required this.onTrim,
-    this.reciterId,
     this.allClips = const [],
-    this.allTrackGroups = const [],
     this.projectLayers = const [],
   });
 
@@ -553,10 +548,7 @@ class _ClipItemState extends State<_ClipItem> {
               children: [
                 Flexible(
                   child: Text(
-                    _clipLabel(
-                      clip,
-                      reciterId: widget.isAudioTrack ? widget.reciterId : null,
-                    ),
+                    _clipLabel(clip),
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       fontSize: 11,

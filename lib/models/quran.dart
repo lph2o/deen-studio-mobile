@@ -51,10 +51,33 @@ class Ayah {
   });
 
   factory Ayah.fromMap(Map<String, dynamic> map) {
+    String text = map['text'] ?? '';
+    final numberInSurah = map['numberInSurah'] ?? 0;
+    
+    // AlQuran.cloud API appends the Basmallah to the first verse of every Surah (except 1 and 9).
+    // This causes audio desyncs in video generation since the audio file typically starts directly with the verse.
+    if (numberInSurah == 1) {
+      const basmalahUthmani = 'بِسْمِ ٱللَّهِ ٱلرَّحْمَـٰنِ ٱلرَّحِيمِ ';
+      const basmalahUthmani2 = 'بِسۡمِ ٱللَّهِ ٱلرَّحۡمَـٰنِ ٱلرَّحِيمِ ';
+      const basmalahSimple = 'بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ ';
+      
+      if (text.startsWith(basmalahUthmani)) {
+        text = text.substring(basmalahUthmani.length);
+      } else if (text.startsWith(basmalahUthmani2)) {
+        text = text.substring(basmalahUthmani2.length);
+      } else if (text.startsWith(basmalahSimple)) {
+        text = text.substring(basmalahSimple.length);
+      }
+      
+      // Fallback: If it's Surah Al-Fatihah, we MUST NOT strip it because Ayat 1 IS the Basmallah.
+      // Above logic handles this because Al-Fatihah Ayat 1 does NOT have a trailing space in the API, 
+      // thus startsWith(basmalahUthmani_with_space) returns false!
+    }
+
     return Ayah(
       number: map['number'] ?? 0,
-      text: map['text'] ?? '',
-      numberInSurah: map['numberInSurah'] ?? 0,
+      text: text,
+      numberInSurah: numberInSurah,
       juz: map['juz'] ?? 0,
       manzil: map['manzil'] ?? 0,
       page: map['page'] ?? 0,

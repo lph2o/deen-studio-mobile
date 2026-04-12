@@ -11,6 +11,7 @@ import '../../../../core/models/voice_effect.dart';
 import '../../../../core/models/canvas_background.dart';
 import '../../../../core/services/quran_animation_export.dart';
 import '../../../../models/text_layer_style.dart';
+import '../recitation/recitation_timing.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../editor_state.dart';
 
@@ -28,6 +29,18 @@ class _TextChunk {
   });
 
   double get duration => end - start;
+}
+
+_TextChunk _pickChunkAtTime(List<_TextChunk> chunks, double time) {
+  if (chunks.isEmpty) {
+    return _TextChunk(text: '', start: 0, end: 0);
+  }
+  if (time <= chunks.first.start) return chunks.first;
+  if (time >= chunks.last.end) return chunks.last;
+  return chunks.firstWhere(
+    (c) => time >= c.start && time < c.end,
+    orElse: () => chunks.first,
+  );
 }
 
 List<_TextChunk> _chunkWordTimings(
@@ -107,6 +120,7 @@ class _VideoPreviewState extends ConsumerState<VideoPreview>
   bool? _lastAppliedAudioPlaying;
   bool? _lastAppliedVideoPlaying;
   String? _preWarmingVideoPath;
+  DateTime? _lastAudioSwitchAt;
   double _initialPlaybackTime = 0.0;
 
   // Drag state for canvas layers
@@ -176,8 +190,13 @@ class _VideoPreviewState extends ConsumerState<VideoPreview>
         return;
       }
 
-      final newController = VideoPlayerController.file(file);
+      final newController = VideoPlayerController.file(
+        file,
+        videoPlayerOptions: VideoPlayerOptions(mixWithOthers: true),
+      );
       await newController.initialize();
+      // Ensure the video player never competes with our isolated just_audio engine
+      await newController.setVolume(0.0);
 
       final oldController = _videoController;
       _lastVideoPath = path;
@@ -208,6 +227,58 @@ class _VideoPreviewState extends ConsumerState<VideoPreview>
       controller.dispose();
     }
     super.dispose();
+  }
+
+  double _resolveRecitationTime({
+    required double fallbackTimelineTime,
+    required List<Layer> allLayers,
+  }) {
+    final audioLayers = allLayers.where((l) => l.type == 'audio').toList();
+    if (audioLayers.isEmpty) return fallbackTimelineTime;
+
+    Layer? anchor;
+    if (_currentAudioPath != null) {
+      anchor = audioLayers.firstWhere(
+        (l) => l.content == _currentAudioPath,
+        orElse: () => Layer(
+          id: '',
+          type: '',
+          content: '',
+          startTime: 0,
+          duration: 0,
+          style: const {},
+        ),
+      );
+      if (anchor.id.isEmpty) {
+        anchor = null;
+      }
+    }
+
+    anchor ??= audioLayers.firstWhere(
+      (l) => l.activeAt(fallbackTimelineTime),
+      orElse: () => Layer(
+        id: '',
+        type: '',
+        content: '',
+        startTime: 0,
+        duration: 0,
+        style: const {},
+      ),
+    );
+    if (anchor.id.isEmpty) return fallbackTimelineTime;
+
+    final ready =
+        _audioPlayer.processingState == ProcessingState.ready ||
+        _audioPlayer.processingState == ProcessingState.completed;
+    final sourceMatches = _currentAudioPath == anchor.content;
+
+    return RecitationTiming.computeEffectiveRecitationTime(
+      fallbackTimelineTime: fallbackTimelineTime,
+      isAudioReady: ready && sourceMatches,
+      audioPosition: _audioPlayer.position,
+      audioLayerStartTime: anchor.startTime,
+      audioLayerDuration: anchor.effectiveDuration,
+    );
   }
 
   Future<void> _syncAudioPlayers() async {
@@ -250,11 +321,24 @@ class _VideoPreviewState extends ConsumerState<VideoPreview>
         if (_audioPlayer.playing) await _audioPlayer.pause();
         await _audioPlayer.stop();
         _currentAudioPath = audioPath;
-        final expectedPosition = Duration(
-          milliseconds: ((currentTime - activeLayer.startTime) * 1000).toInt(),
+        var playbackSpeed =
+            (activeLayer.style['speed'] as num?)?.toDouble() ?? 1.0;
+        if (activeLayer.voiceEffectId != 'none') {
+          final voiceEffect = findVoiceEffectById(activeLayer.voiceEffectId);
+          if (voiceEffect.id != 'none') {
+            playbackSpeed *= voiceEffect.speed;
+          }
+        }
+        playbackSpeed = playbackSpeed.clamp(0.25, 4.0);
+        final expectedPosition = RecitationTiming.computeSwitchSeekPosition(
+          isPlaying: state.isPlaying,
+          currentTime: currentTime,
+          layerStartTime: activeLayer.startTime,
+          playbackSpeed: playbackSpeed,
         );
         await _audioPlayer.setFilePath(audioPath);
         await _audioPlayer.seek(expectedPosition);
+        _lastAudioSwitchAt = DateTime.now();
       } catch (e) {
         _failedAudioPaths.add(audioPath);
         debugPrint('[Audio] Failed to load: $e');
@@ -271,14 +355,25 @@ class _VideoPreviewState extends ConsumerState<VideoPreview>
         final drift = (_audioPlayer.position - expectedPosition).inMilliseconds
             .abs();
         final isPlaying = ref.read(editorProvider).isPlaying;
-        // Optimization: Do not micromanage the native audio clock during active playback 
-        // to avoid flutter causing stream drop-outs and AudioTrack stalls.
-        if (isPlaying && drift > 1500) {
-           // Massive drift > 1.5s, force a resync (usually happens if video lagged hard but audio kept going)
-           await _audioPlayer.seek(expectedPosition);
+        final speed =
+            (activeLayer.style['speed'] as num?)?.toDouble().clamp(0.25, 4.0) ??
+            1.0;
+        final delayCorrection =
+            RecitationTiming.shouldDelayDriftCorrectionAfterSwitch(
+              now: DateTime.now(),
+              lastSwitchAt: _lastAudioSwitchAt,
+              currentTime: currentTime,
+              layerStartTime: activeLayer.startTime,
+              playbackSpeed: speed,
+            );
+        // Optimization: keep playing uninterrupted; only correct significant drift,
+        // and never during the immediate post-switch window.
+        if (isPlaying && !delayCorrection && drift > 1500) {
+          // Massive drift > 1.5s, force a resync (usually happens if video lagged hard but audio kept going)
+          await _audioPlayer.seek(expectedPosition);
         } else if (!isPlaying && drift > 150) {
-           // Scrubbing validation: precise sync when paused
-           await _audioPlayer.seek(expectedPosition);
+          // Scrubbing validation: precise sync when paused
+          await _audioPlayer.seek(expectedPosition);
         }
       }
     }
@@ -373,14 +468,9 @@ class _VideoPreviewState extends ConsumerState<VideoPreview>
   DateTime _lastAudioSyncTime = DateTime.now();
   bool _isAudioSyncing = false;
 
-  void _syncAudioPlayersThrottled() async {
+  void _syncAudioPlayersImmediate() async {
     if (_isAudioSyncing) return;
-    
-    final now = DateTime.now();
-    // Throttled to 10Hz to prevent spamming just_audio MethodChannel and starving Android's underlying AudioTrack.
-    if (now.difference(_lastAudioSyncTime).inMilliseconds < 100) return;
-    _lastAudioSyncTime = now;
-
+    _lastAudioSyncTime = DateTime.now();
     _isAudioSyncing = true;
     try {
       await _syncAudioPlayers();
@@ -389,11 +479,22 @@ class _VideoPreviewState extends ConsumerState<VideoPreview>
     }
   }
 
+  void _syncAudioPlayersThrottled() async {
+    if (_isAudioSyncing) return;
+
+    final now = DateTime.now();
+    // Throttled to 10Hz to prevent spamming just_audio MethodChannel and starving Android's underlying AudioTrack.
+    if (now.difference(_lastAudioSyncTime).inMilliseconds < 100) return;
+    _lastAudioSyncTime = now;
+
+    _syncAudioPlayersImmediate();
+  }
+
   void _onTick(Duration elapsed) {
     if (!mounted) return;
     final state = ref.read(editorProvider);
     final isPlaying = state.isPlaying;
-    
+
     // We expect playhead updates coming from outside when PAUSED
     if (!isPlaying) {
       if (_playbackTicker.isActive) _stopPlayback();
@@ -402,12 +503,14 @@ class _VideoPreviewState extends ConsumerState<VideoPreview>
 
     final total = state.currentProject?.totalDuration ?? 30.0;
     final layers = state.currentProject?.layers ?? [];
-    
+
     // Find relevant video layer
-    final activeVideoLayer = layers.where((l) => l.type == 'video' && l.activeAt(_playbackTime.value)).firstOrNull;
+    final activeVideoLayer = layers
+        .where((l) => l.type == 'video' && l.activeAt(_playbackTime.value))
+        .firstOrNull;
 
     // MASTER CLOCK: Pure Hardware Synthetic Time
-    // We completely decouple from video decoder jitter. 
+    // We completely decouple from video decoder jitter.
     // The UI must run flawlessly at 60fps regardless of video decoding speed.
     double next = _initialPlaybackTime + (elapsed.inMicroseconds / 1000000.0);
 
@@ -425,17 +528,50 @@ class _VideoPreviewState extends ConsumerState<VideoPreview>
       _lastEditorStateUpdateTime = now;
       ref.read(editorProvider.notifier).setCurrentTime(next.clamp(0.0, total));
     }
-    
-    _syncAudioPlayersThrottled();
+
+    final audioLayers = layers.where((l) => l.type == 'audio').toList();
+    Layer? activeAudioLayer;
+    for (final layer in audioLayers) {
+      if (next >= layer.startTime &&
+          next < layer.startTime + layer.effectiveDuration) {
+        activeAudioLayer = layer;
+        break;
+      }
+    }
+    var speedHint =
+        (activeAudioLayer?.style['speed'] as num?)?.toDouble() ?? 1.0;
+    if (activeAudioLayer != null && activeAudioLayer.voiceEffectId != 'none') {
+      final voiceEffect = findVoiceEffectById(activeAudioLayer.voiceEffectId);
+      if (voiceEffect.id != 'none') {
+        speedHint *= voiceEffect.speed;
+      }
+    }
+    speedHint = speedHint.clamp(0.25, 4.0);
+    final priorityAudioSync = RecitationTiming.shouldPrioritizeSync(
+      audioLayers: audioLayers,
+      currentTime: next,
+      playbackSpeed: speedHint,
+    );
+    if (priorityAudioSync) {
+      _syncAudioPlayersImmediate();
+    } else {
+      _syncAudioPlayersThrottled();
+    }
 
     // Handle video controller playback state
-    if (_isVideoInitialized && _videoController != null && _videoController!.value.isInitialized) {
+    if (_isVideoInitialized &&
+        _videoController != null &&
+        _videoController!.value.isInitialized) {
       if (activeVideoLayer != null) {
         final isActive = activeVideoLayer.activeAt(next);
-        if (isActive && (!_videoController!.value.isPlaying || _lastAppliedVideoPlaying != true)) {
+        if (isActive &&
+            (!_videoController!.value.isPlaying ||
+                _lastAppliedVideoPlaying != true)) {
           _videoController!.play();
           _lastAppliedVideoPlaying = true;
-        } else if (!isActive && (_videoController!.value.isPlaying || _lastAppliedVideoPlaying != false)) {
+        } else if (!isActive &&
+            (_videoController!.value.isPlaying ||
+                _lastAppliedVideoPlaying != false)) {
           _videoController!.pause();
           _lastAppliedVideoPlaying = false;
         }
@@ -448,7 +584,14 @@ class _VideoPreviewState extends ConsumerState<VideoPreview>
 
       final isMidVideo = activeVideoLayer != null;
       if (!isMidVideo) {
-        final comingUp = layers.where((l) => l.type == 'video' && l.startTime > next && l.startTime < next + 2.0).firstOrNull;
+        final comingUp = layers
+            .where(
+              (l) =>
+                  l.type == 'video' &&
+                  l.startTime > next &&
+                  l.startTime < next + 2.0,
+            )
+            .firstOrNull;
         if (comingUp != null && _preWarmingVideoPath != comingUp.content) {
           _preWarmingVideoPath = comingUp.content;
           _initializeVideoControllerByPath(comingUp.content);
@@ -465,7 +608,7 @@ class _VideoPreviewState extends ConsumerState<VideoPreview>
     // Sync video controller position once before starting, then let it play freely
     final state = ref.read(editorProvider);
     final project = state.currentProject;
-    
+
     _initialPlaybackTime = state.currentTime;
     _playbackTime.value = state.currentTime;
 
@@ -814,7 +957,13 @@ class _VideoPreviewState extends ConsumerState<VideoPreview>
         style?.fontFamily ?? layer.fontFamily ?? 'UthmanicRegular';
     final opacity = (layer.style['opacity'] as num?)?.toDouble() ?? 1.0;
     final transformY = layer.transform.y;
-    final y = layer.style['y']?.toDouble() ?? (transformY * previewHeight);
+    final styleY = (layer.style['y'] as num?)?.toDouble();
+    final hasLegacyQuranAutoY =
+        layer.style['x'] == null &&
+        (styleY == 300.0 || styleY == 600.0 || styleY == 750.0);
+    final y = hasLegacyQuranAutoY
+        ? (transformY * previewHeight)
+        : (styleY ?? (transformY * previewHeight));
     final quranAnimationId = style?.quranAnimationId;
     final hasQuranAnimation =
         quranAnimationId != null &&
@@ -837,12 +986,7 @@ class _VideoPreviewState extends ConsumerState<VideoPreview>
     if (hasWordTimings) {
       final chunks = _chunkWordTimings(layer.wordTimings, wordsPerChunk: 10);
       if (chunks.isNotEmpty) {
-        final activeChunksIter = chunks.where(
-          (c) => currentTime >= c.start && currentTime <= c.end,
-        );
-        final activeChunk = activeChunksIter.isNotEmpty
-            ? activeChunksIter.first
-            : chunks.last;
+        final activeChunk = _pickChunkAtTime(chunks, currentTime);
 
         displayText = activeChunk.text;
 
@@ -1158,8 +1302,10 @@ class _VideoPreviewState extends ConsumerState<VideoPreview>
         previewWidth: previewWidth,
         previewHeight: previewHeight,
         isSelected: ref.read(editorProvider).selectedLayerId == layer.id,
+        defaultX: 0,
         defaultY: y - 40,
         defaultWidthRatio: 1.0,
+        fillWidthWhenNoCustom: true,
         child: RepaintBoundary(child: _applyMask(wrapperChild, layer.mask)),
       );
     }
@@ -1169,8 +1315,10 @@ class _VideoPreviewState extends ConsumerState<VideoPreview>
       previewWidth: previewWidth,
       previewHeight: previewHeight,
       isSelected: ref.read(editorProvider).selectedLayerId == layer.id,
+      defaultX: 0,
       defaultY: y,
       defaultWidthRatio: 1.0,
+      fillWidthWhenNoCustom: true,
       child: RepaintBoundary(
         child: _applyMask(
           Opacity(
@@ -1200,7 +1348,13 @@ class _VideoPreviewState extends ConsumerState<VideoPreview>
     final color = style != null ? _parseColor(style.color) : Colors.white70;
     final opacity = (layer.style['opacity'] as num?)?.toDouble() ?? 1.0;
     final transformY = layer.transform.y;
-    final y = layer.style['y']?.toDouble() ?? (transformY * previewHeight);
+    final styleY = (layer.style['y'] as num?)?.toDouble();
+    final hasLegacyQuranAutoY =
+        layer.style['x'] == null &&
+        (styleY == 300.0 || styleY == 600.0 || styleY == 750.0);
+    final y = hasLegacyQuranAutoY
+        ? (transformY * previewHeight)
+        : (styleY ?? (transformY * previewHeight));
 
     String displayText = layer.content;
     final arabicLayer = activeLayers
@@ -1219,12 +1373,7 @@ class _VideoPreviewState extends ConsumerState<VideoPreview>
         arabicChunks,
       );
       if (transChunks.isNotEmpty) {
-        final activeChunksIter = transChunks.where(
-          (c) => currentTime >= c.start && currentTime <= c.end,
-        );
-        final activeChunk = activeChunksIter.isNotEmpty
-            ? activeChunksIter.first
-            : transChunks.last;
+        final activeChunk = _pickChunkAtTime(transChunks, currentTime);
         displayText = activeChunk.text;
       }
     }
@@ -1251,8 +1400,10 @@ class _VideoPreviewState extends ConsumerState<VideoPreview>
       previewWidth: previewWidth,
       previewHeight: previewHeight,
       isSelected: ref.read(editorProvider).selectedLayerId == layer.id,
+      defaultX: 0,
       defaultY: y,
       defaultWidthRatio: 1.0,
+      fillWidthWhenNoCustom: true,
       child: _applyMask(
         _applyBlendMode(
           Opacity(opacity: opacity.clamp(0.0, 1.0), child: tWidget),
@@ -1277,7 +1428,13 @@ class _VideoPreviewState extends ConsumerState<VideoPreview>
     final color = style != null ? _parseColor(style.color) : Colors.white70;
     final opacity = (layer.style['opacity'] as num?)?.toDouble() ?? 1.0;
     final transformY = layer.transform.y;
-    final y = layer.style['y']?.toDouble() ?? (transformY * previewHeight);
+    final styleY = (layer.style['y'] as num?)?.toDouble();
+    final hasLegacyQuranAutoY =
+        layer.style['x'] == null &&
+        (styleY == 300.0 || styleY == 600.0 || styleY == 750.0);
+    final y = hasLegacyQuranAutoY
+        ? (transformY * previewHeight)
+        : (styleY ?? (transformY * previewHeight));
 
     String displayText = layer.content;
     final arabicLayer = activeLayers
@@ -1296,12 +1453,7 @@ class _VideoPreviewState extends ConsumerState<VideoPreview>
         arabicChunks,
       );
       if (transChunks.isNotEmpty) {
-        final activeChunksIter = transChunks.where(
-          (c) => currentTime >= c.start && currentTime <= c.end,
-        );
-        final activeChunk = activeChunksIter.isNotEmpty
-            ? activeChunksIter.first
-            : transChunks.last;
+        final activeChunk = _pickChunkAtTime(transChunks, currentTime);
         displayText = activeChunk.text;
       }
     }
@@ -1328,8 +1480,10 @@ class _VideoPreviewState extends ConsumerState<VideoPreview>
       previewWidth: previewWidth,
       previewHeight: previewHeight,
       isSelected: ref.read(editorProvider).selectedLayerId == layer.id,
+      defaultX: 0,
       defaultY: y,
       defaultWidthRatio: 1.0,
+      fillWidthWhenNoCustom: true,
       child: _applyMask(
         _applyBlendMode(
           Opacity(opacity: opacity.clamp(0.0, 1.0), child: tWidget),
@@ -1435,23 +1589,28 @@ class _VideoPreviewState extends ConsumerState<VideoPreview>
     final isPlaying = ref.watch(editorProvider.select((s) => s.isPlaying));
 
     // Reverse sync: Update _playbackTime when scrubbing manually on the timeline (only if paused or significantly drifted)
-    ref.listen<double>(
-      editorProvider.select((s) => s.currentTime),
-      (previous, next) {
-        if (!isPlaying && (_playbackTime.value - next).abs() > 0.05) {
-          _playbackTime.value = next;
-          // Synchronize video player visually for scrubbing
-          if (_isVideoInitialized && _videoController != null && _videoController!.value.isInitialized) {
-             final activeVideo = project.layers.where((l) => l.type == 'video' && l.activeAt(next)).firstOrNull;
-             if (activeVideo != null) {
-                final inPoint = activeVideo.inPoint ?? 0;
-                final seekMs = ((next - activeVideo.startTime + inPoint) * 1000).toInt();
-                _videoController!.seekTo(Duration(milliseconds: seekMs));
-             }
+    ref.listen<double>(editorProvider.select((s) => s.currentTime), (
+      previous,
+      next,
+    ) {
+      if (!isPlaying && (_playbackTime.value - next).abs() > 0.05) {
+        _playbackTime.value = next;
+        // Synchronize video player visually for scrubbing
+        if (_isVideoInitialized &&
+            _videoController != null &&
+            _videoController!.value.isInitialized) {
+          final activeVideo = project.layers
+              .where((l) => l.type == 'video' && l.activeAt(next))
+              .firstOrNull;
+          if (activeVideo != null) {
+            final inPoint = activeVideo.inPoint ?? 0;
+            final seekMs = ((next - activeVideo.startTime + inPoint) * 1000)
+                .toInt();
+            _videoController!.seekTo(Duration(milliseconds: seekMs));
           }
         }
-      },
-    );
+      }
+    });
 
     final cinematicMode = ref.watch(
       editorProvider.select((s) => s.cinematicMode),
@@ -1472,10 +1631,30 @@ class _VideoPreviewState extends ConsumerState<VideoPreview>
       builder: (context, currentTime, child) {
         // High-frequency UI logic: only recalculate active parts
         final layers = project.layers;
-        final activeLayers = layers.where((l) => l.activeAt(currentTime)).toList();
+        final activeLayers = layers
+            .where((l) => l.activeAt(currentTime))
+            .toList();
+        final recitationTime = _resolveRecitationTime(
+          fallbackTimelineTime: currentTime,
+          allLayers: layers,
+        );
+        final activeRecitationLayers = layers
+            .where(
+              (l) =>
+                  (l.type == 'arabic' ||
+                      l.type == 'translation' ||
+                      l.type == 'phonetic') &&
+                  l.activeAt(recitationTime),
+            )
+            .toList();
         activeLayers.sort((a, b) => a.startTime.compareTo(b.startTime));
-        
-        final selectedLayerId = ref.watch(editorProvider.select((s) => s.selectedLayerId));
+        activeRecitationLayers.sort(
+          (a, b) => a.startTime.compareTo(b.startTime),
+        );
+
+        final selectedLayerId = ref.watch(
+          editorProvider.select((s) => s.selectedLayerId),
+        );
 
         return LayoutBuilder(
           builder: (context, constraints) {
@@ -1579,36 +1758,36 @@ class _VideoPreviewState extends ConsumerState<VideoPreview>
                                           previewHeight,
                                         ),
                                       ),
-                                  ...activeLayers
+                                  ...activeRecitationLayers
                                       .where((l) => l.type == 'arabic')
                                       .map(
                                         (layer) => _buildArabicLayer(
                                           layer,
-                                          currentTime,
+                                          recitationTime,
                                           previewWidth,
                                           previewHeight,
                                         ),
                                       ),
-                                  ...activeLayers
+                                  ...activeRecitationLayers
                                       .where((l) => l.type == 'translation')
                                       .map(
                                         (layer) => _buildTranslationLayer(
                                           layer,
-                                          currentTime,
+                                          recitationTime,
                                           previewWidth,
                                           previewHeight,
-                                          activeLayers,
+                                          activeRecitationLayers,
                                         ),
                                       ),
-                                  ...activeLayers
+                                  ...activeRecitationLayers
                                       .where((l) => l.type == 'phonetic')
                                       .map(
                                         (layer) => _buildPhoneticLayer(
                                           layer,
-                                          currentTime,
+                                          recitationTime,
                                           previewWidth,
                                           previewHeight,
-                                          activeLayers,
+                                          activeRecitationLayers,
                                         ),
                                       ),
                                   ...activeLayers
@@ -1631,7 +1810,7 @@ class _VideoPreviewState extends ConsumerState<VideoPreview>
                                   if (cinematicMode)
                                     Positioned.fill(
                                       child: FadeTransition(
-                                        opacity: _cinematicAnimation!,
+                                        opacity: _cinematicAnimation,
                                         child: Container(
                                           decoration: BoxDecoration(
                                             gradient: RadialGradient(
@@ -1885,9 +2064,24 @@ class _VideoPreviewState extends ConsumerState<VideoPreview>
     double defaultX = 0,
     double defaultY = 0,
     double defaultWidthRatio = 0.85,
+    bool fillWidthWhenNoCustom = false,
   }) {
-    final x = layer.style['x']?.toDouble() ?? defaultX;
-    final y = layer.style['y']?.toDouble() ?? defaultY;
+    final styleX = layer.style['x'];
+    final styleY = layer.style['y'];
+    final transformX = layer.transform.x;
+    final transformY = layer.transform.y;
+
+    final x = styleX is num
+        ? styleX.toDouble()
+        : (transformX >= 0.0 && transformX <= 1.0
+              ? (transformX * previewWidth) -
+                    (previewWidth * defaultWidthRatio / 2)
+              : defaultX);
+    final y = styleY is num
+        ? styleY.toDouble()
+        : (transformY >= 0.0 && transformY <= 1.0
+              ? transformY * previewHeight
+              : defaultY);
     final scale = layer.style['scale']?.toDouble() ?? 1.0;
     final customWidth = layer.style['width']?.toDouble();
 
@@ -1895,7 +2089,12 @@ class _VideoPreviewState extends ConsumerState<VideoPreview>
       constraints: BoxConstraints(maxWidth: previewWidth * defaultWidthRatio),
       child: customWidth != null
           ? SizedBox(width: customWidth, child: child)
-          : IntrinsicWidth(child: child),
+          : (fillWidthWhenNoCustom
+                ? SizedBox(
+                    width: previewWidth * defaultWidthRatio,
+                    child: child,
+                  )
+                : IntrinsicWidth(child: child)),
     );
 
     if (isSelected) {
@@ -2261,7 +2460,7 @@ class _VideoLayerRenderer extends StatelessWidget {
       return const SizedBox.shrink();
     }
 
-    // VideoPlayer handles its own sync internally. We do not pass our synthetic 
+    // VideoPlayer handles its own sync internally. We do not pass our synthetic
     // timeline time, which prevents severe Texture rebinding crashes on screen refreshes.
     return SizedBox(
       width: width,

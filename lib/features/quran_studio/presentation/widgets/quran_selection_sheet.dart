@@ -103,7 +103,7 @@ class _QuranSelectionSheetState extends ConsumerState<QuranSelectionSheet> {
           content: clip.arabic,
           startTime: currentStartTime,
           duration: durationSecs,
-          style: {'y': 300.0},
+          style: {},
           textStyle: const TextLayerStyle(fontFamily: 'UthmanicRegular', fontSize: 26, isRTL: true),
           transform: const ClipTransform(x: 0.5, y: 0.35),
           wordTimings: clip.wordTimings,
@@ -116,7 +116,7 @@ class _QuranSelectionSheetState extends ConsumerState<QuranSelectionSheet> {
             content: clip.translation,
             startTime: currentStartTime,
             duration: durationSecs,
-            style: {'y': 600.0},
+            style: {},
             textStyle: const TextLayerStyle(fontSize: 14),
             transform: const ClipTransform(x: 0.5, y: 0.65),
           ));
@@ -129,7 +129,7 @@ class _QuranSelectionSheetState extends ConsumerState<QuranSelectionSheet> {
             content: clip.phonetic ?? '',
             startTime: currentStartTime,
             duration: durationSecs,
-            style: {'y': 750.0},
+            style: {},
             textStyle: const TextLayerStyle(fontSize: 12),
             transform: const ClipTransform(x: 0.5, y: 0.85),
           ));

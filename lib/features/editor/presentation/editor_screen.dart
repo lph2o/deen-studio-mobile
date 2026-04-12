@@ -65,7 +65,13 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final state = ref.watch(editorProvider);
+    final isFullScreen = ref.watch(editorProvider.select((s) => s.isFullScreen));
+    final isTimelineExpanded = ref.watch(
+      editorProvider.select((s) => s.isTimelineExpanded),
+    );
+    final hasProject = ref.watch(
+      editorProvider.select((s) => s.currentProject != null),
+    );
 
     // Landscape ↔ Portrait when entering / exiting fullscreen
     ref.listen(editorProvider.select((s) => s.isFullScreen), (_, isFull) {
@@ -137,13 +143,13 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
       },
       child: Scaffold(
         backgroundColor: AppTheme.backgroundDark,
-        appBar: state.isFullScreen
+        appBar: isFullScreen
             ? null
             : EditorAppBar(
                 onHome: _saveAndExit,
                 onExport: _openExport,
               ),
-        body: state.currentProject == null
+        body: !hasProject
             ? _buildLoading()
             : ClipRRect(
                 borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
@@ -151,20 +157,20 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
                   children: [
                     Column(
                       children: [
-                        if (!state.isFullScreen)
+                        if (!isFullScreen)
                           Expanded(
-                            flex: state.isTimelineExpanded ? 2 : 5,
+                            flex: isTimelineExpanded ? 2 : 5,
                             child: const VideoPreview(),
                           ),
-                        if (state.isFullScreen)
+                        if (isFullScreen)
                           const Expanded(child: VideoPreview()),
 
                         // ── Scrubber + play controls ──
                         const EditorPlayBar(),
 
-                        if (!state.isFullScreen)
+                        if (!isFullScreen)
                           Expanded(
-                            flex: state.isTimelineExpanded ? 5 : 2,
+                            flex: isTimelineExpanded ? 5 : 2,
                             child: const Timeline(),
                           ),
                       ],

@@ -263,24 +263,68 @@ class QuranSubtitleGenerator {
     // Surah 1 = the Basmallah IS the verse. Surah 9 = no Basmallah.
     if (surahNumber == 1 || surahNumber == 9) return text;
 
-    // Common Basmallah variants in alquran.cloud API responses
+    // Fast path for common exact variants.
     const basmallahs = [
-      'بِسْمِ ٱللَّهِ ٱلرَّحْمَـٰنِ ٱلرَّحِيمِ ',  // uthmani with tatweel + space
-      'بِسْمِ ٱللَّهِ ٱلرَّحْمَـٰنِ ٱلرَّحِيمِ',   // uthmani with tatweel no space
-      'بِسْمِ اللَّهِ الرَّحْمَنِ الرَّحِيمِ ',     // standard with space
-      'بِسْمِ اللَّهِ الرَّحْمَنِ الرَّحِيمِ',      // standard no space
-      'بسم الله الرحمن الرحيم ',                     // simplified with space
-      'بسم الله الرحمن الرحيم',                      // simplified no space
+      'بِسْمِ ٱللَّهِ ٱلرَّحْمَـٰنِ ٱلرَّحِيمِ ',
+      'بِسْمِ ٱللَّهِ ٱلرَّحْمَـٰنِ ٱلرَّحِيمِ',
+      'بِسْمِ اللَّهِ الرَّحْمَنِ الرَّحِيمِ ',
+      'بِسْمِ اللَّهِ الرَّحْمَنِ الرَّحِيمِ',
+      'بسم الله الرحمن الرحيم ',
+      'بسم الله الرحمن الرحيم',
     ];
-
     for (final basmallah in basmallahs) {
       if (text.startsWith(basmallah)) {
         final stripped = text.substring(basmallah.length).trimLeft();
-        debugPrint('[QuranSubtitleGenerator] Stripped Basmallah from S$surahNumber:A1');
+        debugPrint('[QuranSubtitleGenerator] Stripped Basmallah (exact) from S$surahNumber:A1');
         return stripped;
       }
     }
 
+    // Robust fallback: strip if the first 4 normalized words equal
+    // "بسم الله الرحمن الرحيم", regardless of diacritics/hamza variants.
+    final normalized = _normalizeArabicForPrefix(text);
+    if (normalized.startsWith('بسم الله الرحمن الرحيم')) {
+      final stripped = _dropLeadingWordCount(text, 4);
+      debugPrint('[QuranSubtitleGenerator] Stripped Basmallah (normalized) from S$surahNumber:A1');
+      return stripped;
+    }
+
     return text;
+  }
+
+  static String _normalizeArabicForPrefix(String value) {
+    var out = value;
+    // Remove tatweel + Arabic diacritics / small marks.
+    out = out.replaceAll(RegExp(r'[\u0640\u064B-\u065F\u0670\u06D6-\u06ED]'), '');
+    // Normalize common alif/hamza variants for stable comparisons.
+    out = out
+        .replaceAll('ٱ', 'ا')
+        .replaceAll('آ', 'ا')
+        .replaceAll('أ', 'ا')
+        .replaceAll('إ', 'ا');
+    return out.trimLeft().replaceAll(RegExp(r'\s+'), ' ');
+  }
+
+  static String _dropLeadingWordCount(String value, int wordCount) {
+    int i = 0;
+    int seen = 0;
+    bool inWord = false;
+
+    while (i < value.length) {
+      final ch = value[i];
+      final isSpace = RegExp(r'\s').hasMatch(ch);
+      if (!isSpace && !inWord) {
+        inWord = true;
+        seen++;
+      } else if (isSpace && inWord) {
+        inWord = false;
+        if (seen >= wordCount) {
+          return value.substring(i).trimLeft();
+        }
+      }
+      i++;
+    }
+
+    return seen >= wordCount ? '' : value;
   }
 }

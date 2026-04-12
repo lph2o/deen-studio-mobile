@@ -24,6 +24,7 @@ import 'reframe_panel.dart';
 import 'export_dialog.dart';
 import '../../../pixabay/presentation/widgets/pixabay_gallery_widget.dart';
 import '../../../quran_studio/presentation/widgets/quran_selection_sheet.dart';
+
 /// ════════════════════════════════════════════════════════════
 /// EditorToolbar — Smart bottom navigation bar
 ///
@@ -43,23 +44,35 @@ class EditorToolbar extends ConsumerStatefulWidget {
 }
 
 class _EditorToolbarState extends ConsumerState<EditorToolbar> {
-
   // ─── Dialog Helpers ─────────────────────────────────────────────────────
 
   void _showSnack(String message) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text(message),
-      behavior: SnackBarBehavior.floating,
-      duration: const Duration(seconds: 2),
-    ));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 2),
+      ),
+    );
   }
 
   Future<void> _openVolumeDialog(String layerId) async {
-    final layer = ref.read(editorProvider).currentProject?.layers.firstWhere(
-      (l) => l.id == layerId,
-      orElse: () => Layer(id: '', type: '', content: '', startTime: 0, duration: 0, style: {}),
-    );
+    final layer = ref
+        .read(editorProvider)
+        .currentProject
+        ?.layers
+        .firstWhere(
+          (l) => l.id == layerId,
+          orElse: () => Layer(
+            id: '',
+            type: '',
+            content: '',
+            startTime: 0,
+            duration: 0,
+            style: {},
+          ),
+        );
     if (layer == null || layer.id.isEmpty) return;
 
     final result = await showModalBottomSheet<double>(
@@ -67,20 +80,35 @@ class _EditorToolbarState extends ConsumerState<EditorToolbar> {
       isScrollControlled: true,
       useSafeArea: true,
       backgroundColor: Colors.transparent,
-      builder: (_) => VolumeDialog(initialVolume: (layer.style['volume'] as num?)?.toDouble() ?? 1.0),
+      builder: (_) => VolumeDialog(
+        initialVolume: (layer.style['volume'] as num?)?.toDouble() ?? 1.0,
+      ),
     );
     if (result != null && mounted) {
-      ref.read(editorProvider.notifier).updateLayer(
-        layer.copyWith(style: {...layer.style, 'volume': result}),
-      );
+      ref
+          .read(editorProvider.notifier)
+          .updateLayer(
+            layer.copyWith(style: {...layer.style, 'volume': result}),
+          );
     }
   }
 
   Future<void> _openSpeedDialog(String layerId) async {
-    final layer = ref.read(editorProvider).currentProject?.layers.firstWhere(
-      (l) => l.id == layerId,
-      orElse: () => Layer(id: '', type: '', content: '', startTime: 0, duration: 0, style: {}),
-    );
+    final layer = ref
+        .read(editorProvider)
+        .currentProject
+        ?.layers
+        .firstWhere(
+          (l) => l.id == layerId,
+          orElse: () => Layer(
+            id: '',
+            type: '',
+            content: '',
+            startTime: 0,
+            duration: 0,
+            style: {},
+          ),
+        );
     if (layer == null || layer.id.isEmpty) return;
 
     final result = await showModalBottomSheet<double>(
@@ -88,20 +116,35 @@ class _EditorToolbarState extends ConsumerState<EditorToolbar> {
       isScrollControlled: true,
       useSafeArea: true,
       backgroundColor: Colors.transparent,
-      builder: (_) => SpeedDialog(initialSpeed: (layer.style['speed'] as num?)?.toDouble() ?? 1.0),
+      builder: (_) => SpeedDialog(
+        initialSpeed: (layer.style['speed'] as num?)?.toDouble() ?? 1.0,
+      ),
     );
     if (result != null && mounted) {
-      ref.read(editorProvider.notifier).updateLayer(
-        layer.copyWith(style: {...layer.style, 'speed': result}),
-      );
+      ref
+          .read(editorProvider.notifier)
+          .updateLayer(
+            layer.copyWith(style: {...layer.style, 'speed': result}),
+          );
     }
   }
 
   Future<void> _openFadeDialog(String layerId) async {
-    final layer = ref.read(editorProvider).currentProject?.layers.firstWhere(
-      (l) => l.id == layerId,
-      orElse: () => Layer(id: '', type: '', content: '', startTime: 0, duration: 0, style: {}),
-    );
+    final layer = ref
+        .read(editorProvider)
+        .currentProject
+        ?.layers
+        .firstWhere(
+          (l) => l.id == layerId,
+          orElse: () => Layer(
+            id: '',
+            type: '',
+            content: '',
+            startTime: 0,
+            duration: 0,
+            style: {},
+          ),
+        );
     if (layer == null || layer.id.isEmpty) return;
 
     final result = await showModalBottomSheet<Map<String, double>>(
@@ -115,20 +158,36 @@ class _EditorToolbarState extends ConsumerState<EditorToolbar> {
       ),
     );
     if (result != null && mounted) {
-      ref.read(editorProvider.notifier).updateLayer(
-        layer.copyWith(style: {...layer.style,
-          'fadeIn': result['fadeIn'] ?? 0.0,
-          'fadeOut': result['fadeOut'] ?? 0.0,
-        }),
-      );
+      ref
+          .read(editorProvider.notifier)
+          .updateLayer(
+            layer.copyWith(
+              style: {
+                ...layer.style,
+                'fadeIn': result['fadeIn'] ?? 0.0,
+                'fadeOut': result['fadeOut'] ?? 0.0,
+              },
+            ),
+          );
     }
   }
 
   Future<void> _openTransitionDialog(String layerId) async {
-    final layer = ref.read(editorProvider).currentProject?.layers.firstWhere(
-      (l) => l.id == layerId,
-      orElse: () => Layer(id: '', type: '', content: '', startTime: 0, duration: 0, style: {}),
-    );
+    final layer = ref
+        .read(editorProvider)
+        .currentProject
+        ?.layers
+        .firstWhere(
+          (l) => l.id == layerId,
+          orElse: () => Layer(
+            id: '',
+            type: '',
+            content: '',
+            startTime: 0,
+            duration: 0,
+            style: {},
+          ),
+        );
     if (layer == null || layer.id.isEmpty) return;
 
     final result = await showModalBottomSheet<Map<String, dynamic>>(
@@ -138,16 +197,22 @@ class _EditorToolbarState extends ConsumerState<EditorToolbar> {
       backgroundColor: Colors.transparent,
       builder: (_) => TransitionDialog(
         initialTransition: layer.style['transition'] as String? ?? 'none',
-        initialDuration: (layer.style['transitionDuration'] as num?)?.toDouble() ?? 1.0,
+        initialDuration:
+            (layer.style['transitionDuration'] as num?)?.toDouble() ?? 1.0,
       ),
     );
     if (result != null && mounted) {
-      ref.read(editorProvider.notifier).updateLayer(
-        layer.copyWith(style: {...layer.style,
-          'transition': result['transition'],
-          'transitionDuration': result['duration'],
-        }),
-      );
+      ref
+          .read(editorProvider.notifier)
+          .updateLayer(
+            layer.copyWith(
+              style: {
+                ...layer.style,
+                'transition': result['transition'],
+                'transitionDuration': result['duration'],
+              },
+            ),
+          );
     }
   }
 
@@ -162,9 +227,9 @@ class _EditorToolbarState extends ConsumerState<EditorToolbar> {
       ),
     );
     if (result != null && mounted) {
-      ref.read(editorProvider.notifier).updateLayer(
-        layer.copyWith(style: {...layer.style, 'size': result}),
-      );
+      ref
+          .read(editorProvider.notifier)
+          .updateLayer(layer.copyWith(style: {...layer.style, 'size': result}));
       _showSnack('Taille: ${result.toInt()}px');
     }
   }
@@ -180,9 +245,11 @@ class _EditorToolbarState extends ConsumerState<EditorToolbar> {
       ),
     );
     if (result != null && mounted) {
-      ref.read(editorProvider.notifier).updateLayer(
-        layer.copyWith(style: {...layer.style, 'opacity': result}),
-      );
+      ref
+          .read(editorProvider.notifier)
+          .updateLayer(
+            layer.copyWith(style: {...layer.style, 'opacity': result}),
+          );
       _showSnack('Opacité: ${(result * 100).toInt()}%');
     }
   }
@@ -198,10 +265,19 @@ class _EditorToolbarState extends ConsumerState<EditorToolbar> {
       ),
     );
     if (result != null && mounted) {
-      ref.read(editorProvider.notifier).updateLayer(
-        layer.copyWith(style: {...layer.style, 'animation': result}),
-      );
-      const names = ['Aucune', 'Apparition', 'Rebond', 'Rotation', 'Zoom', 'Glissement'];
+      ref
+          .read(editorProvider.notifier)
+          .updateLayer(
+            layer.copyWith(style: {...layer.style, 'animation': result}),
+          );
+      const names = [
+        'Aucune',
+        'Apparition',
+        'Rebond',
+        'Rotation',
+        'Zoom',
+        'Glissement',
+      ];
       _showSnack('Animation: ${names[result]}');
     }
   }
@@ -212,25 +288,40 @@ class _EditorToolbarState extends ConsumerState<EditorToolbar> {
       barrierDismissible: false,
       builder: (_) => _ProcessingDialog(label: 'Stabilisation de la vidéo...'),
     );
-    final success = await ref.read(editorProvider.notifier).stabilizeVideo(layer.id, onProgress: (_, _) {});
+    final success = await ref
+        .read(editorProvider.notifier)
+        .stabilizeVideo(layer.id, onProgress: (_, _) {});
     if (!mounted) return;
     Navigator.of(context).pop();
-    _showSnack(success ? 'Vidéo stabilisée avec succès' : 'Erreur ou vidéo déjà stable');
+    _showSnack(
+      success ? 'Vidéo stabilisée avec succès' : 'Erreur ou vidéo déjà stable',
+    );
   }
 
   Future<void> _freezeFrame(Layer layer) async {
     final state = ref.read(editorProvider);
-    final timestamp = (state.currentTime - layer.startTime) + (layer.inPoint ?? 0);
+    final timestamp =
+        (state.currentTime - layer.startTime) + (layer.inPoint ?? 0);
     showDialog<String?>(
       context: context,
       barrierDismissible: false,
       builder: (_) => _ProcessingDialog(label: 'Extraction de l\'image...'),
     );
-    final framePath = await VideoToolService.freezeFrame(videoPath: layer.content, timestamp: timestamp);
+    final framePath = await VideoToolService.freezeFrame(
+      videoPath: layer.content,
+      timestamp: timestamp,
+    );
     if (!mounted) return;
     Navigator.of(context).pop();
     if (framePath != null) {
-      ref.read(editorProvider.notifier).addMediaLayer(type: 'image', content: framePath, startTime: state.currentTime, duration: 3.0);
+      ref
+          .read(editorProvider.notifier)
+          .addMediaLayer(
+            type: 'image',
+            content: framePath,
+            startTime: state.currentTime,
+            duration: 3.0,
+          );
       _showSnack('Image freeze ajoutée (3s)');
     } else {
       _showSnack('Erreur lors de l\'extraction');
@@ -243,11 +334,16 @@ class _EditorToolbarState extends ConsumerState<EditorToolbar> {
       barrierDismissible: false,
       builder: (_) => _ProcessingDialog(label: 'Inversion de la vidéo...'),
     );
-    final reversedPath = await VideoToolService.reverseVideo(videoPath: layer.content, onProgress: (_, _) {});
+    final reversedPath = await VideoToolService.reverseVideo(
+      videoPath: layer.content,
+      onProgress: (_, _) {},
+    );
     if (!mounted) return;
     Navigator.of(context).pop();
     if (reversedPath != null) {
-      ref.read(editorProvider.notifier).updateLayer(layer.copyWith(content: reversedPath));
+      ref
+          .read(editorProvider.notifier)
+          .updateLayer(layer.copyWith(content: reversedPath));
       _showSnack('Vidéo inversée avec succès');
     } else {
       _showSnack('Erreur lors de l\'inversion');
@@ -306,7 +402,9 @@ class _EditorToolbarState extends ConsumerState<EditorToolbar> {
               ),
               Text(
                 'Ajouter ${isVideo ? "une vidéo" : "une image"}',
-                style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+                style: theme.textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
               ),
               const SizedBox(height: 20),
               Row(
@@ -320,13 +418,20 @@ class _EditorToolbarState extends ConsumerState<EditorToolbar> {
                         final result = await FilePicker.platform.pickFiles(
                           type: isVideo ? FileType.video : FileType.image,
                         );
-                        if (result != null && result.files.single.path != null && mounted) {
-                          final persistentPath = await PersistentMediaStore.persistFile(result.files.single.path!);
+                        if (result != null &&
+                            result.files.single.path != null &&
+                            mounted) {
+                          final persistentPath =
+                              await PersistentMediaStore.persistFile(
+                                result.files.single.path!,
+                              );
                           if (mounted) {
-                            ref.read(editorProvider.notifier).addMediaLayer(
-                              type: isVideo ? 'video' : 'image',
-                              content: persistentPath,
-                            );
+                            ref
+                                .read(editorProvider.notifier)
+                                .addMediaLayer(
+                                  type: isVideo ? 'video' : 'image',
+                                  content: persistentPath,
+                                );
                           }
                         }
                       },
@@ -344,10 +449,12 @@ class _EditorToolbarState extends ConsumerState<EditorToolbar> {
                           isVideo: isVideo,
                           onImported: (path, isVid) {
                             if (mounted) {
-                              ref.read(editorProvider.notifier).addMediaLayer(
-                                type: isVid ? 'video' : 'image',
-                                content: path,
-                              );
+                              ref
+                                  .read(editorProvider.notifier)
+                                  .addMediaLayer(
+                                    type: isVid ? 'video' : 'image',
+                                    content: path,
+                                  );
                             }
                           },
                         );
@@ -369,15 +476,26 @@ class _EditorToolbarState extends ConsumerState<EditorToolbar> {
 
   @override
   Widget build(BuildContext context) {
-    final state = ref.watch(editorProvider);
-    final selectedLayer = state.selectedLayerId != null
-        ? state.currentProject?.layers.firstWhere(
-            (l) => l.id == state.selectedLayerId,
-            orElse: () => Layer(id: '', type: 'none', content: '', startTime: 0, duration: 0, style: {}),
+    final selectedLayerId = ref.watch(
+      editorProvider.select((s) => s.selectedLayerId),
+    );
+    final project = ref.watch(editorProvider.select((s) => s.currentProject));
+    final selectedLayer = selectedLayerId != null
+        ? project?.layers.firstWhere(
+            (l) => l.id == selectedLayerId,
+            orElse: () => Layer(
+              id: '',
+              type: 'none',
+              content: '',
+              startTime: 0,
+              duration: 0,
+              style: {},
+            ),
           )
         : null;
 
-    final bool hasSelection = selectedLayer != null && selectedLayer.type != 'none';
+    final bool hasSelection =
+        selectedLayer != null && selectedLayer.type != 'none';
 
     return ClipRRect(
       borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
@@ -391,14 +509,16 @@ class _EditorToolbarState extends ConsumerState<EditorToolbar> {
           decoration: BoxDecoration(
             color: AppTheme.surfaceLowest.withValues(alpha: 0.85),
             border: Border(
-              top: BorderSide(color: AppTheme.outlineVariant.withValues(alpha: 0.12)),
+              top: BorderSide(
+                color: AppTheme.outlineVariant.withValues(alpha: 0.12),
+              ),
             ),
           ),
           child: hasSelection
               ? (selectedLayer.isAudio
-                  ? _buildAudioMixerToolbar(state, selectedLayer)
-                  : _buildSelectionToolbar(state, selectedLayer))
-              : _buildDefaultToolbar(state),
+                    ? _buildAudioMixerToolbar(project!, selectedLayer)
+                    : _buildSelectionToolbar(project!, selectedLayer))
+              : _buildDefaultToolbar(project!),
         ),
       ),
     );
@@ -408,9 +528,8 @@ class _EditorToolbarState extends ConsumerState<EditorToolbar> {
   // DEFAULT TOOLBAR — shown when nothing is selected
   // ─────────────────────────────────────────────────────────────────────────
 
-  Widget _buildDefaultToolbar(EditorState state) {
-    final project = state.currentProject;
-    final videoCount = project?.layers.where((l) => l.type == 'video').length ?? 0;
+  Widget _buildDefaultToolbar(Project project) {
+    final videoCount = project.layers.where((l) => l.type == 'video').length;
 
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
@@ -428,7 +547,9 @@ class _EditorToolbarState extends ConsumerState<EditorToolbar> {
           _ToolbarItem(
             icon: LucideIcons.type,
             label: 'Texte',
-            onTap: () => ref.read(editorProvider.notifier).addTextLayer(content: 'Votre texte'),
+            onTap: () => ref
+                .read(editorProvider.notifier)
+                .addTextLayer(content: 'Votre texte'),
             color: AppTheme.trackText,
           ),
           const SizedBox(width: 8),
@@ -436,9 +557,19 @@ class _EditorToolbarState extends ConsumerState<EditorToolbar> {
             icon: LucideIcons.music,
             label: 'Audio',
             onTap: () async {
-              final result = await FilePicker.platform.pickFiles(type: FileType.audio, allowMultiple: false);
-              if (result != null && result.files.single.path != null && mounted) {
-                ref.read(editorProvider.notifier).addMediaLayer(type: 'audio', content: result.files.single.path!);
+              final result = await FilePicker.platform.pickFiles(
+                type: FileType.audio,
+                allowMultiple: false,
+              );
+              if (result != null &&
+                  result.files.single.path != null &&
+                  mounted) {
+                ref
+                    .read(editorProvider.notifier)
+                    .addMediaLayer(
+                      type: 'audio',
+                      content: result.files.single.path!,
+                    );
               }
             },
             color: AppTheme.trackAudio,
@@ -474,7 +605,11 @@ class _EditorToolbarState extends ConsumerState<EditorToolbar> {
             ),
           ],
           const SizedBox(width: 8),
-          Container(width: 1, height: 32, color: AppTheme.outlineVariant.withValues(alpha: 0.15)),
+          Container(
+            width: 1,
+            height: 32,
+            color: AppTheme.outlineVariant.withValues(alpha: 0.15),
+          ),
           const SizedBox(width: 8),
           _ToolbarItem(
             icon: LucideIcons.monitorSmartphone,
@@ -486,14 +621,19 @@ class _EditorToolbarState extends ConsumerState<EditorToolbar> {
           _ToolbarItem(
             icon: LucideIcons.sliders,
             label: 'Mixage',
-            onTap: () => ref.read(editorProvider.notifier).setActiveToolbarCategory('Mixage Audio'),
+            onTap: () => ref
+                .read(editorProvider.notifier)
+                .setActiveToolbarCategory('Mixage Audio'),
             color: AppTheme.onSurface,
           ),
           const SizedBox(width: 8),
           _ToolbarItem(
             icon: LucideIcons.download,
             label: 'Exporter',
-            onTap: () => showDialog(context: context, builder: (_) => const ExportDialog()),
+            onTap: () => showDialog(
+              context: context,
+              builder: (_) => const ExportDialog(),
+            ),
             color: AppTheme.primaryColor,
             isPrimary: true,
           ),
@@ -506,7 +646,7 @@ class _EditorToolbarState extends ConsumerState<EditorToolbar> {
   // AUDIO MIXER TOOLBAR
   // ─────────────────────────────────────────────────────────────────────────
 
-  Widget _buildAudioMixerToolbar(EditorState state, Layer layer) {
+  Widget _buildAudioMixerToolbar(Project project, Layer layer) {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -515,15 +655,22 @@ class _EditorToolbarState extends ConsumerState<EditorToolbar> {
           child: Row(
             children: [
               GestureDetector(
-                onTap: () => ref.read(editorProvider.notifier).setSelectedLayer(null),
+                onTap: () =>
+                    ref.read(editorProvider.notifier).setSelectedLayer(null),
                 child: Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
                     color: AppTheme.trackAudio.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: AppTheme.trackAudio.withValues(alpha: 0.25)),
+                    border: Border.all(
+                      color: AppTheme.trackAudio.withValues(alpha: 0.25),
+                    ),
                   ),
-                  child: Icon(Icons.arrow_back_ios_new_rounded, size: 12, color: AppTheme.trackAudio),
+                  child: Icon(
+                    Icons.arrow_back_ios_new_rounded,
+                    size: 12,
+                    color: AppTheme.trackAudio,
+                  ),
                 ),
               ),
               const SizedBox(width: 10),
@@ -531,12 +678,26 @@ class _EditorToolbarState extends ConsumerState<EditorToolbar> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Audio', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600, color: AppTheme.trackAudio, letterSpacing: 0.8)),
                     Text(
-                      layer.content.contains('/') || layer.content.contains('\\')
+                      'Audio',
+                      style: GoogleFonts.inter(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: AppTheme.trackAudio,
+                        letterSpacing: 0.8,
+                      ),
+                    ),
+                    Text(
+                      layer.content.contains('/') ||
+                              layer.content.contains('\\')
                           ? layer.content.split(Platform.pathSeparator).last
-                          : (layer.content.length > 30 ? '${layer.content.substring(0, 30)}...' : layer.content),
-                      style: GoogleFonts.inter(fontSize: 10, color: AppTheme.onSurface.withValues(alpha: 0.4)),
+                          : (layer.content.length > 30
+                                ? '${layer.content.substring(0, 30)}...'
+                                : layer.content),
+                      style: GoogleFonts.inter(
+                        fontSize: 10,
+                        color: AppTheme.onSurface.withValues(alpha: 0.4),
+                      ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -552,7 +713,11 @@ class _EditorToolbarState extends ConsumerState<EditorToolbar> {
                     color: AppTheme.onSurface.withValues(alpha: 0.06),
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: Icon(LucideIcons.expand, size: 14, color: AppTheme.onSurface.withValues(alpha: 0.5)),
+                  child: Icon(
+                    LucideIcons.expand,
+                    size: 14,
+                    color: AppTheme.onSurface.withValues(alpha: 0.5),
+                  ),
                 ),
               ),
               GestureDetector(
@@ -565,9 +730,15 @@ class _EditorToolbarState extends ConsumerState<EditorToolbar> {
                   decoration: BoxDecoration(
                     color: Colors.red.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.red.withValues(alpha: 0.2)),
+                    border: Border.all(
+                      color: Colors.red.withValues(alpha: 0.2),
+                    ),
                   ),
-                  child: Icon(LucideIcons.trash2, size: 14, color: Colors.red.withValues(alpha: 0.7)),
+                  child: Icon(
+                    LucideIcons.trash2,
+                    size: 14,
+                    color: Colors.red.withValues(alpha: 0.7),
+                  ),
                 ),
               ),
             ],
@@ -575,11 +746,13 @@ class _EditorToolbarState extends ConsumerState<EditorToolbar> {
         ),
         InlineAudioMixer(
           audioLayer: layer,
-          editorState: state,
+          editorState: ref.read(editorProvider),
           onStyleUpdated: (styleUpdates) {
-            ref.read(editorProvider.notifier).updateLayer(
-              layer.copyWith(style: {...layer.style, ...styleUpdates}),
-            );
+            ref
+                .read(editorProvider.notifier)
+                .updateLayer(
+                  layer.copyWith(style: {...layer.style, ...styleUpdates}),
+                );
           },
         ),
         const SizedBox(height: 4),
@@ -591,7 +764,8 @@ class _EditorToolbarState extends ConsumerState<EditorToolbar> {
   // SELECTION TOOLBAR — shown when a non-audio layer is selected
   // ─────────────────────────────────────────────────────────────────────────
 
-  Widget _buildSelectionToolbar(EditorState state, Layer layer) {
+  Widget _buildSelectionToolbar(Project project, Layer layer) {
+    final state = ref.read(editorProvider);
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -599,20 +773,34 @@ class _EditorToolbarState extends ConsumerState<EditorToolbar> {
         children: [
           // Back button
           GestureDetector(
-            onTap: () => ref.read(editorProvider.notifier).setSelectedLayer(null),
+            onTap: () =>
+                ref.read(editorProvider.notifier).setSelectedLayer(null),
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               decoration: BoxDecoration(
                 color: AppTheme.primaryColor.withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: AppTheme.primaryColor.withValues(alpha: 0.25)),
+                border: Border.all(
+                  color: AppTheme.primaryColor.withValues(alpha: 0.25),
+                ),
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.arrow_back_ios_new_rounded, size: 12, color: AppTheme.primaryColor),
+                  Icon(
+                    Icons.arrow_back_ios_new_rounded,
+                    size: 12,
+                    color: AppTheme.primaryColor,
+                  ),
                   const SizedBox(width: 4),
-                  Text('Retour', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600, color: AppTheme.primaryColor)),
+                  Text(
+                    'Retour',
+                    style: GoogleFonts.inter(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: AppTheme.primaryColor,
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -623,7 +811,11 @@ class _EditorToolbarState extends ConsumerState<EditorToolbar> {
           ..._buildSelectionChips(layer, state),
 
           const SizedBox(width: 8),
-          Container(width: 1, height: 32, color: AppTheme.outlineVariant.withValues(alpha: 0.15)),
+          Container(
+            width: 1,
+            height: 32,
+            color: AppTheme.outlineVariant.withValues(alpha: 0.15),
+          ),
           const SizedBox(width: 8),
 
           // Text-specific tools
@@ -646,10 +838,14 @@ class _EditorToolbarState extends ConsumerState<EditorToolbar> {
               icon: Icons.sync_alt_rounded,
               label: 'Sync Pos.',
               onTap: () {
-                ref.read(editorProvider.notifier).applyMetricsToSameTypeLayers(layer.id);
+                ref
+                    .read(editorProvider.notifier)
+                    .applyMetricsToSameTypeLayers(layer.id);
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
-                    content: Text('Position synchronisée sur tous les textes de ce type'),
+                    content: Text(
+                      'Position synchronisée sur tous les textes de ce type',
+                    ),
                     backgroundColor: AppTheme.primaryColor,
                     duration: Duration(seconds: 2),
                   ),
@@ -675,7 +871,9 @@ class _EditorToolbarState extends ConsumerState<EditorToolbar> {
               onTap: () {
                 final project = ref.read(editorProvider).currentProject;
                 if (project == null) return;
-                final hasGroup = project.multiCamGroups.any((g) => g.angles.any((a) => a.layerId == layer.id));
+                final hasGroup = project.multiCamGroups.any(
+                  (g) => g.angles.any((a) => a.layerId == layer.id),
+                );
                 if (hasGroup) {
                   showModalBottomSheet(
                     context: context,
@@ -741,91 +939,165 @@ class _EditorToolbarState extends ConsumerState<EditorToolbar> {
     final chips = <Widget>[];
 
     // Always: Split + Duplicate
-    chips.add(_ActionChip(
-      icon: LucideIcons.splitSquareHorizontal,
-      label: 'Couper',
-      onTap: () => ref.read(editorProvider.notifier).splitLayer(layer.id, state.currentTime),
-    ));
+    chips.add(
+      _ActionChip(
+        icon: LucideIcons.splitSquareHorizontal,
+        label: 'Couper',
+        onTap: () => ref
+            .read(editorProvider.notifier)
+            .splitLayer(layer.id, state.currentTime),
+      ),
+    );
     chips.add(const SizedBox(width: 6));
 
-    chips.add(_ActionChip(
-      icon: LucideIcons.copy,
-      label: 'Dupliquer',
-      onTap: () => ref.read(editorProvider.notifier).duplicateLayer(layer.id),
-    ));
+    chips.add(
+      _ActionChip(
+        icon: LucideIcons.copy,
+        label: 'Dupliquer',
+        onTap: () => ref.read(editorProvider.notifier).duplicateLayer(layer.id),
+      ),
+    );
     chips.add(const SizedBox(width: 6));
 
     // Visual layers
     if (layer.isVisual) {
-      chips.add(_ActionChip(
-        icon: LucideIcons.moveRight,
-        label: 'Transition',
-        onTap: () => _openTransitionDialog(layer.id),
-      ));
+      chips.add(
+        _ActionChip(
+          icon: LucideIcons.moveRight,
+          label: 'Transition',
+          onTap: () => _openTransitionDialog(layer.id),
+        ),
+      );
       chips.add(const SizedBox(width: 6));
 
       if (layer.type == 'video') {
-        chips.add(_ActionChip(icon: LucideIcons.volume2, label: 'Volume', onTap: () => _openVolumeDialog(layer.id)));
+        chips.add(
+          _ActionChip(
+            icon: LucideIcons.volume2,
+            label: 'Volume',
+            onTap: () => _openVolumeDialog(layer.id),
+          ),
+        );
         chips.add(const SizedBox(width: 6));
-        chips.add(_ActionChip(icon: LucideIcons.clock, label: 'Vitesse', onTap: () => _openSpeedDialog(layer.id)));
+        chips.add(
+          _ActionChip(
+            icon: LucideIcons.clock,
+            label: 'Vitesse',
+            onTap: () => _openSpeedDialog(layer.id),
+          ),
+        );
         chips.add(const SizedBox(width: 6));
-        chips.add(_ActionChip(icon: LucideIcons.image, label: 'Freeze', onTap: () => _freezeFrame(layer)));
+        chips.add(
+          _ActionChip(
+            icon: LucideIcons.image,
+            label: 'Freeze',
+            onTap: () => _freezeFrame(layer),
+          ),
+        );
         chips.add(const SizedBox(width: 6));
-        chips.add(_ActionChip(icon: LucideIcons.rotateCcw, label: 'Inverser', onTap: () => _reverseVideo(layer)));
+        chips.add(
+          _ActionChip(
+            icon: LucideIcons.rotateCcw,
+            label: 'Inverser',
+            onTap: () => _reverseVideo(layer),
+          ),
+        );
         chips.add(const SizedBox(width: 6));
       }
     }
 
     // Text layers
     if (layer.isTextType) {
-      chips.add(_ActionChip(
-        icon: LucideIcons.focus,
-        label: 'Animation',
-        onTap: () => showTextEditorPanel(context, layer, initialIndex: 4),
-      ));
+      chips.add(
+        _ActionChip(
+          icon: LucideIcons.focus,
+          label: 'Animation',
+          onTap: () => showTextEditorPanel(context, layer, initialIndex: 4),
+        ),
+      );
       chips.add(const SizedBox(width: 6));
 
-      chips.add(_ActionChip(
-        icon: LucideIcons.mic,
-        label: 'Voix',
-        onTap: () => showModalBottomSheet(
-          context: context,
-          isScrollControlled: true,
-          backgroundColor: Colors.transparent,
-          builder: (_) => TextToSpeechSheet(targetLayer: layer),
+      chips.add(
+        _ActionChip(
+          icon: LucideIcons.mic,
+          label: 'Voix',
+          onTap: () => showModalBottomSheet(
+            context: context,
+            isScrollControlled: true,
+            backgroundColor: Colors.transparent,
+            builder: (_) => TextToSpeechSheet(targetLayer: layer),
+          ),
         ),
-      ));
+      );
       chips.add(const SizedBox(width: 6));
     }
 
     // Audio layers
     if (layer.isAudio) {
-      chips.add(_ActionChip(icon: LucideIcons.volume2, label: 'Volume', onTap: () => _openVolumeDialog(layer.id)));
-      chips.add(const SizedBox(width: 6));
-      chips.add(_ActionChip(icon: LucideIcons.clock, label: 'Vitesse', onTap: () => _openSpeedDialog(layer.id)));
-      chips.add(const SizedBox(width: 6));
-      chips.add(_ActionChip(icon: LucideIcons.skipForward, label: 'Estomper', onTap: () => _openFadeDialog(layer.id)));
-      chips.add(const SizedBox(width: 6));
-      chips.add(_ActionChip(
-        icon: LucideIcons.type,
-        label: 'Sous-titres',
-        onTap: () => showModalBottomSheet(
-          context: context,
-          isScrollControlled: true,
-          backgroundColor: Colors.transparent,
-          builder: (_) => const AutoSubtitleSheet(),
+      chips.add(
+        _ActionChip(
+          icon: LucideIcons.volume2,
+          label: 'Volume',
+          onTap: () => _openVolumeDialog(layer.id),
         ),
-      ));
+      );
+      chips.add(const SizedBox(width: 6));
+      chips.add(
+        _ActionChip(
+          icon: LucideIcons.clock,
+          label: 'Vitesse',
+          onTap: () => _openSpeedDialog(layer.id),
+        ),
+      );
+      chips.add(const SizedBox(width: 6));
+      chips.add(
+        _ActionChip(
+          icon: LucideIcons.skipForward,
+          label: 'Estomper',
+          onTap: () => _openFadeDialog(layer.id),
+        ),
+      );
+      chips.add(const SizedBox(width: 6));
+      chips.add(
+        _ActionChip(
+          icon: LucideIcons.type,
+          label: 'Sous-titres',
+          onTap: () => showModalBottomSheet(
+            context: context,
+            isScrollControlled: true,
+            backgroundColor: Colors.transparent,
+            builder: (_) => const AutoSubtitleSheet(),
+          ),
+        ),
+      );
       chips.add(const SizedBox(width: 6));
     }
 
     // Sticker layers
     if (layer.isSticker) {
-      chips.add(_ActionChip(icon: LucideIcons.maximize2, label: 'Taille', onTap: () => _openStickerSizeDialog(layer)));
+      chips.add(
+        _ActionChip(
+          icon: LucideIcons.maximize2,
+          label: 'Taille',
+          onTap: () => _openStickerSizeDialog(layer),
+        ),
+      );
       chips.add(const SizedBox(width: 6));
-      chips.add(_ActionChip(icon: LucideIcons.eye, label: 'Opacité', onTap: () => _openStickerOpacityDialog(layer)));
+      chips.add(
+        _ActionChip(
+          icon: LucideIcons.eye,
+          label: 'Opacité',
+          onTap: () => _openStickerOpacityDialog(layer),
+        ),
+      );
       chips.add(const SizedBox(width: 6));
-      chips.add(_ActionChip(icon: LucideIcons.sparkles, label: 'Animation', onTap: () => _openStickerAnimationPicker(layer)));
+      chips.add(
+        _ActionChip(
+          icon: LucideIcons.sparkles,
+          label: 'Animation',
+          onTap: () => _openStickerAnimationPicker(layer),
+        ),
+      );
       chips.add(const SizedBox(width: 6));
     }
 
@@ -858,21 +1130,35 @@ class _ToolbarItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final effectiveColor = isDestructive ? Colors.red : color;
-    final alpha = isDestructive ? 0.8 : isPrimary ? 1.0 : 0.7;
+    final alpha = isDestructive
+        ? 0.8
+        : isPrimary
+        ? 1.0
+        : 0.7;
 
     return GestureDetector(
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
-          color: effectiveColor.withValues(alpha: isPrimary || isDestructive ? 0.1 : 0.12),
+          color: effectiveColor.withValues(
+            alpha: isPrimary || isDestructive ? 0.1 : 0.12,
+          ),
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: effectiveColor.withValues(alpha: isPrimary || isDestructive ? 0.3 : 0.2)),
+          border: Border.all(
+            color: effectiveColor.withValues(
+              alpha: isPrimary || isDestructive ? 0.3 : 0.2,
+            ),
+          ),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 18, color: effectiveColor.withValues(alpha: alpha)),
+            Icon(
+              icon,
+              size: 18,
+              color: effectiveColor.withValues(alpha: alpha),
+            ),
             const SizedBox(height: 4),
             Text(
               label,
@@ -897,7 +1183,11 @@ class _ActionChip extends StatelessWidget {
   final String label;
   final VoidCallback onTap;
 
-  const _ActionChip({required this.icon, required this.label, required this.onTap});
+  const _ActionChip({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -908,7 +1198,9 @@ class _ActionChip extends StatelessWidget {
         decoration: BoxDecoration(
           color: AppTheme.surfaceHigh.withValues(alpha: 0.6),
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: AppTheme.outlineVariant.withValues(alpha: 0.15)),
+          border: Border.all(
+            color: AppTheme.outlineVariant.withValues(alpha: 0.15),
+          ),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -936,7 +1228,11 @@ class _MediaSourceButton extends StatelessWidget {
   final String label;
   final VoidCallback onTap;
 
-  const _MediaSourceButton({required this.icon, required this.label, required this.onTap});
+  const _MediaSourceButton({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -947,7 +1243,9 @@ class _MediaSourceButton extends StatelessWidget {
         decoration: BoxDecoration(
           color: AppTheme.surfaceHigh,
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: AppTheme.outlineVariant.withValues(alpha: 0.2)),
+          border: Border.all(
+            color: AppTheme.outlineVariant.withValues(alpha: 0.2),
+          ),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -989,7 +1287,9 @@ void showPixabayPicker(
           return Container(
             decoration: BoxDecoration(
               color: AppTheme.surfaceContainer,
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(24),
+              ),
             ),
             child: PixabayGalleryWidget(onMediaImported: onImported),
           );
@@ -1020,15 +1320,16 @@ class _ProcessingDialog extends StatelessWidget {
             const SizedBox(height: 16),
             Text(label, style: theme.textTheme.bodyLarge),
             const SizedBox(height: 4),
-            Text('Cela peut prendre quelques instants', style: theme.textTheme.bodySmall),
+            Text(
+              'Cela peut prendre quelques instants',
+              style: theme.textTheme.bodySmall,
+            ),
           ],
         ),
       ),
     );
   }
 }
-
-
 
 // ─── Sticker Tool Sheets ──────────────────────────────────────────────────────
 
@@ -1042,7 +1343,10 @@ class _StickerSizeSheet extends StatefulWidget {
 class _StickerSizeSheetState extends State<_StickerSizeSheet> {
   late double _size;
   @override
-  void initState() { super.initState(); _size = widget.initialSize; }
+  void initState() {
+    super.initState();
+    _size = widget.initialSize;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -1051,7 +1355,14 @@ class _StickerSizeSheetState extends State<_StickerSizeSheet> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text('${_size.toInt()}px', style: GoogleFonts.inter(fontSize: 32, fontWeight: FontWeight.w800, color: AppTheme.primaryColor)),
+          Text(
+            '${_size.toInt()}px',
+            style: GoogleFonts.inter(
+              fontSize: 32,
+              fontWeight: FontWeight.w800,
+              color: AppTheme.primaryColor,
+            ),
+          ),
           const SizedBox(height: 12),
           Slider(
             value: _size,
@@ -1064,17 +1375,24 @@ class _StickerSizeSheetState extends State<_StickerSizeSheet> {
           const SizedBox(height: 12),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [20.0, 48.0, 80.0, 120.0, 200.0].map((v) => _QuickPill(
-              label: '${v.toInt()}',
-              isSelected: (_size - v).abs() < 1,
-              onTap: () => setState(() => _size = v),
-            )).toList(),
+            children: [20.0, 48.0, 80.0, 120.0, 200.0]
+                .map(
+                  (v) => _QuickPill(
+                    label: '${v.toInt()}',
+                    isSelected: (_size - v).abs() < 1,
+                    onTap: () => setState(() => _size = v),
+                  ),
+                )
+                .toList(),
           ),
           const SizedBox(height: 16),
           SizedBox(
             width: double.infinity,
             child: ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primaryColor, foregroundColor: Colors.white),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.primaryColor,
+                foregroundColor: Colors.white,
+              ),
               onPressed: () => Navigator.pop(context, _size),
               child: const Text('Appliquer'),
             ),
@@ -1095,7 +1413,10 @@ class _StickerOpacitySheet extends StatefulWidget {
 class _StickerOpacitySheetState extends State<_StickerOpacitySheet> {
   late double _opacity;
   @override
-  void initState() { super.initState(); _opacity = widget.initialOpacity; }
+  void initState() {
+    super.initState();
+    _opacity = widget.initialOpacity;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -1104,7 +1425,14 @@ class _StickerOpacitySheetState extends State<_StickerOpacitySheet> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text('${(_opacity * 100).toInt()}%', style: GoogleFonts.inter(fontSize: 32, fontWeight: FontWeight.w800, color: AppTheme.primaryColor)),
+          Text(
+            '${(_opacity * 100).toInt()}%',
+            style: GoogleFonts.inter(
+              fontSize: 32,
+              fontWeight: FontWeight.w800,
+              color: AppTheme.primaryColor,
+            ),
+          ),
           const SizedBox(height: 12),
           Slider(
             value: _opacity,
@@ -1118,7 +1446,10 @@ class _StickerOpacitySheetState extends State<_StickerOpacitySheet> {
           SizedBox(
             width: double.infinity,
             child: ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primaryColor, foregroundColor: Colors.white),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.primaryColor,
+                foregroundColor: Colors.white,
+              ),
               onPressed: () => Navigator.pop(context, _opacity),
               child: const Text('Appliquer'),
             ),
@@ -1147,7 +1478,10 @@ class _StickerAnimationSheetState extends State<_StickerAnimationSheet> {
     (5, 'Glissement', LucideIcons.moveRight),
   ];
   @override
-  void initState() { super.initState(); _selected = widget.initialAnimation; }
+  void initState() {
+    super.initState();
+    _selected = widget.initialAnimation;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -1166,18 +1500,44 @@ class _StickerAnimationSheetState extends State<_StickerAnimationSheet> {
                 onTap: () => setState(() => _selected = idx),
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 150),
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 10,
+                  ),
                   decoration: BoxDecoration(
-                    color: isSelected ? AppTheme.primaryColor.withValues(alpha: 0.15) : AppTheme.surfaceHigh,
+                    color: isSelected
+                        ? AppTheme.primaryColor.withValues(alpha: 0.15)
+                        : AppTheme.surfaceHigh,
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: isSelected ? AppTheme.primaryColor.withValues(alpha: 0.4) : AppTheme.outlineVariant.withValues(alpha: 0.15)),
+                    border: Border.all(
+                      color: isSelected
+                          ? AppTheme.primaryColor.withValues(alpha: 0.4)
+                          : AppTheme.outlineVariant.withValues(alpha: 0.15),
+                    ),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(icon, size: 16, color: isSelected ? AppTheme.primaryColor : AppTheme.onSurface.withValues(alpha: 0.5)),
+                      Icon(
+                        icon,
+                        size: 16,
+                        color: isSelected
+                            ? AppTheme.primaryColor
+                            : AppTheme.onSurface.withValues(alpha: 0.5),
+                      ),
                       const SizedBox(width: 6),
-                      Text(label, style: GoogleFonts.inter(fontSize: 12, fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500, color: isSelected ? AppTheme.primaryColor : AppTheme.onSurface.withValues(alpha: 0.7))),
+                      Text(
+                        label,
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          fontWeight: isSelected
+                              ? FontWeight.w700
+                              : FontWeight.w500,
+                          color: isSelected
+                              ? AppTheme.primaryColor
+                              : AppTheme.onSurface.withValues(alpha: 0.7),
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -1188,7 +1548,10 @@ class _StickerAnimationSheetState extends State<_StickerAnimationSheet> {
           SizedBox(
             width: double.infinity,
             child: ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primaryColor, foregroundColor: Colors.white),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.primaryColor,
+                foregroundColor: Colors.white,
+              ),
               onPressed: () => Navigator.pop(context, _selected),
               child: const Text('Appliquer'),
             ),
@@ -1224,12 +1587,23 @@ class _BottomSheetContainer extends StatelessWidget {
         children: [
           Center(
             child: Container(
-              width: 40, height: 4,
+              width: 40,
+              height: 4,
               margin: const EdgeInsets.only(bottom: 16),
-              decoration: BoxDecoration(color: AppTheme.onSurface.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(2)),
+              decoration: BoxDecoration(
+                color: AppTheme.onSurface.withValues(alpha: 0.2),
+                borderRadius: BorderRadius.circular(2),
+              ),
             ),
           ),
-          Text(title, style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w700, color: AppTheme.onSurface)),
+          Text(
+            title,
+            style: GoogleFonts.inter(
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+              color: AppTheme.onSurface,
+            ),
+          ),
           const SizedBox(height: 16),
           child,
         ],
@@ -1242,7 +1616,11 @@ class _QuickPill extends StatelessWidget {
   final String label;
   final bool isSelected;
   final VoidCallback onTap;
-  const _QuickPill({required this.label, required this.isSelected, required this.onTap});
+  const _QuickPill({
+    required this.label,
+    required this.isSelected,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -1252,11 +1630,26 @@ class _QuickPill extends StatelessWidget {
         duration: const Duration(milliseconds: 120),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
-          color: isSelected ? AppTheme.primaryColor.withValues(alpha: 0.15) : AppTheme.onSurface.withValues(alpha: 0.04),
+          color: isSelected
+              ? AppTheme.primaryColor.withValues(alpha: 0.15)
+              : AppTheme.onSurface.withValues(alpha: 0.04),
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: isSelected ? AppTheme.primaryColor.withValues(alpha: 0.4) : AppTheme.outlineVariant.withValues(alpha: 0.1)),
+          border: Border.all(
+            color: isSelected
+                ? AppTheme.primaryColor.withValues(alpha: 0.4)
+                : AppTheme.outlineVariant.withValues(alpha: 0.1),
+          ),
         ),
-        child: Text(label, style: GoogleFonts.inter(fontSize: 11, fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500, color: isSelected ? AppTheme.primaryColor : AppTheme.onSurface.withValues(alpha: 0.5))),
+        child: Text(
+          label,
+          style: GoogleFonts.inter(
+            fontSize: 11,
+            fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+            color: isSelected
+                ? AppTheme.primaryColor
+                : AppTheme.onSurface.withValues(alpha: 0.5),
+          ),
+        ),
       ),
     );
   }
