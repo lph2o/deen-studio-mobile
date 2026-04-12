@@ -31,6 +31,8 @@ class _TextChunk {
   double get duration => end - start;
 }
 
+const double _kQuranTextHorizontalPadding = 16.0;
+
 _TextChunk _pickChunkAtTime(List<_TextChunk> chunks, double time) {
   if (chunks.isEmpty) {
     return _TextChunk(text: '', start: 0, end: 0);
@@ -1270,7 +1272,9 @@ class _VideoPreviewState extends ConsumerState<VideoPreview>
       final wrapperChild = Opacity(
         opacity: opacity.clamp(0.0, 1.0),
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
+          padding: const EdgeInsets.symmetric(
+            horizontal: _kQuranTextHorizontalPadding,
+          ),
           child: CustomPaint(
             painter:
                 isOverlay ||
@@ -1324,7 +1328,9 @@ class _VideoPreviewState extends ConsumerState<VideoPreview>
           Opacity(
             opacity: opacity.clamp(0.0, 1.0),
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
+              padding: const EdgeInsets.symmetric(
+                horizontal: _kQuranTextHorizontalPadding,
+              ),
               child: textWidget,
             ),
           ),
@@ -1406,7 +1412,15 @@ class _VideoPreviewState extends ConsumerState<VideoPreview>
       fillWidthWhenNoCustom: true,
       child: _applyMask(
         _applyBlendMode(
-          Opacity(opacity: opacity.clamp(0.0, 1.0), child: tWidget),
+          Opacity(
+            opacity: opacity.clamp(0.0, 1.0),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: _kQuranTextHorizontalPadding,
+              ),
+              child: tWidget,
+            ),
+          ),
           layer.blendMode,
         ),
         layer.mask,
@@ -1486,7 +1500,15 @@ class _VideoPreviewState extends ConsumerState<VideoPreview>
       fillWidthWhenNoCustom: true,
       child: _applyMask(
         _applyBlendMode(
-          Opacity(opacity: opacity.clamp(0.0, 1.0), child: tWidget),
+          Opacity(
+            opacity: opacity.clamp(0.0, 1.0),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: _kQuranTextHorizontalPadding,
+              ),
+              child: tWidget,
+            ),
+          ),
           layer.blendMode,
         ),
         layer.mask,
