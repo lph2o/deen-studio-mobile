@@ -32,9 +32,12 @@ class EditorState {
   final Set<String> hiddenTracks;
   final Set<String> mutedTracks;
 
-  // Beat sync state — detected beat timestamps (shared across all audio layers)
+  // Beat sync state
   final List<double> beatMarkers;
   final bool beatSyncEnabled;
+
+  // Cinematic Mode — golden particle overlay + vignette + letterbox
+  final bool cinematicMode;
 
   EditorState({
     this.currentProject,
@@ -55,6 +58,7 @@ class EditorState {
     this.mutedTracks = const {},
     this.beatMarkers = const [],
     this.beatSyncEnabled = false,
+    this.cinematicMode = false,
   });
 
   EditorState copyWith({
@@ -76,6 +80,7 @@ class EditorState {
     Set<String>? mutedTracks,
     List<double>? beatMarkers,
     bool? beatSyncEnabled,
+    bool? cinematicMode,
     bool clearSelected = false,
   }) {
     return EditorState(
@@ -97,6 +102,7 @@ class EditorState {
       mutedTracks: mutedTracks ?? Set<String>.from(this.mutedTracks),
       beatMarkers: beatMarkers ?? this.beatMarkers,
       beatSyncEnabled: beatSyncEnabled ?? this.beatSyncEnabled,
+      cinematicMode: cinematicMode ?? this.cinematicMode,
     );
   }
 
@@ -227,6 +233,11 @@ class EditorNotifier extends Notifier<EditorState> {
   /// Toggle ripple edit mode on/off.
   void toggleRippleEdit() {
     state = state.copyWith(rippleEdit: !state.rippleEdit);
+  }
+
+  /// Toggle the cinematic mode (particle overlay + vignette + letterbox).
+  void toggleCinematicMode() {
+    state = state.copyWith(cinematicMode: !state.cinematicMode);
   }
 
   void trimLayer(String id, {double? inPoint, double? outPoint}) {
@@ -1006,4 +1017,10 @@ class EditorNotifier extends Notifier<EditorState> {
 
 final editorProvider = NotifierProvider<EditorNotifier, EditorState>(() {
   return EditorNotifier();
+});
+
+/// Global high-frequency (60fps) playback clock directly driving animation and 
+/// timeline playback heads, isolated from the heavy generic EditorState updates.
+final playbackTimeProvider = Provider<ValueNotifier<double>>((ref) {
+  return ValueNotifier<double>(0.0);
 });

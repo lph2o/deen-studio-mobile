@@ -23,7 +23,13 @@ const double _kSnapThreshold = 2.0;
 const _trackGroups = [
   ('ARABE', 'arabic', null, 'text_arabic_', AppTheme.trackArabic),
   ('PHONETIQUE', 'phonetic', null, 'text_phonetic_', AppTheme.trackPhonetic),
-  ('TRADUCTION', 'translation', null, 'text_translation_', AppTheme.trackTranslation),
+  (
+    'TRADUCTION',
+    'translation',
+    null,
+    'text_translation_',
+    AppTheme.trackTranslation,
+  ),
   ('TEXTE', 'text', null, 'text', AppTheme.trackText),
   ('STICKER', 'sticker', null, 'sticker', AppTheme.trackSticker),
   ('AUDIO', 'audio', null, 'audio', AppTheme.trackAudio),
@@ -49,57 +55,59 @@ class _TimelineState extends ConsumerState<Timeline> {
 
   @override
   Widget build(BuildContext context) {
-    final state = ref.watch(editorProvider);
-    final theme = Theme.of(context);
-    final pxPerSec = state.zoomLevel;
-    final totalDuration = state.currentProject?.totalDuration ?? 30.0;
+    // Structural selection: only rebuild when zoom or project structure changes.
+    final zoomLevel = ref.watch(editorProvider.select((s) => s.zoomLevel));
+    final project = ref.watch(editorProvider.select((s) => s.currentProject));
 
-    // Sync scroll position with current time during playback
-    // MUST be called directly in build(), not inside LayoutBuilder.builder
-    ref.listen(editorProvider.select((s) => s.currentTime), (prev, next) {
-      if (!state.isDraggingTimeline && _hScrollController.hasClients) {
-        final targetOffset = next * pxPerSec;
-        // Only jump if we are significantly away from the target (prevents fighting with user)
-        if ((_hScrollController.offset - targetOffset).abs() > 1.0) {
-          _hScrollController.jumpTo(targetOffset);
-        }
-      }
-    });
+    final pxPerSec = zoomLevel;
+    final totalDuration = project?.totalDuration ?? 30.0;
 
     return LayoutBuilder(
       builder: (context, constraints) {
         final viewportWidth = constraints.maxWidth;
         final halfWidth = viewportWidth / 2;
         final totalContentWidth = totalDuration * pxPerSec;
-        final totalWidth = totalContentWidth + viewportWidth; // padding at both ends
+        final totalWidth = totalContentWidth + viewportWidth;
 
-        return _TimelineStateProvider(
-          state: state.currentTime,
-          child: Container(
+        return Container(
           decoration: BoxDecoration(
             color: AppTheme.surfaceContainer,
             borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
             border: Border(
-              top: BorderSide(color: AppTheme.outlineVariant.withValues(alpha: 0.15)),
+              top: BorderSide(
+                color: AppTheme.outlineVariant.withValues(alpha: 0.15),
+              ),
             ),
           ),
           child: Column(
             children: [
-              _buildHeaderBar(state, theme, pxPerSec),
+              _TimelineHeaderTime(totalDuration: totalDuration),
+              _TimelineAutoScroll(
+                hScrollController: _hScrollController,
+                pxPerSec: pxPerSec,
+              ),
               Expanded(
                 child: Stack(
                   children: [
-                    // Main timeline content
                     NotificationListener<ScrollNotification>(
                       onNotification: (notification) {
-                        if (notification is ScrollStartNotification && notification.dragDetails != null) {
-                          ref.read(editorProvider.notifier).setDraggingTimeline(true);
+                        if (notification is ScrollStartNotification &&
+                            notification.dragDetails != null) {
+                          ref
+                              .read(editorProvider.notifier)
+                              .setDraggingTimeline(true);
                         } else if (notification is ScrollEndNotification) {
-                          ref.read(editorProvider.notifier).setDraggingTimeline(false);
-                        } else if (notification is ScrollUpdateNotification && notification.dragDetails != null) {
-                          // User is dragging the timeline
+                          ref
+                              .read(editorProvider.notifier)
+                              .setDraggingTimeline(false);
+                        } else if (notification is ScrollUpdateNotification &&
+                            notification.dragDetails != null) {
                           final newTime = _hScrollController.offset / pxPerSec;
-                          ref.read(editorProvider.notifier).setCurrentTime(newTime.clamp(0.0, totalDuration));
+                          ref
+                              .read(editorProvider.notifier)
+                              .setCurrentTime(
+                                newTime.clamp(0.0, totalDuration),
+                              );
                         }
                         return true;
                       },
@@ -111,34 +119,35 @@ class _TimelineState extends ConsumerState<Timeline> {
                           width: totalWidth,
                           child: Column(
                             children: [
-                              // Time ruler
                               _TimelineRuler(
                                 pxPerSec: pxPerSec,
                                 totalDuration: totalDuration,
                                 leadingPadding: halfWidth,
-                                beatMarkers: state.beatMarkers,
+                                beatMarkers: ref
+                                    .read(editorProvider)
+                                    .beatMarkers,
                               ),
-                              // Track rows
                               Expanded(
                                 child: SingleChildScrollView(
                                   scrollDirection: Axis.vertical,
                                   child: Column(
                                     children: [
-                                      for (int i = 0; i < _trackGroups.length; i++) ...[
+                                      for (
+                                        int i = 0;
+                                        i < _trackGroups.length;
+                                        i++
+                                      ) ...[
                                         if (i > 0)
                                           Divider(
                                             height: 1,
                                             thickness: 1,
-                                            color: AppTheme.outlineVariant.withValues(alpha: 0.1),
+                                            color: AppTheme.outlineVariant
+                                                .withValues(alpha: 0.1),
                                           ),
-                                        _buildTrackRow(
-                                          context, state,
-                                          _trackGroups[i].$1,  // label
-                                          _trackGroups[i].$2,  // type
-                                          _trackGroups[i].$3,  // idPrefix
-                                          _trackGroups[i].$4,  // trackKey
-                                          _trackGroups[i].$5,  // baseColor
-                                          pxPerSec, halfWidth,
+                                        _TimelineTrackRow(
+                                          trackIndex: i,
+                                          pxPerSec: pxPerSec,
+                                          leadingPadding: halfWidth,
                                         ),
                                       ],
                                     ],
@@ -150,312 +159,23 @@ class _TimelineState extends ConsumerState<Timeline> {
                         ),
                       ),
                     ),
-                    // Centered Playhead line (fixed)
-                    IgnorePointer(
-                      child: Center(
-                        child: Container(
-                          width: 2,
-                          color: AppTheme.playheadColor,
-                          child: Stack(
-                            clipBehavior: Clip.none,
-                            children: [
-                              Positioned(
-                                top: 0,
-                                left: -4,
-                                child: Container(
-                                  width: 10,
-                                  height: 10,
-                                  decoration: const BoxDecoration(
-                                    color: AppTheme.playheadColor,
-                                    shape: BoxShape.circle,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
+                    const _PlayheadIndicator(),
                   ],
                 ),
               ),
             ],
           ),
-        ),
-      ); // end Container
-    },
-    ); // end _TimelineStateProvider + LayoutBuilder
-  }
-
-  Widget _buildHeaderBar(EditorState state, ThemeData theme, double pxPerSec) {
-    final totalDuration = state.currentProject?.totalDuration ?? 0;
-    final layerCount = state.currentProject?.layers.length ?? 0;
-
-    return ClipRRect(
-      borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          decoration: BoxDecoration(
-            color: AppTheme.surfaceContainer.withValues(alpha: 0.7),
-            border: Border(
-              bottom: BorderSide(color: AppTheme.outlineVariant.withValues(alpha: 0.15)),
-            ),
-          ),
-          child: Row(
-            children: [
-              Text(
-                _fmt(state.currentTime),
-                style: TextStyle(
-                  fontFamily: 'monospace',
-                  fontSize: 12,
-                  color: AppTheme.onSurface.withValues(alpha: 0.5),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Text(
-                layerCount > 0 ? '$layerCount clips ${_fmt(totalDuration)}' : 'Empty timeline',
-                style: TextStyle(
-                  fontSize: 11,
-                  color: AppTheme.onSurface.withValues(alpha: 0.4),
-                ),
-              ),
-              const Spacer(),
-              // Ripple edit toggle
-              GestureDetector(
-                onTap: () => ref.read(editorProvider.notifier).toggleRippleEdit(),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: state.rippleEdit
-                        ? AppTheme.primaryColor.withValues(alpha: 0.2)
-                        : Colors.transparent,
-                    borderRadius: BorderRadius.circular(6),
-                    border: Border.all(
-                      color: state.rippleEdit
-                          ? AppTheme.primaryColor
-                          : AppTheme.outlineVariant.withValues(alpha: 0.2),
-                      width: 1,
-                    ),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        Icons.pan_tool,
-                        size: 14,
-                        color: state.rippleEdit
-                            ? AppTheme.primaryColor
-                            : AppTheme.onSurface.withValues(alpha: 0.5),
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        'Ripple',
-                        style: TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w700,
-                          color: state.rippleEdit
-                              ? AppTheme.primaryColor
-                              : AppTheme.onSurface.withValues(alpha: 0.5),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              // Zoom controls
-              Row(
-                children: [
-                  GlassIconButton(
-                    icon: Icons.zoom_out,
-                    size: 16,
-                    onTap: () => ref.read(editorProvider.notifier).setZoomLevel(pxPerSec - 15),
-                  ),
-                  const SizedBox(width: 6),
-                  Text(
-                    '${pxPerSec.round()}px/s',
-                    style: TextStyle(
-                      fontSize: 10,
-                      color: AppTheme.onSurface.withValues(alpha: 0.5),
-                    ),
-                  ),
-                  const SizedBox(width: 6),
-                  GlassIconButton(
-                    icon: Icons.zoom_in,
-                    size: 16,
-                    onTap: () => ref.read(editorProvider.notifier).setZoomLevel(pxPerSec + 15),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
+        );
+      },
     );
   }
+}
 
-  Widget _buildTrackRow(
-    BuildContext context,
-    EditorState state,
-    String label,
-    String type,
-    String? idPrefix,
-    String trackKey,
-    Color baseColor,
-    double pxPerSec,
-    double leadingPadding,
-  ) {
-    var clips = state.currentProject?.layers.where((l) => l.type == type).toList() ?? [];
-
-    // Apply ID prefix filtering if provided
-    if (idPrefix != null) {
-      clips = clips.where((l) => l.id.startsWith(idPrefix)).toList();
-    } else if (type == 'text') {
-      // For the generic "TEXTE" track, exclude Quranic prefixes to avoid duplication
-      clips = clips.where((l) =>
-        !l.id.startsWith('arabic_') &&
-        !l.id.startsWith('phonetic_') &&
-        !l.id.startsWith('translation_')
-      ).toList();
-    }
-
-    final isLocked = state.lockedTracks.contains(trackKey);
-    final isHidden = state.hiddenTracks.contains(trackKey);
-    final isMuted = state.mutedTracks.contains(type);
-    final isAudioTrack = type == 'audio';
-
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        // Track controls header row
-        SizedBox(
-          height: _kControlsHeight,
-          child: Stack(
-            children: [
-              // Controls positioned on the left, aligned with track labels
-              Positioned(
-                left: leadingPadding - _kLabelWidth,
-                top: 0,
-                bottom: 0,
-                width: _kLabelWidth,
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    // Lock toggle
-                    _TrackControlButton(
-                      icon: isLocked ? Icons.lock : Icons.lock_open,
-                      isActive: isLocked,
-                      onTap: () => ref.read(editorProvider.notifier).toggleTrackLock(trackKey),
-                    ),
-                    const SizedBox(width: 4),
-                    // Hide toggle (eye)
-                    _TrackControlButton(
-                      icon: isHidden ? Icons.visibility_off : Icons.visibility,
-                      isActive: isHidden,
-                      onTap: () => ref.read(editorProvider.notifier).toggleTrackHide(trackKey),
-                    ),
-                    if (isAudioTrack) ...[
-                      const SizedBox(width: 4),
-                      // Mute toggle (speaker) — only for audio tracks
-                      _TrackControlButton(
-                        icon: isMuted ? Icons.volume_off : Icons.volume_up,
-                        isActive: isMuted,
-                        onTap: () => ref.read(editorProvider.notifier).toggleTrackMute(type),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-        // Clip row
-        SizedBox(
-          height: _kTrackHeight + 8,
-          child: Stack(
-            children: [
-              // Track background (full width)
-              Positioned.fill(
-                child: Container(
-                  margin: const EdgeInsets.symmetric(vertical: 4),
-                  decoration: BoxDecoration(
-                    color: AppTheme.onSurface.withValues(alpha: 0.02),
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                ),
-              ),
-              // Track label - offset by leadingPadding
-              Positioned(
-                left: leadingPadding - _kLabelWidth,
-                top: 0,
-                bottom: 0,
-                width: _kLabelWidth,
-                child: Container(
-                  alignment: Alignment.centerLeft,
-                  padding: const EdgeInsets.symmetric(horizontal: 10),
-                  child: Text(
-                    label,
-                    style: TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 1.2,
-                      color: clips.isEmpty
-                          ? AppTheme.onSurface.withValues(alpha: 0.15)
-                          : baseColor.withValues(alpha: 0.8),
-                    ),
-                  ),
-                ),
-              ),
-              // Clips
-              for (final clip in clips)
-                _ClipItem(
-                  clip: clip,
-                  baseColor: baseColor,
-                  pxPerSec: pxPerSec,
-                  leadingPadding: leadingPadding,
-                  isSelected: state.selectedLayerId == clip.id,
-                  isLocked: isLocked,
-                  isAudioTrack: isAudioTrack,
-                  isRippleMode: state.rippleEdit,
-                  reciterId: state.currentProject?.reciterId,
-                  onTap: () => ref.read(editorProvider.notifier).setSelectedLayer(clip.id),
-                  onDragEnd: (newStart) {
-                    final notifier = ref.read(editorProvider.notifier);
-                    if (state.rippleEdit) {
-                      final delta = newStart - clip.startTime;
-                      notifier.moveLayerWithRipple(clip.id, delta);
-                    } else {
-                      notifier.moveLayer(clip.id, newStart);
-                    }
-                  },
-                  onTrim: ({startDelta, endDelta}) {
-                    final notifier = ref.read(editorProvider.notifier);
-                    if (startDelta != null) {
-                      notifier.trimLayerStart(clip.id, startDelta);
-                    } else if (endDelta != null) {
-                      notifier.trimLayerEnd(clip.id, endDelta);
-                    }
-                  },
-                  // Snap data for magnetic timeline
-                  allClips: clips,
-                  allTrackGroups: _trackGroups,
-                  projectLayers: state.currentProject?.layers ?? [],
-                ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  String _fmt(double seconds) {
-    final m = (seconds / 60).floor();
-    final s = (seconds % 60).floor();
-    final ms = ((seconds % 1) * 10).floor();
-    return '${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}.$ms';
-  }
+String _fmt(double seconds) {
+  final m = (seconds / 60).floor();
+  final s = (seconds % 60).floor();
+  final ms = ((seconds % 1) * 10).floor();
+  return '${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}.$ms';
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -497,7 +217,12 @@ class _RulerPainter extends CustomPainter {
   final double leadingPadding;
   final List<double> beatMarkers;
 
-  _RulerPainter({required this.pxPerSec, required this.totalDuration, required this.leadingPadding, this.beatMarkers = const []});
+  _RulerPainter({
+    required this.pxPerSec,
+    required this.totalDuration,
+    required this.leadingPadding,
+    this.beatMarkers = const [],
+  });
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -510,7 +235,11 @@ class _RulerPainter extends CustomPainter {
     );
 
     // Decide step size based on zoom
-    final step = pxPerSec < 30 ? 5.0 : pxPerSec < 80 ? 2.0 : 1.0;
+    final step = pxPerSec < 30
+        ? 5.0
+        : pxPerSec < 80
+        ? 2.0
+        : 1.0;
     final steps = (totalDuration / step).ceil() + 1;
 
     for (int i = 0; i <= steps; i++) {
@@ -527,7 +256,8 @@ class _RulerPainter extends CustomPainter {
       if (isMajor) {
         final mins = (t / 60).floor();
         final secs = (t % 60).floor();
-        final label = '${mins.toString().padLeft(2, '0')}:${secs.toString().padLeft(2, '0')}';
+        final label =
+            '${mins.toString().padLeft(2, '0')}:${secs.toString().padLeft(2, '0')}';
         _drawText(canvas, label, Offset(x + 3, 2), textStyle);
       }
     }
@@ -540,11 +270,7 @@ class _RulerPainter extends CustomPainter {
       for (final beat in beatMarkers) {
         if (beat < 0 || beat > totalDuration) continue;
         final x = leadingPadding + beat * pxPerSec;
-        canvas.drawLine(
-          Offset(x, 0),
-          Offset(x, size.height * 0.7),
-          beatPaint,
-        );
+        canvas.drawLine(Offset(x, 0), Offset(x, size.height * 0.7), beatPaint);
       }
     }
   }
@@ -558,7 +284,10 @@ class _RulerPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_RulerPainter old) =>
-      old.pxPerSec != pxPerSec || old.totalDuration != totalDuration || old.leadingPadding != leadingPadding || old.beatMarkers != beatMarkers;
+      old.pxPerSec != pxPerSec ||
+      old.totalDuration != totalDuration ||
+      old.leadingPadding != leadingPadding ||
+      old.beatMarkers != beatMarkers;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -704,15 +433,14 @@ class _ClipItem extends StatefulWidget {
   final bool isLocked;
   final bool isAudioTrack;
   final bool isRippleMode;
+  final double Function() getPlayheadTime;
   final String? reciterId;
   final VoidCallback onTap;
-  final ValueChanged<double> onDragEnd;
-  final Function({double? startDelta, double? endDelta}) onTrim;
-
-  // Snap-related data
-  final List<Layer> allClips; // clips on the same track
-  final List<(String, String, String?, String, Color)> allTrackGroups;
-  final List<Layer> projectLayers; // all layers in the project
+  final void Function(double) onDragEnd;
+  final void Function({double? startDelta, double? endDelta}) onTrim;
+  final List<Layer> allClips;
+  final List<dynamic> allTrackGroups;
+  final List<Layer> projectLayers;
 
   const _ClipItem({
     required this.clip,
@@ -723,10 +451,11 @@ class _ClipItem extends StatefulWidget {
     required this.isLocked,
     required this.isAudioTrack,
     required this.isRippleMode,
-    this.reciterId,
+    required this.getPlayheadTime,
     required this.onTap,
     required this.onDragEnd,
     required this.onTrim,
+    this.reciterId,
     this.allClips = const [],
     this.allTrackGroups = const [],
     this.projectLayers = const [],
@@ -754,12 +483,14 @@ class _ClipItemState extends State<_ClipItem> {
     // Calculate snap positions when dragging
     final snapInfo = _calculateSnapPositions(pxPerSec);
 
-    final left = widget.leadingPadding +
+    final left =
+        widget.leadingPadding +
         clip.startTime * pxPerSec +
         _dragDelta +
         _trimLeftDelta +
         (_snapOffset ?? 0);
-    final width = (clip.effectiveDuration * pxPerSec) - _trimLeftDelta + _trimRightDelta;
+    final width =
+        (clip.effectiveDuration * pxPerSec) - _trimLeftDelta + _trimRightDelta;
     final color = widget.baseColor;
 
     Widget clipContent = Container(
@@ -771,8 +502,14 @@ class _ClipItemState extends State<_ClipItem> {
         border: widget.isSelected
             ? Border.all(color: AppTheme.onSurface, width: 1.5)
             : widget.isRippleMode
-                ? Border.all(color: AppTheme.primaryColor.withValues(alpha: 0.4), width: 1)
-                : Border.all(color: AppTheme.onSurface.withValues(alpha: 0.08), width: 1),
+            ? Border.all(
+                color: AppTheme.primaryColor.withValues(alpha: 0.4),
+                width: 1,
+              )
+            : Border.all(
+                color: AppTheme.onSurface.withValues(alpha: 0.08),
+                width: 1,
+              ),
         boxShadow: widget.isSelected
             ? [
                 BoxShadow(
@@ -782,14 +519,14 @@ class _ClipItemState extends State<_ClipItem> {
                 ),
               ]
             : widget.isRippleMode
-                ? [
-                    BoxShadow(
-                      color: AppTheme.primaryColor.withValues(alpha: 0.15),
-                      blurRadius: 6,
-                      spreadRadius: 1,
-                    ),
-                  ]
-                : null,
+            ? [
+                BoxShadow(
+                  color: AppTheme.primaryColor.withValues(alpha: 0.15),
+                  blurRadius: 6,
+                  spreadRadius: 1,
+                ),
+              ]
+            : null,
       ),
       child: Stack(
         clipBehavior: Clip.none,
@@ -816,11 +553,16 @@ class _ClipItemState extends State<_ClipItem> {
               children: [
                 Flexible(
                   child: Text(
-                    _clipLabel(clip, reciterId: widget.isAudioTrack ? widget.reciterId : null),
+                    _clipLabel(
+                      clip,
+                      reciterId: widget.isAudioTrack ? widget.reciterId : null,
+                    ),
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       fontSize: 11,
-                      fontWeight: widget.isSelected ? FontWeight.w700 : FontWeight.w500,
+                      fontWeight: widget.isSelected
+                          ? FontWeight.w700
+                          : FontWeight.w500,
                       color: AppTheme.onSurface,
                       fontFamily: clip.type == 'arabic' ? 'serif' : null,
                     ),
@@ -830,11 +572,16 @@ class _ClipItemState extends State<_ClipItem> {
                 if (clip.id.contains('_copy_'))
                   Container(
                     margin: const EdgeInsets.only(left: 4),
-                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 4,
+                      vertical: 1,
+                    ),
                     decoration: BoxDecoration(
                       color: AppTheme.secondaryColor.withValues(alpha: 0.2),
                       borderRadius: BorderRadius.circular(3),
-                      border: Border.all(color: AppTheme.secondaryColor.withValues(alpha: 0.4)),
+                      border: Border.all(
+                        color: AppTheme.secondaryColor.withValues(alpha: 0.4),
+                      ),
                     ),
                     child: Text(
                       'COPY',
@@ -878,7 +625,9 @@ class _ClipItemState extends State<_ClipItem> {
                 height: _kTrackHeight,
                 decoration: BoxDecoration(
                   color: AppTheme.onSurface,
-                  borderRadius: const BorderRadius.horizontal(left: Radius.circular(4)),
+                  borderRadius: const BorderRadius.horizontal(
+                    left: Radius.circular(4),
+                  ),
                 ),
                 child: GestureDetector(
                   onHorizontalDragUpdate: (d) {
@@ -889,7 +638,11 @@ class _ClipItemState extends State<_ClipItem> {
                     setState(() => _trimLeftDelta = 0);
                     widget.onTrim(startDelta: dt);
                   },
-                  child: Icon(Icons.chevron_left, size: 12, color: AppTheme.surfaceContainer),
+                  child: Icon(
+                    Icons.chevron_left,
+                    size: 12,
+                    color: AppTheme.surfaceContainer,
+                  ),
                 ),
               ),
             ),
@@ -903,7 +656,9 @@ class _ClipItemState extends State<_ClipItem> {
                 height: _kTrackHeight,
                 decoration: BoxDecoration(
                   color: AppTheme.onSurface,
-                  borderRadius: const BorderRadius.horizontal(right: Radius.circular(4)),
+                  borderRadius: const BorderRadius.horizontal(
+                    right: Radius.circular(4),
+                  ),
                 ),
                 child: GestureDetector(
                   onHorizontalDragUpdate: (d) {
@@ -914,7 +669,11 @@ class _ClipItemState extends State<_ClipItem> {
                     setState(() => _trimRightDelta = 0);
                     widget.onTrim(endDelta: dt);
                   },
-                  child: Icon(Icons.chevron_right, size: 12, color: AppTheme.surfaceContainer),
+                  child: Icon(
+                    Icons.chevron_right,
+                    size: 12,
+                    color: AppTheme.surfaceContainer,
+                  ),
                 ),
               ),
             ),
@@ -946,7 +705,10 @@ class _ClipItemState extends State<_ClipItem> {
             onLongPressEnd: (_) {
               final rawNewStart = clip.startTime + _dragDelta / pxPerSec;
               // Apply snapping on release
-              final snapped = _snapToNearest(rawNewStart, snapInfo.snapPositions);
+              final snapped = _snapToNearest(
+                rawNewStart,
+                snapInfo.snapPositions,
+              );
               double finalStart = snapped.snapped ? snapped.time : rawNewStart;
 
               // Apply beat snap for audio layers if beat sync is enabled
@@ -986,20 +748,14 @@ class _ClipItemState extends State<_ClipItem> {
           )
         : GestureDetector(
             onTap: widget.onTap,
-            child: Opacity(
-              opacity: 0.6,
-              child: clipContent,
-            ),
+            child: Opacity(opacity: 0.6, child: clipContent),
           );
 
     return Positioned(
       left: 0,
       top: 4,
       bottom: 4,
-      child: Transform.translate(
-        offset: Offset(left, 0),
-        child: child,
-      ),
+      child: Transform.translate(offset: Offset(left, 0), child: child),
     );
   }
 
@@ -1007,11 +763,10 @@ class _ClipItemState extends State<_ClipItem> {
   _SnapData _calculateSnapPositions(double pxPerSec) {
     final snapPositions = <double>{};
 
-    // 1. Snap to playhead (current time from editor state)
-    // We access this via a static approach — read from context
-    final currentTime = _getCurrentTime();
-    if (currentTime > 0) {
-      snapPositions.add(currentTime);
+    // 1. Snap to playhead (current time from global clock)
+    final playheadPos = widget.getPlayheadTime();
+    if (playheadPos > 0) {
+      snapPositions.add(playheadPos);
     }
 
     // 2. Snap to adjacent clips on the same track
@@ -1035,7 +790,10 @@ class _ClipItemState extends State<_ClipItem> {
   }
 
   /// Snap a time value to the nearest snap position if within threshold
-  ({double time, bool snapped}) _snapToNearest(double time, List<double> snapPositions) {
+  ({double time, bool snapped}) _snapToNearest(
+    double time,
+    List<double> snapPositions,
+  ) {
     double closest = time;
     double minDist = _kSnapThreshold;
 
@@ -1048,14 +806,6 @@ class _ClipItemState extends State<_ClipItem> {
     }
 
     return (time: closest, snapped: minDist < _kSnapThreshold);
-  }
-
-  double _getCurrentTime() {
-    // Read current time from the editor state via context
-    final state = context
-        .dependOnInheritedWidgetOfExactType<_TimelineStateProvider>()
-        ?.state;
-    return state ?? 0.0;
   }
 
   /// Apply beat snapping using the BeatDetector utility.
@@ -1114,7 +864,8 @@ String _clipLabel(Layer clip, {String? reciterId}) {
 
     // For audio, prepend reciter name if available
     if (reciterId != null) {
-      final reciterName = _reciterNames[reciterId] ?? reciterId.replaceAll('ar.', '');
+      final reciterName =
+          _reciterNames[reciterId] ?? reciterId.replaceAll('ar.', '');
       shortName = '$reciterName • $shortName';
     }
 
@@ -1126,9 +877,7 @@ String _clipLabel(Layer clip, {String? reciterId}) {
   }
 
   // Plain text content
-  var label = content.length > 24
-      ? '${content.substring(0, 24)}...'
-      : content;
+  var label = content.length > 24 ? '${content.substring(0, 24)}...' : content;
   if (isCopy) {
     label = '$label (copie)';
   }
@@ -1142,16 +891,375 @@ class _SnapData {
 }
 
 /// Provider to share current timeline time with clip items
-class _TimelineStateProvider extends InheritedWidget {
-  final double state;
 
-  const _TimelineStateProvider({
-    required this.state,
-    required super.child,
+// Playhead class removed - logic moved into Timeline Stack
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PERFORMANCE OPTIMIZED COMPONENTS
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// Isolated widget to display current time in header to avoid full timeline rebuilds.
+class _TimelineHeaderTime extends ConsumerWidget {
+  final double totalDuration;
+  const _TimelineHeaderTime({required this.totalDuration});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    // Unbind from editorProvider entirely. 
+    final playbackNotifier = ref.read(playbackTimeProvider);
+    final layerCount = ref.watch(
+      editorProvider.select((s) => s.currentProject?.layers.length ?? 0),
+    );
+    final rippleEdit = ref.watch(editorProvider.select((s) => s.rippleEdit));
+
+    return ClipRRect(
+      borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          decoration: BoxDecoration(
+            color: AppTheme.surfaceContainer.withValues(alpha: 0.7),
+            border: Border(
+              bottom: BorderSide(
+                color: AppTheme.outlineVariant.withValues(alpha: 0.15),
+              ),
+            ),
+          ),
+          child: Row(
+            children: [
+              ValueListenableBuilder<double>(
+                valueListenable: playbackNotifier,
+                builder: (context, time, _) {
+                  return Text(
+                    _fmt(time),
+                    style: TextStyle(
+                      fontFamily: 'monospace',
+                      fontSize: 12,
+                      color: AppTheme.onSurface.withValues(alpha: 0.5),
+                    ),
+                  );
+                },
+              ),
+              const SizedBox(width: 12),
+              Text(
+                layerCount > 0
+                    ? '$layerCount clips ${_fmt(totalDuration)}'
+                    : 'Empty timeline',
+                style: TextStyle(
+                  fontSize: 11,
+                  color: AppTheme.onSurface.withValues(alpha: 0.4),
+                ),
+              ),
+              const Spacer(),
+              // Ripple edit toggle
+              GestureDetector(
+                onTap: () =>
+                    ref.read(editorProvider.notifier).toggleRippleEdit(),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: rippleEdit
+                        ? AppTheme.primaryColor.withValues(alpha: 0.2)
+                        : Colors.transparent,
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(
+                      color: rippleEdit
+                          ? AppTheme.primaryColor
+                          : AppTheme.outlineVariant.withValues(alpha: 0.2),
+                      width: 1,
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.pan_tool,
+                        size: 14,
+                        color: rippleEdit
+                            ? AppTheme.primaryColor
+                            : AppTheme.onSurface.withValues(alpha: 0.5),
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        'RIPPLE',
+                        style: TextStyle(
+                          fontSize: 9,
+                          fontWeight: FontWeight.w800,
+                          color: rippleEdit
+                              ? AppTheme.primaryColor
+                              : AppTheme.onSurface.withValues(alpha: 0.5),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Headless widget that listens to playbackTimeProvider to sync the scroll offset natively.
+class _TimelineAutoScroll extends ConsumerStatefulWidget {
+  final ScrollController hScrollController;
+  final double pxPerSec;
+
+  const _TimelineAutoScroll({
+    required this.hScrollController,
+    required this.pxPerSec,
   });
 
   @override
-  bool updateShouldNotify(_TimelineStateProvider old) => state != old.state;
+  ConsumerState<_TimelineAutoScroll> createState() => _TimelineAutoScrollState();
 }
 
-// Playhead class removed - logic moved into Timeline Stack
+class _TimelineAutoScrollState extends ConsumerState<_TimelineAutoScroll> {
+  late ValueNotifier<double> _notifier;
+
+  @override
+  void initState() {
+    super.initState();
+    _notifier = ref.read(playbackTimeProvider);
+    _notifier.addListener(_syncScroll);
+  }
+
+  @override
+  void dispose() {
+    _notifier.removeListener(_syncScroll);
+    super.dispose();
+  }
+
+  void _syncScroll() {
+    if (!mounted) return;
+    final isDragging = ref.read(editorProvider).isDraggingTimeline;
+    if (!isDragging && widget.hScrollController.hasClients) {
+      final targetOffset = _notifier.value * widget.pxPerSec;
+      if ((widget.hScrollController.offset - targetOffset).abs() > 1.0) {
+        widget.hScrollController.jumpTo(targetOffset);
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return const SizedBox.shrink();
+  }
+}
+
+/// Static playhead indicator (centered).
+class _PlayheadIndicator extends StatelessWidget {
+  const _PlayheadIndicator();
+
+  @override
+  Widget build(BuildContext context) {
+    return IgnorePointer(
+      child: Center(
+        child: Container(
+          width: 2,
+          color: AppTheme.playheadColor,
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              Positioned(
+                top: 0,
+                left: -4,
+                child: Container(
+                  width: 10,
+                  height: 10,
+                  decoration: const BoxDecoration(
+                    color: AppTheme.playheadColor,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Structural TrackRow that only rebuilds when structural state changes.
+class _TimelineTrackRow extends ConsumerWidget {
+  final int trackIndex;
+  final double pxPerSec;
+  final double leadingPadding;
+
+  const _TimelineTrackRow({
+    required this.trackIndex,
+    required this.pxPerSec,
+    required this.leadingPadding,
+  });
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final group = _trackGroups[trackIndex];
+    final label = group.$1;
+    final type = group.$2;
+    final idPrefix = group.$3;
+    final trackKey = group.$4;
+    final baseColor = group.$5;
+
+    // Structural selection
+    final clips = ref.watch(
+      editorProvider.select((s) {
+        final allClips =
+            s.currentProject?.layers.where((l) => l.type == type).toList() ??
+            [];
+        if (idPrefix != null) {
+          return allClips.where((l) => l.id.startsWith(idPrefix)).toList();
+        } else if (type == 'text') {
+          return allClips
+              .where(
+                (l) =>
+                    !l.id.startsWith('arabic_') &&
+                    !l.id.startsWith('phonetic_') &&
+                    !l.id.startsWith('translation_'),
+              )
+              .toList();
+        }
+        return allClips;
+      }),
+    );
+
+    final isLocked = ref.watch(
+      editorProvider.select((s) => s.lockedTracks.contains(trackKey)),
+    );
+    final isHidden = ref.watch(
+      editorProvider.select((s) => s.hiddenTracks.contains(trackKey)),
+    );
+    final isMuted = ref.watch(
+      editorProvider.select((s) => s.mutedTracks.contains(type)),
+    );
+    final selectedLayerId = ref.watch(
+      editorProvider.select((s) => s.selectedLayerId),
+    );
+    final rippleMode = ref.watch(editorProvider.select((s) => s.rippleEdit));
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        SizedBox(
+          height: _kControlsHeight,
+          child: Stack(
+            children: [
+              Positioned(
+                left: leadingPadding - _kLabelWidth,
+                top: 0,
+                bottom: 0,
+                width: _kLabelWidth,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    _TrackControlButton(
+                      icon: isLocked ? Icons.lock : Icons.lock_open,
+                      isActive: isLocked,
+                      onTap: () => ref
+                          .read(editorProvider.notifier)
+                          .toggleTrackLock(trackKey),
+                    ),
+                    _TrackControlButton(
+                      icon: isHidden ? Icons.visibility_off : Icons.visibility,
+                      isActive: isHidden,
+                      onTap: () => ref
+                          .read(editorProvider.notifier)
+                          .toggleTrackHide(trackKey),
+                    ),
+                    if (type == 'audio' || type == 'video')
+                      _TrackControlButton(
+                        icon: isMuted ? Icons.volume_off : Icons.volume_up,
+                        isActive: isMuted,
+                        onTap: () => ref
+                            .read(editorProvider.notifier)
+                            .toggleTrackMute(type),
+                      ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        Container(
+          height: _kTrackHeight,
+          width: double.infinity,
+          decoration: BoxDecoration(
+            color: AppTheme.surfaceContainer.withValues(alpha: 0.3),
+          ),
+          child: Stack(
+            children: [
+              Positioned(
+                left: 0,
+                top: 0,
+                bottom: 0,
+                width: leadingPadding,
+                child: Container(
+                  alignment: Alignment.centerRight,
+                  padding: const EdgeInsets.only(right: 12),
+                  child: Text(
+                    label,
+                    style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w700,
+                      color: baseColor.withValues(alpha: 0.8),
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                ),
+              ),
+              if (!isHidden)
+                for (final clip in clips)
+                  _ClipItem(
+                    clip: clip,
+                    pxPerSec: pxPerSec,
+                    leadingPadding: leadingPadding,
+                    baseColor: baseColor,
+                    isAudioTrack: type == 'audio',
+                    isSelected: selectedLayerId == clip.id,
+                    isLocked: isLocked,
+                    isRippleMode: rippleMode,
+                    getPlayheadTime: () => ref.read(playbackTimeProvider).value,
+                    onTap: () => ref
+                        .read(editorProvider.notifier)
+                        .setSelectedLayer(clip.id),
+                    onDragEnd: (newStart) {
+                      if (rippleMode) {
+                        final delta = newStart - clip.startTime;
+                        ref
+                            .read(editorProvider.notifier)
+                            .moveLayerWithRipple(clip.id, delta);
+                      } else {
+                        ref
+                            .read(editorProvider.notifier)
+                            .moveLayer(clip.id, newStart);
+                      }
+                    },
+                    onTrim: ({startDelta, endDelta}) {
+                      if (startDelta != null) {
+                        ref
+                            .read(editorProvider.notifier)
+                            .trimLayerStart(clip.id, startDelta);
+                      } else if (endDelta != null) {
+                        ref
+                            .read(editorProvider.notifier)
+                            .trimLayerEnd(clip.id, endDelta);
+                      }
+                    },
+                    allClips: clips,
+                    projectLayers:
+                        ref.read(editorProvider).currentProject?.layers ?? [],
+                  ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}

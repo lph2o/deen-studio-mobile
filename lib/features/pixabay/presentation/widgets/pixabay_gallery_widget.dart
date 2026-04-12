@@ -13,7 +13,8 @@ class PixabayGalleryWidget extends ConsumerStatefulWidget {
   const PixabayGalleryWidget({super.key, required this.onMediaImported});
 
   @override
-  ConsumerState<PixabayGalleryWidget> createState() => _PixabayGalleryWidgetState();
+  ConsumerState<PixabayGalleryWidget> createState() =>
+      _PixabayGalleryWidgetState();
 }
 
 class _PixabayGalleryWidgetState extends ConsumerState<PixabayGalleryWidget> {
@@ -27,7 +28,8 @@ class _PixabayGalleryWidgetState extends ConsumerState<PixabayGalleryWidget> {
   }
 
   void _onScroll() {
-    if (_scrollController.position.pixels >= _scrollController.position.maxScrollExtent - 400) {
+    if (_scrollController.position.pixels >=
+        _scrollController.position.maxScrollExtent - 400) {
       ref.read(pixabayProvider.notifier).loadMore();
     }
   }
@@ -54,7 +56,8 @@ class _PixabayGalleryWidgetState extends ConsumerState<PixabayGalleryWidget> {
         children: [
           // Handle
           Container(
-            width: 40, height: 4,
+            width: 40,
+            height: 4,
             margin: const EdgeInsets.only(top: 12, bottom: 16),
             decoration: BoxDecoration(
               color: Colors.white.withValues(alpha: 0.15),
@@ -67,16 +70,28 @@ class _PixabayGalleryWidgetState extends ConsumerState<PixabayGalleryWidget> {
             padding: const EdgeInsets.symmetric(horizontal: 20),
             child: Row(
               children: [
-                Icon(LucideIcons.image, color: theme.colorScheme.primary, size: 20),
+                Icon(
+                  LucideIcons.image,
+                  color: theme.colorScheme.primary,
+                  size: 20,
+                ),
                 const SizedBox(width: 10),
                 Text(
                   'Visual Library',
-                  style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800, fontFamily: 'Manrope'),
+                  style: theme.textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.w800,
+                    fontFamily: 'Manrope',
+                  ),
                 ),
                 const Spacer(),
                 Text(
                   'Powered by Pixabay',
-                  style: TextStyle(fontSize: 10, color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.5)),
+                  style: TextStyle(
+                    fontSize: 10,
+                    color: theme.colorScheme.onSurfaceVariant.withValues(
+                      alpha: 0.5,
+                    ),
+                  ),
                 ),
               ],
             ),
@@ -92,8 +107,19 @@ class _PixabayGalleryWidgetState extends ConsumerState<PixabayGalleryWidget> {
               style: const TextStyle(fontSize: 14),
               decoration: InputDecoration(
                 hintText: 'Search for visuals (e.g. "mosque", "nature")',
-                hintStyle: TextStyle(color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.5), fontSize: 13),
-                prefixIcon: Icon(LucideIcons.search, size: 18, color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.5)),
+                hintStyle: TextStyle(
+                  color: theme.colorScheme.onSurfaceVariant.withValues(
+                    alpha: 0.5,
+                  ),
+                  fontSize: 13,
+                ),
+                prefixIcon: Icon(
+                  LucideIcons.search,
+                  size: 18,
+                  color: theme.colorScheme.onSurfaceVariant.withValues(
+                    alpha: 0.5,
+                  ),
+                ),
                 suffixIcon: _searchController.text.isNotEmpty
                     ? IconButton(
                         icon: const Icon(LucideIcons.x, size: 16),
@@ -109,7 +135,10 @@ class _PixabayGalleryWidgetState extends ConsumerState<PixabayGalleryWidget> {
                   borderRadius: BorderRadius.circular(14),
                   borderSide: BorderSide.none,
                 ),
-                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
               ),
             ),
           ),
@@ -124,14 +153,18 @@ class _PixabayGalleryWidgetState extends ConsumerState<PixabayGalleryWidget> {
                   label: 'Photos',
                   icon: LucideIcons.image,
                   isActive: state.mediaType == PixabayMediaType.images,
-                  onTap: () => ref.read(pixabayProvider.notifier).switchMediaType(PixabayMediaType.images),
+                  onTap: () => ref
+                      .read(pixabayProvider.notifier)
+                      .switchMediaType(PixabayMediaType.images),
                 ),
                 const SizedBox(width: 10),
                 _TypeButton(
                   label: 'Videos',
                   icon: LucideIcons.video,
                   isActive: state.mediaType == PixabayMediaType.videos,
-                  onTap: () => ref.read(pixabayProvider.notifier).switchMediaType(PixabayMediaType.videos),
+                  onTap: () => ref
+                      .read(pixabayProvider.notifier)
+                      .switchMediaType(PixabayMediaType.videos),
                 ),
               ],
             ),
@@ -142,13 +175,14 @@ class _PixabayGalleryWidgetState extends ConsumerState<PixabayGalleryWidget> {
           if (state.error != null)
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
-              child: Text(state.error!, style: TextStyle(color: theme.colorScheme.error, fontSize: 12)),
+              child: Text(
+                state.error!,
+                style: TextStyle(color: theme.colorScheme.error, fontSize: 12),
+              ),
             ),
 
           // Grid
-          Expanded(
-            child: _buildGrid(state, theme),
-          ),
+          Expanded(child: _buildGrid(state, theme)),
         ],
       ),
     );
@@ -160,9 +194,21 @@ class _PixabayGalleryWidgetState extends ConsumerState<PixabayGalleryWidget> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(LucideIcons.search, size: 48, color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.2)),
+            Icon(
+              LucideIcons.search,
+              size: 48,
+              color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.2),
+            ),
             const SizedBox(height: 16),
-            Text('Search for images or videos above', style: TextStyle(color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.4), fontSize: 13)),
+            Text(
+              'Search for images or videos above',
+              style: TextStyle(
+                color: theme.colorScheme.onSurfaceVariant.withValues(
+                  alpha: 0.4,
+                ),
+                fontSize: 13,
+              ),
+            ),
           ],
         ),
       );
@@ -174,7 +220,12 @@ class _PixabayGalleryWidgetState extends ConsumerState<PixabayGalleryWidget> {
 
     if (state.items.isEmpty) {
       return Center(
-        child: Text('No results for "${state.query}"', style: TextStyle(color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.5))),
+        child: Text(
+          'No results for "${state.query}"',
+          style: TextStyle(
+            color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
+          ),
+        ),
       );
     }
 
@@ -202,9 +253,16 @@ class _PixabayGalleryWidgetState extends ConsumerState<PixabayGalleryWidget> {
           mediaType: state.mediaType,
           onTap: () async {
             HapticFeedback.lightImpact();
-            final filePath = await ref.read(pixabayProvider.notifier).downloadAndImport(item);
+            final filePath = await ref
+                .read(pixabayProvider.notifier)
+                .downloadAndImport(item);
             if (filePath != null && mounted) {
-              widget.onMediaImported(filePath, state.mediaType == PixabayMediaType.videos);
+              widget.onMediaImported(
+                filePath,
+                state.mediaType == PixabayMediaType.videos,
+              );
+              // Dismiss the bottom sheet after import
+              Navigator.of(context).pop();
             }
           },
         );
@@ -220,7 +278,16 @@ class _PixabayGalleryWidgetState extends ConsumerState<PixabayGalleryWidget> {
       padding: const EdgeInsets.symmetric(horizontal: 16),
       itemCount: 8,
       itemBuilder: (context, index) {
-        final heights = [120.0, 180.0, 140.0, 200.0, 130.0, 160.0, 190.0, 150.0];
+        final heights = [
+          120.0,
+          180.0,
+          140.0,
+          200.0,
+          130.0,
+          160.0,
+          190.0,
+          150.0,
+        ];
         return Container(
           height: heights[index % 8],
           decoration: BoxDecoration(
@@ -239,7 +306,12 @@ class _TypeButton extends StatelessWidget {
   final bool isActive;
   final VoidCallback onTap;
 
-  const _TypeButton({required this.label, required this.icon, required this.isActive, required this.onTap});
+  const _TypeButton({
+    required this.label,
+    required this.icon,
+    required this.isActive,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -250,23 +322,35 @@ class _TypeButton extends StatelessWidget {
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: BoxDecoration(
-          color: isActive ? theme.colorScheme.primaryContainer : theme.colorScheme.surfaceContainerLow,
+          color: isActive
+              ? theme.colorScheme.primaryContainer
+              : theme.colorScheme.surfaceContainerLow,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: isActive ? theme.colorScheme.primary.withValues(alpha: 0.4) : Colors.transparent,
+            color: isActive
+                ? theme.colorScheme.primary.withValues(alpha: 0.4)
+                : Colors.transparent,
           ),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 14, color: isActive ? theme.colorScheme.primary : theme.colorScheme.onSurfaceVariant),
+            Icon(
+              icon,
+              size: 14,
+              color: isActive
+                  ? theme.colorScheme.primary
+                  : theme.colorScheme.onSurfaceVariant,
+            ),
             const SizedBox(width: 6),
             Text(
               label,
               style: TextStyle(
                 fontSize: 13,
                 fontWeight: isActive ? FontWeight.w700 : FontWeight.normal,
-                color: isActive ? theme.colorScheme.primary : theme.colorScheme.onSurfaceVariant,
+                color: isActive
+                    ? theme.colorScheme.primary
+                    : theme.colorScheme.onSurfaceVariant,
               ),
             ),
           ],
@@ -329,7 +413,11 @@ class _MediaCard extends StatelessWidget {
                     color: Colors.black.withValues(alpha: 0.6),
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(Icons.play_arrow, size: 14, color: Colors.white),
+                  child: const Icon(
+                    Icons.play_arrow,
+                    size: 14,
+                    color: Colors.white,
+                  ),
                 ),
               ),
 
@@ -344,12 +432,19 @@ class _MediaCard extends StatelessWidget {
                       const SizedBox(
                         width: 28,
                         height: 28,
-                        child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white),
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2.5,
+                          color: Colors.white,
+                        ),
                       ),
                       const SizedBox(height: 8),
                       Text(
                         'Downloading…',
-                        style: TextStyle(color: Colors.white.withValues(alpha: 0.9), fontSize: 10, fontWeight: FontWeight.w600),
+                        style: TextStyle(
+                          color: Colors.white.withValues(alpha: 0.9),
+                          fontSize: 10,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     ],
                   ),
