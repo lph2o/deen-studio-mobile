@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import '../../../../models/project.dart';
+import '../../../../models/text_layer_style.dart';
 import '../../../../core/models/video_filter.dart';
 import '../../../../core/models/speed_curve.dart';
 import '../../../../core/theme.dart';
@@ -60,8 +61,18 @@ class _InspectorSheet extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppTheme.surfaceContainer,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-        border: Border(top: BorderSide(color: AppTheme.outlineVariant.withValues(alpha: 0.15))),
-        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.4), blurRadius: 32, offset: const Offset(0, -8))],
+        border: Border(
+          top: BorderSide(
+            color: AppTheme.outlineVariant.withValues(alpha: 0.15),
+          ),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.4),
+            blurRadius: 32,
+            offset: const Offset(0, -8),
+          ),
+        ],
       ),
       child: Column(
         children: [
@@ -71,7 +82,8 @@ class _InspectorSheet extends StatelessWidget {
             child: Column(
               children: [
                 Container(
-                  width: 36, height: 4,
+                  width: 36,
+                  height: 4,
                   decoration: BoxDecoration(
                     color: AppTheme.onSurface.withValues(alpha: 0.24),
                     borderRadius: BorderRadius.circular(2),
@@ -85,7 +97,9 @@ class _InspectorSheet extends StatelessWidget {
                     Expanded(
                       child: Text(
                         _layerTitle(layer),
-                        style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+                        style: theme.textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
@@ -93,14 +107,18 @@ class _InspectorSheet extends StatelessWidget {
                       icon: LucideIcons.trash2,
                       onTap: () {
                         ref.read(editorProvider.notifier).removeLayer(layer.id);
-                        ref.read(editorProvider.notifier).setSelectedLayer(null);
+                        ref
+                            .read(editorProvider.notifier)
+                            .setSelectedLayer(null);
                       },
                       size: 18,
                       color: theme.colorScheme.error,
                     ),
                     GlassIconButton(
                       icon: LucideIcons.x,
-                      onTap: () => ref.read(editorProvider.notifier).setSelectedLayer(null),
+                      onTap: () => ref
+                          .read(editorProvider.notifier)
+                          .setSelectedLayer(null),
                       size: 18,
                     ),
                   ],
@@ -122,30 +140,50 @@ class _InspectorSheet extends StatelessWidget {
                 _SliderTile(
                   label: 'Opacity',
                   value: layer.transform.opacity,
-                  min: 0, max: 1,
-                  onChanged: (v) => ref.read(editorProvider.notifier)
-                      .updateLayerTransform(layer.id, layer.transform.copyWith(opacity: v)),
+                  min: 0,
+                  max: 1,
+                  onChanged: (v) => ref
+                      .read(editorProvider.notifier)
+                      .updateLayerTransform(
+                        layer.id,
+                        layer.transform.copyWith(opacity: v),
+                      ),
                 ),
                 _SliderTile(
                   label: 'Scale X',
                   value: layer.transform.scaleX,
-                  min: 0.1, max: 3.0,
-                  onChanged: (v) => ref.read(editorProvider.notifier)
-                      .updateLayerTransform(layer.id, layer.transform.copyWith(scaleX: v)),
+                  min: 0.1,
+                  max: 3.0,
+                  onChanged: (v) => ref
+                      .read(editorProvider.notifier)
+                      .updateLayerTransform(
+                        layer.id,
+                        layer.transform.copyWith(scaleX: v),
+                      ),
                 ),
                 _SliderTile(
                   label: 'Scale Y',
                   value: layer.transform.scaleY,
-                  min: 0.1, max: 3.0,
-                  onChanged: (v) => ref.read(editorProvider.notifier)
-                      .updateLayerTransform(layer.id, layer.transform.copyWith(scaleY: v)),
+                  min: 0.1,
+                  max: 3.0,
+                  onChanged: (v) => ref
+                      .read(editorProvider.notifier)
+                      .updateLayerTransform(
+                        layer.id,
+                        layer.transform.copyWith(scaleY: v),
+                      ),
                 ),
                 _SliderTile(
                   label: 'Rotation',
                   value: layer.transform.rotation,
-                  min: -180, max: 180,
-                  onChanged: (v) => ref.read(editorProvider.notifier)
-                      .updateLayerTransform(layer.id, layer.transform.copyWith(rotation: v)),
+                  min: -180,
+                  max: 180,
+                  onChanged: (v) => ref
+                      .read(editorProvider.notifier)
+                      .updateLayerTransform(
+                        layer.id,
+                        layer.transform.copyWith(rotation: v),
+                      ),
                 ),
                 const SizedBox(height: 16),
 
@@ -330,7 +368,16 @@ class _InspectorSheet extends StatelessWidget {
                 // Text-specific
                 if (layer.isTextType) ...[
                   _SectionHeader('Text Style'),
+                  if (layer.type == 'translation' ||
+                      layer.type == 'phonetic' ||
+                      layer.type == 'text') ...[
+                    _CaptionStyleSelector(layer: layer, ref: ref),
+                    const SizedBox(height: 16),
+                  ],
                   _AnimationPicker(layer: layer, ref: ref),
+                  const SizedBox(height: 12),
+                  _AnimationConfigSection(layer: layer, ref: ref),
+                  const SizedBox(height: 16),
                 ],
               ],
             ),
@@ -342,7 +389,9 @@ class _InspectorSheet extends StatelessWidget {
 
   String _layerTitle(Layer layer) {
     if (layer.content.isNotEmpty) {
-      return layer.content.length > 40 ? '${layer.content.substring(0, 40)}…' : layer.content;
+      return layer.content.length > 40
+          ? '${layer.content.substring(0, 40)}…'
+          : layer.content;
     }
     return layer.type.toUpperCase();
   }
@@ -372,7 +421,12 @@ class _TypeBadge extends StatelessWidget {
       ),
       child: Text(
         type.toUpperCase(),
-        style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: color, letterSpacing: 1),
+        style: TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w800,
+          color: color,
+          letterSpacing: 1,
+        ),
       ),
     );
   }
@@ -389,9 +443,7 @@ class _SectionHeader extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 10),
       child: Text(
         title.toUpperCase(),
-        style: theme.textTheme.labelSmall?.copyWith(
-          letterSpacing: 1.5,
-        ),
+        style: theme.textTheme.labelSmall?.copyWith(letterSpacing: 1.5),
       ),
     );
   }
@@ -411,7 +463,13 @@ class _InlineRow extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(label, style: theme.textTheme.bodySmall?.copyWith(fontSize: 13)),
-          Text(value, style: theme.textTheme.bodySmall?.copyWith(fontSize: 13, fontWeight: FontWeight.w600)),
+          Text(
+            value,
+            style: theme.textTheme.bodySmall?.copyWith(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
         ],
       ),
     );
@@ -470,7 +528,9 @@ class _EffectToggle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final existing = layer.effects.where((e) => e.type == effectType).firstOrNull;
+    final existing = layer.effects
+        .where((e) => e.type == effectType)
+        .firstOrNull;
     final isActive = existing?.enabled ?? false;
     final value = existing?.params['value'] ?? defaultValue;
 
@@ -478,7 +538,15 @@ class _EffectToggle extends StatelessWidget {
       children: [
         Row(
           children: [
-            Expanded(child: Text(label, style: TextStyle(fontSize: 13, color: AppTheme.onSurface.withValues(alpha: 0.54)))),
+            Expanded(
+              child: Text(
+                label,
+                style: TextStyle(
+                  fontSize: 13,
+                  color: AppTheme.onSurface.withValues(alpha: 0.54),
+                ),
+              ),
+            ),
             Switch(
               value: isActive,
               onChanged: (v) {
@@ -514,11 +582,209 @@ class _EffectToggle extends StatelessWidget {
             padding: const EdgeInsets.only(top: 2, bottom: 6),
             child: Text(
               valueDisplay!(value),
-              style: TextStyle(fontSize: 10, color: AppTheme.onSurface.withValues(alpha: 0.3), fontStyle: FontStyle.italic),
+              style: TextStyle(
+                fontSize: 10,
+                color: AppTheme.onSurface.withValues(alpha: 0.3),
+                fontStyle: FontStyle.italic,
+              ),
             ),
           ),
       ],
     );
+  }
+}
+
+class _CaptionStyleSelector extends StatelessWidget {
+  final Layer layer;
+  final WidgetRef ref;
+
+  const _CaptionStyleSelector({required this.layer, required this.ref});
+
+  @override
+  Widget build(BuildContext context) {
+    final style = layer.textStyle ?? const TextLayerStyle();
+
+    final presets = [
+      (id: 'none', label: 'Aucun', icon: LucideIcons.type),
+      (id: 'bubble', label: 'Bulle', icon: LucideIcons.messageSquare),
+      (id: 'glow', label: 'Lueur', icon: LucideIcons.sun),
+      (id: 'neon', label: 'Néon', icon: LucideIcons.zap),
+      (id: 'outline', label: 'Bordure', icon: LucideIcons.square),
+    ];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Styles de Caption',
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            color: AppTheme.onSurface.withValues(alpha: 0.54),
+          ),
+        ),
+        const SizedBox(height: 12),
+        SizedBox(
+          height: 70,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            itemCount: presets.length,
+            separatorBuilder: (_, _) => const SizedBox(width: 12),
+            itemBuilder: (context, index) {
+              final p = presets[index];
+              final isSelected = (style.captionStyleId ?? 'none') == p.id;
+
+              return GestureDetector(
+                onTap: () {
+                  _applyPreset(p.id, style);
+                },
+                child: Column(
+                  children: [
+                    Container(
+                      width: 48,
+                      height: 48,
+                      decoration: BoxDecoration(
+                        color: isSelected
+                            ? AppTheme.primaryColor.withValues(alpha: 0.15)
+                            : AppTheme.surfaceHigh,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: isSelected
+                              ? AppTheme.primaryColor
+                              : AppTheme.outlineVariant.withValues(alpha: 0.1),
+                          width: 2,
+                        ),
+                      ),
+                      child: Icon(
+                        p.icon,
+                        size: 20,
+                        color: isSelected
+                            ? AppTheme.primaryColor
+                            : AppTheme.onSurface.withValues(alpha: 0.7),
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      p.label,
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: isSelected
+                            ? FontWeight.w700
+                            : FontWeight.normal,
+                        color: isSelected
+                            ? AppTheme.primaryColor
+                            : AppTheme.onSurface.withValues(alpha: 0.54),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+        ),
+        if (style.captionStyleId != null && style.captionStyleId != 'none') ...[
+          const SizedBox(height: 16),
+          if (style.captionStyleId == 'bubble') ...[
+            _SliderTile(
+              label: 'Padding',
+              value: style.backgroundPadding,
+              min: 4,
+              max: 32,
+              onChanged: (v) {
+                ref
+                    .read(editorProvider.notifier)
+                    .updateLayerTextStyle(
+                      layer.id,
+                      style.copyWith(backgroundPadding: v),
+                    );
+              },
+            ),
+            const SizedBox(height: 8),
+            _SliderTile(
+              label: 'Arrondi',
+              value: style.borderRadius,
+              min: 0,
+              max: 40,
+              onChanged: (v) {
+                ref
+                    .read(editorProvider.notifier)
+                    .updateLayerTextStyle(
+                      layer.id,
+                      style.copyWith(borderRadius: v),
+                    );
+              },
+            ),
+          ],
+          if (style.captionStyleId == 'glow' || style.captionStyleId == 'neon')
+            _SliderTile(
+              label: 'Intensité Lueur',
+              value: style.glowBlur,
+              min: 0,
+              max: 30,
+              onChanged: (v) {
+                ref
+                    .read(editorProvider.notifier)
+                    .updateLayerTextStyle(
+                      layer.id,
+                      style.copyWith(glowBlur: v),
+                    );
+              },
+            ),
+        ],
+      ],
+    );
+  }
+
+  void _applyPreset(String id, TextLayerStyle current) {
+    TextLayerStyle updated = current;
+
+    switch (id) {
+      case 'none':
+        updated = current.copyWith(
+          clearCaptionStyle: true,
+          clearBackground: true,
+          glowBlur: 0,
+          strokeWidth: 0,
+        );
+        break;
+      case 'bubble':
+        updated = current.copyWith(
+          captionStyleId: 'bubble',
+          backgroundColor: '#000000',
+          backgroundPadding: 12,
+          borderRadius: 12,
+          color: '#FFFFFF',
+        );
+        break;
+      case 'glow':
+        updated = current.copyWith(
+          captionStyleId: 'glow',
+          glowBlur: 8,
+          glowColor: current.color,
+        );
+        break;
+      case 'neon':
+        updated = current.copyWith(
+          captionStyleId: 'neon',
+          glowBlur: 12,
+          glowColor: current.color,
+          isBold: true,
+        );
+        break;
+      case 'outline':
+        updated = current.copyWith(
+          captionStyleId: 'outline',
+          strokeWidth: 2.0,
+          strokeColor: '#000000',
+          shadowColor: '#000000',
+          shadowBlur: 4,
+          shadowOffsetX: 2,
+          shadowOffsetY: 2,
+        );
+        break;
+    }
+
+    ref.read(editorProvider.notifier).updateLayerTextStyle(layer.id, updated);
   }
 }
 
@@ -530,27 +796,248 @@ class _AnimationPicker extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final options = ['none', 'fade', 'typewriter', 'karaoke'];
+    const options = [
+      TextAnimationPreset.none,
+      TextAnimationPreset.fadeIn,
+      TextAnimationPreset.fadeOut,
+      TextAnimationPreset.fadeInOut,
+      TextAnimationPreset.typewriter,
+      TextAnimationPreset.wordByWord,
+      TextAnimationPreset.wordHighlight,
+      TextAnimationPreset.karaokeRTL,
+    ];
+    final currentStyle = layer.textStyle ?? const TextLayerStyle();
 
     return Row(
       children: [
-        Text('Animation', style: TextStyle(fontSize: 13, color: AppTheme.onSurface.withValues(alpha: 0.54))),
+        Text(
+          'Animation',
+          style: TextStyle(
+            fontSize: 13,
+            color: AppTheme.onSurface.withValues(alpha: 0.54),
+          ),
+        ),
         const SizedBox(width: 12),
         Expanded(
-          child: DropdownButton<String>(
-            value: layer.textAnimation ?? 'none',
+          child: DropdownButton<TextAnimationPreset>(
+            value: currentStyle.animationPreset,
             isExpanded: true,
             dropdownColor: AppTheme.surfaceHigh,
             underline: const SizedBox(),
-            style: TextStyle(color: AppTheme.onSurface.withValues(alpha: 0.7), fontSize: 13),
-            items: options.map((o) => DropdownMenuItem(value: o, child: Text(o))).toList(),
+            style: TextStyle(
+              color: AppTheme.onSurface.withValues(alpha: 0.7),
+              fontSize: 13,
+            ),
+            items: options
+                .map(
+                  (preset) => DropdownMenuItem(
+                    value: preset,
+                    child: Text(preset.label),
+                  ),
+                )
+                .toList(),
             onChanged: (v) {
-              ref.read(editorProvider.notifier).updateTextStyle(
-                layer.id,
-                animation: v == 'none' ? null : v,
-              );
+              if (v == null) return;
+              ref
+                  .read(editorProvider.notifier)
+                  .updateLayerTextStyle(
+                    layer.id,
+                    currentStyle.copyWith(animationPreset: v),
+                  );
             },
           ),
+        ),
+      ],
+    );
+  }
+}
+
+class _AnimationConfigSection extends StatelessWidget {
+  final Layer layer;
+  final WidgetRef ref;
+
+  const _AnimationConfigSection({required this.layer, required this.ref});
+
+  @override
+  Widget build(BuildContext context) {
+    final currentStyle = layer.textStyle ?? const TextLayerStyle();
+    final config = currentStyle.animationConfig;
+    final isNone =
+        currentStyle.animationPreset == TextAnimationPreset.none &&
+        currentStyle.quranAnimationId.isEmpty;
+
+    if (isNone) return const SizedBox.shrink();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              'Animation Config',
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: AppTheme.onSurface.withValues(alpha: 0.7),
+              ),
+            ),
+            if (!config.isDefault)
+              InkWell(
+                onTap: () {
+                  ref
+                      .read(editorProvider.notifier)
+                      .updateLayerTextStyle(
+                        layer.id,
+                        currentStyle.copyWith(
+                          animationConfig: const AnimationConfig(),
+                        ),
+                      );
+                },
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 4,
+                    vertical: 2,
+                  ),
+                  child: Text(
+                    'Reset',
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: AppTheme.primaryColor,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        // Duration Multiplier
+        _SliderTile(
+          label: 'Speed (${config.durationMultiplier.toStringAsFixed(1)}x)',
+          value: config.durationMultiplier,
+          min: 0.1,
+          max: 10.0,
+          onChanged: (v) {
+            ref
+                .read(editorProvider.notifier)
+                .updateLayerTextStyle(
+                  layer.id,
+                  currentStyle.copyWith(
+                    animationConfig: config.copyWith(durationMultiplier: v),
+                  ),
+                );
+          },
+        ),
+        const SizedBox(height: 8),
+        // Primary Color
+        Row(
+          children: [
+            Text(
+              'Color',
+              style: TextStyle(
+                fontSize: 12,
+                color: AppTheme.onSurface.withValues(alpha: 0.54),
+              ),
+            ),
+            const Spacer(),
+            GestureDetector(
+              onTap: () async {
+                final color = await showDialog<Color>(
+                  context: context,
+                  builder: (ctx) =>
+                      _ChromaKeyColorPicker(initialColor: config.color),
+                );
+                if (color != null) {
+                  final hex =
+                      '#${color.toARGB32().toRadixString(16).padLeft(8, '0').substring(2).toUpperCase()}';
+                  ref
+                      .read(editorProvider.notifier)
+                      .updateLayerTextStyle(
+                        layer.id,
+                        currentStyle.copyWith(
+                          animationConfig: config.copyWith(color: hex),
+                        ),
+                      );
+                }
+              },
+              child: Container(
+                width: 28,
+                height: 28,
+                decoration: BoxDecoration(
+                  color: TextLayerStyle.parseHexColor(config.color),
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(
+                    color: AppTheme.outlineVariant.withValues(alpha: 0.3),
+                    width: 1.5,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              config.color,
+              style: TextStyle(
+                fontSize: 10,
+                color: AppTheme.onSurface.withValues(alpha: 0.38),
+                fontFamily: 'monospace',
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        // Frequency
+        _SliderTile(
+          label: 'Frequency',
+          value: config.frequency,
+          min: 0.0,
+          max: 1.0,
+          onChanged: (v) {
+            ref
+                .read(editorProvider.notifier)
+                .updateLayerTextStyle(
+                  layer.id,
+                  currentStyle.copyWith(
+                    animationConfig: config.copyWith(frequency: v),
+                  ),
+                );
+          },
+        ),
+        const SizedBox(height: 8),
+        // Intensity
+        _SliderTile(
+          label: 'Intensity',
+          value: config.intensity,
+          min: 0.0,
+          max: 1.0,
+          onChanged: (v) {
+            ref
+                .read(editorProvider.notifier)
+                .updateLayerTextStyle(
+                  layer.id,
+                  currentStyle.copyWith(
+                    animationConfig: config.copyWith(intensity: v),
+                  ),
+                );
+          },
+        ),
+        const SizedBox(height: 8),
+        // Direction
+        _SliderTile(
+          label: 'Direction (${config.direction.round()}°)',
+          value: config.direction,
+          min: 0,
+          max: 360,
+          onChanged: (v) {
+            ref
+                .read(editorProvider.notifier)
+                .updateLayerTextStyle(
+                  layer.id,
+                  currentStyle.copyWith(
+                    animationConfig: config.copyWith(direction: v),
+                  ),
+                );
+          },
         ),
       ],
     );
@@ -593,14 +1080,27 @@ class _KeyframeSection extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: AppTheme.primaryColor.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(6),
-                  border: Border.all(color: AppTheme.primaryColor.withValues(alpha: 0.4)),
+                  border: Border.all(
+                    color: AppTheme.primaryColor.withValues(alpha: 0.4),
+                  ),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(LucideIcons.diamond, size: 12, color: AppTheme.primaryColor),
+                    Icon(
+                      LucideIcons.diamond,
+                      size: 12,
+                      color: AppTheme.primaryColor,
+                    ),
                     const SizedBox(width: 4),
-                    Text('Add', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: AppTheme.primaryColor)),
+                    Text(
+                      'Add',
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w700,
+                        color: AppTheme.primaryColor,
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -611,7 +1111,12 @@ class _KeyframeSection extends StatelessWidget {
 
         // Mini timeline
         if (keyframes.isNotEmpty)
-          _KeyframeTimeline(keyframes: keyframes, layerId: layer.id, currentTime: state.currentTime, ref: ref),
+          _KeyframeTimeline(
+            keyframes: keyframes,
+            layerId: layer.id,
+            currentTime: state.currentTime,
+            ref: ref,
+          ),
 
         // Keyframe list
         if (keyframes.isEmpty)
@@ -619,16 +1124,21 @@ class _KeyframeSection extends StatelessWidget {
             padding: const EdgeInsets.symmetric(vertical: 8),
             child: Text(
               'No keyframes yet. Move the playhead and click Add.',
-              style: TextStyle(fontSize: 11, color: AppTheme.onSurface.withValues(alpha: 0.3)),
+              style: TextStyle(
+                fontSize: 11,
+                color: AppTheme.onSurface.withValues(alpha: 0.3),
+              ),
             ),
           )
         else
-          ...keyframes.asMap().entries.map((entry) => _KeyframeTile(
-                index: entry.key,
-                keyframe: entry.value,
-                layerId: layer.id,
-                ref: ref,
-              )),
+          ...keyframes.asMap().entries.map(
+            (entry) => _KeyframeTile(
+              index: entry.key,
+              keyframe: entry.value,
+              layerId: layer.id,
+              ref: ref,
+            ),
+          ),
       ],
     );
   }
@@ -658,7 +1168,9 @@ class _KeyframeTimeline extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppTheme.surfaceContainer.withValues(alpha: 0.3),
         borderRadius: BorderRadius.circular(4),
-        border: Border.all(color: AppTheme.outlineVariant.withValues(alpha: 0.06)),
+        border: Border.all(
+          color: AppTheme.outlineVariant.withValues(alpha: 0.06),
+        ),
       ),
       child: Stack(
         children: [
@@ -675,7 +1187,9 @@ class _KeyframeTimeline extends StatelessWidget {
           // Keyframe dots
           ...keyframes.asMap().entries.map((entry) {
             final kf = entry.value;
-            final position = totalDuration > 0 ? (kf.time / totalDuration).clamp(0.0, 1.0) : 0.0;
+            final position = totalDuration > 0
+                ? (kf.time / totalDuration).clamp(0.0, 1.0)
+                : 0.0;
             return Positioned(
               left: position * (300.0 - 8),
               top: 6,
@@ -691,7 +1205,10 @@ class _KeyframeTimeline extends StatelessWidget {
                     decoration: BoxDecoration(
                       color: AppTheme.primaryColor,
                       shape: BoxShape.circle,
-                      border: Border.all(color: AppTheme.onSurface.withValues(alpha: 0.5), width: 1),
+                      border: Border.all(
+                        color: AppTheme.onSurface.withValues(alpha: 0.5),
+                        width: 1,
+                      ),
                     ),
                     child: Center(
                       child: Icon(
@@ -734,7 +1251,9 @@ class _KeyframeTile extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppTheme.surfaceContainer.withValues(alpha: 0.3),
         borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: AppTheme.outlineVariant.withValues(alpha: 0.06)),
+        border: Border.all(
+          color: AppTheme.outlineVariant.withValues(alpha: 0.06),
+        ),
       ),
       child: Row(
         children: [
@@ -747,7 +1266,11 @@ class _KeyframeTile extends StatelessWidget {
             width: 52,
             child: Text(
               '${keyframe.time.toStringAsFixed(2)}s',
-              style: TextStyle(fontSize: 11, color: AppTheme.onSurface.withValues(alpha: 0.7), fontWeight: FontWeight.w600),
+              style: TextStyle(
+                fontSize: 11,
+                color: AppTheme.onSurface.withValues(alpha: 0.7),
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ),
           const SizedBox(width: 8),
@@ -759,11 +1282,18 @@ class _KeyframeTile extends StatelessWidget {
               isExpanded: true,
               dropdownColor: AppTheme.surfaceHigh,
               underline: const SizedBox(),
-              style: TextStyle(color: AppTheme.onSurface.withValues(alpha: 0.54), fontSize: 10),
-              items: easingOptions.map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
+              style: TextStyle(
+                color: AppTheme.onSurface.withValues(alpha: 0.54),
+                fontSize: 10,
+              ),
+              items: easingOptions
+                  .map((e) => DropdownMenuItem(value: e, child: Text(e)))
+                  .toList(),
               onChanged: (v) {
                 if (v != null) {
-                  ref.read(editorProvider.notifier).updateKeyframeEasing(layerId, index, v);
+                  ref
+                      .read(editorProvider.notifier)
+                      .updateKeyframeEasing(layerId, index, v);
                 }
               },
             ),
@@ -775,7 +1305,10 @@ class _KeyframeTile extends StatelessWidget {
             width: 60,
             child: Text(
               'S:${keyframe.transform.scaleX.toStringAsFixed(1)}',
-              style: TextStyle(fontSize: 10, color: AppTheme.onSurface.withValues(alpha: 0.38)),
+              style: TextStyle(
+                fontSize: 10,
+                color: AppTheme.onSurface.withValues(alpha: 0.38),
+              ),
               textAlign: TextAlign.end,
             ),
           ),
@@ -784,7 +1317,9 @@ class _KeyframeTile extends StatelessWidget {
           // Delete button
           GlassIconButton(
             icon: LucideIcons.x,
-            onTap: () => ref.read(editorProvider.notifier).removeKeyframe(layerId, index),
+            onTap: () => ref
+                .read(editorProvider.notifier)
+                .removeKeyframe(layerId, index),
             size: 14,
           ),
         ],
@@ -804,7 +1339,9 @@ class _MaskSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final mask = layer.mask;
-    final maskOptions = MaskType.values.where((t) => t != MaskType.none).toList();
+    final maskOptions = MaskType.values
+        .where((t) => t != MaskType.none)
+        .toList();
     final maskLabels = <MaskType, String>{
       MaskType.rectangle: 'Rectangle',
       MaskType.circle: 'Circle',
@@ -825,25 +1362,50 @@ class _MaskSection extends StatelessWidget {
               child: DropdownButton<MaskType>(
                 value: mask.type == MaskType.none ? null : mask.type,
                 isExpanded: true,
-                hint: Text('None', style: TextStyle(fontSize: 13, color: AppTheme.onSurface.withValues(alpha: 0.54))),
+                hint: Text(
+                  'None',
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: AppTheme.onSurface.withValues(alpha: 0.54),
+                  ),
+                ),
                 dropdownColor: AppTheme.surfaceHigh,
                 underline: const SizedBox(),
-                style: TextStyle(color: AppTheme.onSurface.withValues(alpha: 0.7), fontSize: 13),
+                style: TextStyle(
+                  color: AppTheme.onSurface.withValues(alpha: 0.7),
+                  fontSize: 13,
+                ),
                 items: [
                   DropdownMenuItem<MaskType>(
                     value: null,
-                    child: Text('None', style: TextStyle(fontSize: 13, color: AppTheme.onSurface.withValues(alpha: 0.7))),
+                    child: Text(
+                      'None',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: AppTheme.onSurface.withValues(alpha: 0.7),
+                      ),
+                    ),
                   ),
-                  ...maskOptions.map((t) => DropdownMenuItem(
-                    value: t,
-                    child: Text(maskLabels[t] ?? t.name, style: TextStyle(fontSize: 13, color: AppTheme.onSurface.withValues(alpha: 0.7))),
-                  )),
+                  ...maskOptions.map(
+                    (t) => DropdownMenuItem(
+                      value: t,
+                      child: Text(
+                        maskLabels[t] ?? t.name,
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: AppTheme.onSurface.withValues(alpha: 0.7),
+                        ),
+                      ),
+                    ),
+                  ),
                 ],
                 onChanged: (v) {
-                  ref.read(editorProvider.notifier).updateLayerMask(
-                    layer.id,
-                    mask.copyWith(type: v ?? MaskType.none),
-                  );
+                  ref
+                      .read(editorProvider.notifier)
+                      .updateLayerMask(
+                        layer.id,
+                        mask.copyWith(type: v ?? MaskType.none),
+                      );
                 },
               ),
             ),
@@ -855,28 +1417,31 @@ class _MaskSection extends StatelessWidget {
           _SliderTile(
             label: 'Value',
             value: mask.value,
-            min: 0, max: 1,
-            onChanged: (v) => ref.read(editorProvider.notifier).updateLayerMask(
-              layer.id, mask.copyWith(value: v),
-            ),
+            min: 0,
+            max: 1,
+            onChanged: (v) => ref
+                .read(editorProvider.notifier)
+                .updateLayerMask(layer.id, mask.copyWith(value: v)),
           ),
           // Feather slider
           _SliderTile(
             label: 'Feather',
             value: mask.feather,
-            min: 0, max: 1,
-            onChanged: (v) => ref.read(editorProvider.notifier).updateLayerMask(
-              layer.id, mask.copyWith(feather: v),
-            ),
+            min: 0,
+            max: 1,
+            onChanged: (v) => ref
+                .read(editorProvider.notifier)
+                .updateLayerMask(layer.id, mask.copyWith(feather: v)),
           ),
           // Rotation slider
           _SliderTile(
             label: 'Rotation',
             value: mask.rotation,
-            min: 0, max: 360,
-            onChanged: (v) => ref.read(editorProvider.notifier).updateLayerMask(
-              layer.id, mask.copyWith(rotation: v),
-            ),
+            min: 0,
+            max: 360,
+            onChanged: (v) => ref
+                .read(editorProvider.notifier)
+                .updateLayerMask(layer.id, mask.copyWith(rotation: v)),
           ),
         ],
       ],
@@ -917,7 +1482,10 @@ class _BlendModeSection extends StatelessWidget {
           isExpanded: true,
           dropdownColor: AppTheme.surfaceHigh,
           underline: const SizedBox(),
-          style: TextStyle(color: AppTheme.onSurface.withValues(alpha: 0.7), fontSize: 13),
+          style: TextStyle(
+            color: AppTheme.onSurface.withValues(alpha: 0.7),
+            fontSize: 13,
+          ),
           items: kBlendModes.map((mode) {
             return DropdownMenuItem<String>(
               value: mode,
@@ -933,7 +1501,13 @@ class _BlendModeSection extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: 8),
-                  Text(kBlendModeLabels[mode] ?? mode, style: TextStyle(fontSize: 12, color: AppTheme.onSurface.withValues(alpha: 0.7))),
+                  Text(
+                    kBlendModeLabels[mode] ?? mode,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: AppTheme.onSurface.withValues(alpha: 0.7),
+                    ),
+                  ),
                 ],
               ),
             );
@@ -953,25 +1527,45 @@ class _BlendModeSection extends StatelessWidget {
       case 'srcOver':
         return const LinearGradient(colors: [Colors.white, Colors.white]);
       case 'multiply':
-        return const LinearGradient(colors: [Color(0xFFFF6B6B), Color(0xFF4ECDC4)]);
+        return const LinearGradient(
+          colors: [Color(0xFFFF6B6B), Color(0xFF4ECDC4)],
+        );
       case 'screen':
-        return const LinearGradient(colors: [Color(0xFF1a1a2e), Color(0xFFe94560)]);
+        return const LinearGradient(
+          colors: [Color(0xFF1a1a2e), Color(0xFFe94560)],
+        );
       case 'overlay':
-        return const LinearGradient(colors: [Color(0xFF667eea), Color(0xFF764ba2)]);
+        return const LinearGradient(
+          colors: [Color(0xFF667eea), Color(0xFF764ba2)],
+        );
       case 'darken':
-        return const LinearGradient(colors: [Color(0xFF2d3436), Color(0xFF636e72)]);
+        return const LinearGradient(
+          colors: [Color(0xFF2d3436), Color(0xFF636e72)],
+        );
       case 'lighten':
-        return const LinearGradient(colors: [Color(0xFFfdcb6e), Color(0xFFffeaa7)]);
+        return const LinearGradient(
+          colors: [Color(0xFFfdcb6e), Color(0xFFffeaa7)],
+        );
       case 'difference':
-        return const LinearGradient(colors: [Color(0xFFe17055), Color(0xFF00b894)]);
+        return const LinearGradient(
+          colors: [Color(0xFFe17055), Color(0xFF00b894)],
+        );
       case 'colorDodge':
-        return const LinearGradient(colors: [Color(0xFFfd79a8), Color(0xFFfdcb6e)]);
+        return const LinearGradient(
+          colors: [Color(0xFFfd79a8), Color(0xFFfdcb6e)],
+        );
       case 'colorBurn':
-        return const LinearGradient(colors: [Color(0xFFd63031), Color(0xFFe17055)]);
+        return const LinearGradient(
+          colors: [Color(0xFFd63031), Color(0xFFe17055)],
+        );
       case 'hardLight':
-        return const LinearGradient(colors: [Color(0xFF0984e3), Color(0xFF74b9ff)]);
+        return const LinearGradient(
+          colors: [Color(0xFF0984e3), Color(0xFF74b9ff)],
+        );
       case 'softLight':
-        return const LinearGradient(colors: [Color(0xFFa29bfe), Color(0xFF6c5ce7)]);
+        return const LinearGradient(
+          colors: [Color(0xFFa29bfe), Color(0xFF6c5ce7)],
+        );
       default:
         return const LinearGradient(colors: [Colors.white, Colors.white]);
     }
@@ -1001,7 +1595,9 @@ class _FilterSection extends StatelessWidget {
 
           return GestureDetector(
             onTap: () {
-              ref.read(editorProvider.notifier).applyFilter(layer.id, filter.id);
+              ref
+                  .read(editorProvider.notifier)
+                  .applyFilter(layer.id, filter.id);
             },
             child: Container(
               width: 64,
@@ -1017,18 +1613,27 @@ class _FilterSection extends StatelessWidget {
                       borderRadius: BorderRadius.circular(8),
                       gradient: _filterGradient(filter),
                       border: Border.all(
-                        color: isSelected ? AppTheme.primaryColor : AppTheme.outlineVariant.withValues(alpha: 0.15),
+                        color: isSelected
+                            ? AppTheme.primaryColor
+                            : AppTheme.outlineVariant.withValues(alpha: 0.15),
                         width: isSelected ? 2 : 1,
                       ),
                     ),
                     child: Center(
                       child: Text(
-                        filter.name.length > 6 ? '${filter.name.substring(0, 5)}.' : filter.name,
+                        filter.name.length > 6
+                            ? '${filter.name.substring(0, 5)}.'
+                            : filter.name,
                         style: TextStyle(
                           fontSize: 7,
                           fontWeight: FontWeight.w700,
                           color: AppTheme.onSurface.withValues(alpha: 0.9),
-                          shadows: [Shadow(color: Colors.black.withValues(alpha: 0.54), blurRadius: 3)],
+                          shadows: [
+                            Shadow(
+                              color: Colors.black.withValues(alpha: 0.54),
+                              blurRadius: 3,
+                            ),
+                          ],
                         ),
                         textAlign: TextAlign.center,
                       ),
@@ -1039,8 +1644,12 @@ class _FilterSection extends StatelessWidget {
                     filter.name,
                     style: TextStyle(
                       fontSize: 8,
-                      color: isSelected ? AppTheme.primaryColor : AppTheme.onSurface.withValues(alpha: 0.54),
-                      fontWeight: isSelected ? FontWeight.w700 : FontWeight.normal,
+                      color: isSelected
+                          ? AppTheme.primaryColor
+                          : AppTheme.onSurface.withValues(alpha: 0.54),
+                      fontWeight: isSelected
+                          ? FontWeight.w700
+                          : FontWeight.normal,
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -1115,11 +1724,14 @@ class _SpeedCurveSection extends StatefulWidget {
 class _SpeedCurveSectionState extends State<_SpeedCurveSection> {
   SpeedCurve? _editingCurve;
 
-  SpeedCurve get _currentCurve => _editingCurve ?? widget.layer.speedCurve ?? SpeedCurve();
+  SpeedCurve get _currentCurve =>
+      _editingCurve ?? widget.layer.speedCurve ?? SpeedCurve();
 
   void _setCurve(SpeedCurve curve) {
     setState(() => _editingCurve = curve);
-    widget.ref.read(editorProvider.notifier).applySpeedCurve(widget.layer.id, curve);
+    widget.ref
+        .read(editorProvider.notifier)
+        .applySpeedCurve(widget.layer.id, curve);
   }
 
   void _applyPreset(String preset) {
@@ -1134,25 +1746,28 @@ class _SpeedCurveSectionState extends State<_SpeedCurveSection> {
         _setCurve(SpeedCurve.curveRampUp);
         break;
       case 'custom':
-        _setCurve(SpeedCurve(points: [
-          const SpeedPoint(position: 0.0, speed: 1.0),
-          const SpeedPoint(position: 1.0, speed: 1.0),
-        ]));
+        _setCurve(
+          SpeedCurve(
+            points: [
+              const SpeedPoint(position: 0.0, speed: 1.0),
+              const SpeedPoint(position: 1.0, speed: 1.0),
+            ],
+          ),
+        );
         break;
     }
   }
 
   void _resetCurve() {
     setState(() => _editingCurve = null);
-    widget.ref.read(editorProvider.notifier).applySpeedCurve(
-      widget.layer.id,
-      SpeedCurve(points: []),
-    );
+    widget.ref
+        .read(editorProvider.notifier)
+        .applySpeedCurve(widget.layer.id, SpeedCurve(points: []));
     // Also clear from layer
     final layer = widget.layer;
-    widget.ref.read(editorProvider.notifier).updateLayer(
-      layer.copyWith(speedCurve: null),
-    );
+    widget.ref
+        .read(editorProvider.notifier)
+        .updateLayer(layer.copyWith(speedCurve: null));
   }
 
   @override
@@ -1189,7 +1804,8 @@ class _SpeedCurveSectionState extends State<_SpeedCurveSection> {
             _PresetButton(
               label: 'Custom',
               icon: Icons.edit,
-              isActive: points.isNotEmpty &&
+              isActive:
+                  points.isNotEmpty &&
                   !_pointsMatch(points, SpeedCurve.curveMontage.points) &&
                   !_pointsMatch(points, SpeedCurve.curveSlowMo.points) &&
                   !_pointsMatch(points, SpeedCurve.curveRampUp.points),
@@ -1208,27 +1824,26 @@ class _SpeedCurveSectionState extends State<_SpeedCurveSection> {
               decoration: BoxDecoration(
                 color: AppTheme.surfaceContainer.withValues(alpha: 0.3),
                 borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: AppTheme.outlineVariant.withValues(alpha: 0.15)),
+                border: Border.all(
+                  color: AppTheme.outlineVariant.withValues(alpha: 0.15),
+                ),
               ),
               child: Stack(
                 children: [
                   // Grid lines
                   Positioned.fill(
-                    child: CustomPaint(
-                      painter: _SpeedGridPainter(),
-                    ),
+                    child: CustomPaint(painter: _SpeedGridPainter()),
                   ),
                   // Curve line and points
                   Positioned.fill(
-                    child: CustomPaint(
-                      painter: _SpeedCurvePainter(points),
-                    ),
+                    child: CustomPaint(painter: _SpeedCurvePainter(points)),
                   ),
                   // Draggable points
                   ...points.asMap().entries.map((entry) {
                     final index = entry.key;
                     final point = entry.value;
-                    final x = point.position * (context.size?.width ?? 300 - 16) + 8;
+                    final x =
+                        point.position * (context.size?.width ?? 300 - 16) + 8;
                     final y = 100 - (_speedToY(point.speed) * 100);
 
                     return Positioned(
@@ -1238,8 +1853,11 @@ class _SpeedCurveSectionState extends State<_SpeedCurveSection> {
                         onPanUpdate: (d) => _movePoint(index, d.delta, context),
                         onDoubleTap: () {
                           if (points.length > 2) {
-                            final newPoints = List<SpeedPoint>.from(points)..removeAt(index);
-                            newPoints.sort((a, b) => a.position.compareTo(b.position));
+                            final newPoints = List<SpeedPoint>.from(points)
+                              ..removeAt(index);
+                            newPoints.sort(
+                              (a, b) => a.position.compareTo(b.position),
+                            );
                             _setCurve(SpeedCurve(points: newPoints));
                           }
                         },
@@ -1249,7 +1867,10 @@ class _SpeedCurveSectionState extends State<_SpeedCurveSection> {
                           decoration: BoxDecoration(
                             color: AppTheme.primaryColor,
                             shape: BoxShape.circle,
-                            border: Border.all(color: AppTheme.onSurface.withValues(alpha: 0.5), width: 2),
+                            border: Border.all(
+                              color: AppTheme.onSurface.withValues(alpha: 0.5),
+                              width: 2,
+                            ),
                             boxShadow: [
                               BoxShadow(
                                 color: Colors.black.withValues(alpha: 0.4),
@@ -1298,7 +1919,13 @@ class _SpeedCurveSectionState extends State<_SpeedCurveSection> {
           TextButton.icon(
             onPressed: _resetCurve,
             icon: const Icon(Icons.clear, size: 14),
-            label: Text('Reset to constant speed', style: TextStyle(fontSize: 11, color: AppTheme.onSurface.withValues(alpha: 0.5))),
+            label: Text(
+              'Reset to constant speed',
+              style: TextStyle(
+                fontSize: 11,
+                color: AppTheme.onSurface.withValues(alpha: 0.5),
+              ),
+            ),
             style: TextButton.styleFrom(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               foregroundColor: AppTheme.onSurface.withValues(alpha: 0.5),
@@ -1354,11 +1981,17 @@ class _SpeedCurveSectionState extends State<_SpeedCurveSection> {
     final width = box.size.width;
     final point = _currentCurve.points[index];
 
-    final newPosition = (point.position + delta.dx / (width - 16)).clamp(0.0, 1.0);
+    final newPosition = (point.position + delta.dx / (width - 16)).clamp(
+      0.0,
+      1.0,
+    );
     final newSpeed = _yToSpeed(_speedToY(point.speed) - delta.dy / 100);
 
     final newPoints = List<SpeedPoint>.from(_currentCurve.points);
-    newPoints[index] = SpeedPoint(position: newPosition, speed: newSpeed.clamp(0.1, 10.0));
+    newPoints[index] = SpeedPoint(
+      position: newPosition,
+      speed: newSpeed.clamp(0.1, 10.0),
+    );
     newPoints.sort((a, b) => a.position.compareTo(b.position));
     _setCurve(SpeedCurve(points: newPoints));
   }
@@ -1398,14 +2031,22 @@ class _PresetButton extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 12, color: isActive ? AppTheme.primaryColor : AppTheme.onSurface.withValues(alpha: 0.54)),
+            Icon(
+              icon,
+              size: 12,
+              color: isActive
+                  ? AppTheme.primaryColor
+                  : AppTheme.onSurface.withValues(alpha: 0.54),
+            ),
             const SizedBox(width: 4),
             Text(
               label,
               style: TextStyle(
                 fontSize: 10,
                 fontWeight: FontWeight.w700,
-                color: isActive ? AppTheme.primaryColor : AppTheme.onSurface.withValues(alpha: 0.54),
+                color: isActive
+                    ? AppTheme.primaryColor
+                    : AppTheme.onSurface.withValues(alpha: 0.54),
               ),
             ),
           ],
@@ -1537,7 +2178,9 @@ class _ColorGradingButton extends StatelessWidget {
                 Icon(
                   LucideIcons.palette,
                   size: 20,
-                  color: hasChanges ? AppTheme.primaryColor : AppTheme.onSurface.withValues(alpha: 0.38),
+                  color: hasChanges
+                      ? AppTheme.primaryColor
+                      : AppTheme.onSurface.withValues(alpha: 0.38),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -1549,17 +2192,26 @@ class _ColorGradingButton extends StatelessWidget {
                         style: TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.w600,
-                          color: hasChanges ? AppTheme.primaryColor : AppTheme.onSurface.withValues(alpha: 0.7),
+                          color: hasChanges
+                              ? AppTheme.primaryColor
+                              : AppTheme.onSurface.withValues(alpha: 0.7),
                         ),
                       ),
                       Text(
                         'Courbes RGB, HSL, Roues de couleurs',
-                        style: TextStyle(fontSize: 10, color: AppTheme.onSurface.withValues(alpha: 0.3)),
+                        style: TextStyle(
+                          fontSize: 10,
+                          color: AppTheme.onSurface.withValues(alpha: 0.3),
+                        ),
                       ),
                     ],
                   ),
                 ),
-                Icon(LucideIcons.chevronRight, size: 18, color: AppTheme.onSurface.withValues(alpha: 0.3)),
+                Icon(
+                  LucideIcons.chevronRight,
+                  size: 18,
+                  color: AppTheme.onSurface.withValues(alpha: 0.3),
+                ),
               ],
             ),
           ),
@@ -1587,14 +2239,20 @@ class _ChromaKeySection extends StatelessWidget {
         // Toggle
         Row(
           children: [
-            Text('Activer', style: TextStyle(fontSize: 13, color: AppTheme.onSurface.withValues(alpha: 0.54))),
+            Text(
+              'Activer',
+              style: TextStyle(
+                fontSize: 13,
+                color: AppTheme.onSurface.withValues(alpha: 0.54),
+              ),
+            ),
             const Spacer(),
             Switch(
               value: chroma.enabled,
               onChanged: (v) {
-                ref.read(editorProvider.notifier).updateChromaKey(
-                  layer.id, chroma.copyWith(enabled: v),
-                );
+                ref
+                    .read(editorProvider.notifier)
+                    .updateChromaKey(layer.id, chroma.copyWith(enabled: v));
               },
             ),
           ],
@@ -1604,19 +2262,30 @@ class _ChromaKeySection extends StatelessWidget {
           // Color picker
           Row(
             children: [
-              Text('Couleur cle', style: TextStyle(fontSize: 12, color: AppTheme.onSurface.withValues(alpha: 0.54))),
+              Text(
+                'Couleur cle',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: AppTheme.onSurface.withValues(alpha: 0.54),
+                ),
+              ),
               const SizedBox(width: 12),
               GestureDetector(
                 onTap: () async {
                   final color = await showDialog<Color>(
                     context: context,
-                    builder: (ctx) => _ChromaKeyColorPicker(initialColor: chroma.keyColor),
+                    builder: (ctx) =>
+                        _ChromaKeyColorPicker(initialColor: chroma.keyColor),
                   );
                   if (color != null) {
-                    final hex = '#${color.toARGB32().toRadixString(16).padLeft(8, '0').substring(2).toUpperCase()}';
-                    ref.read(editorProvider.notifier).updateChromaKey(
-                      layer.id, chroma.copyWith(keyColor: hex),
-                    );
+                    final hex =
+                        '#${color.toARGB32().toRadixString(16).padLeft(8, '0').substring(2).toUpperCase()}';
+                    ref
+                        .read(editorProvider.notifier)
+                        .updateChromaKey(
+                          layer.id,
+                          chroma.copyWith(keyColor: hex),
+                        );
                   }
                 },
                 child: Container(
@@ -1625,14 +2294,21 @@ class _ChromaKeySection extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: _parseHexColor(chroma.keyColor),
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: AppTheme.outlineVariant.withValues(alpha: 0.3), width: 2),
+                    border: Border.all(
+                      color: AppTheme.outlineVariant.withValues(alpha: 0.3),
+                      width: 2,
+                    ),
                   ),
                 ),
               ),
               const SizedBox(width: 8),
               Text(
                 chroma.keyColor,
-                style: TextStyle(fontSize: 11, color: AppTheme.onSurface.withValues(alpha: 0.38), fontFamily: 'monospace'),
+                style: TextStyle(
+                  fontSize: 11,
+                  color: AppTheme.onSurface.withValues(alpha: 0.38),
+                  fontFamily: 'monospace',
+                ),
               ),
             ],
           ),
@@ -1641,28 +2317,31 @@ class _ChromaKeySection extends StatelessWidget {
           _ChromaSlider(
             label: 'Similarite',
             value: chroma.similarity,
-            min: 0, max: 1,
-            onChanged: (v) => ref.read(editorProvider.notifier).updateChromaKey(
-              layer.id, chroma.copyWith(similarity: v),
-            ),
+            min: 0,
+            max: 1,
+            onChanged: (v) => ref
+                .read(editorProvider.notifier)
+                .updateChromaKey(layer.id, chroma.copyWith(similarity: v)),
           ),
           // Smoothness
           _ChromaSlider(
             label: 'Lissage',
             value: chroma.smoothness,
-            min: 0, max: 1,
-            onChanged: (v) => ref.read(editorProvider.notifier).updateChromaKey(
-              layer.id, chroma.copyWith(smoothness: v),
-            ),
+            min: 0,
+            max: 1,
+            onChanged: (v) => ref
+                .read(editorProvider.notifier)
+                .updateChromaKey(layer.id, chroma.copyWith(smoothness: v)),
           ),
           // Spill
           _ChromaSlider(
             label: 'Reduction de reflets',
             value: chroma.spill,
-            min: 0, max: 1,
-            onChanged: (v) => ref.read(editorProvider.notifier).updateChromaKey(
-              layer.id, chroma.copyWith(spill: v),
-            ),
+            min: 0,
+            max: 1,
+            onChanged: (v) => ref
+                .read(editorProvider.notifier)
+                .updateChromaKey(layer.id, chroma.copyWith(spill: v)),
           ),
         ],
       ],
@@ -1721,7 +2400,9 @@ class _ChromaKeyColorPickerState extends State<_ChromaKeyColorPicker> {
   void initState() {
     super.initState();
     try {
-      _selectedColor = Color(int.parse(widget.initialColor.replaceFirst('#', '0xFF')));
+      _selectedColor = Color(
+        int.parse(widget.initialColor.replaceFirst('#', '0xFF')),
+      );
     } catch (_) {
       _selectedColor = const Color(0xFF00FF00);
     }
@@ -1731,7 +2412,10 @@ class _ChromaKeyColorPickerState extends State<_ChromaKeyColorPicker> {
   Widget build(BuildContext context) {
     return AlertDialog(
       backgroundColor: AppTheme.surfaceContainer,
-      title: Text('Choisir la couleur cle', style: TextStyle(color: AppTheme.onSurface)),
+      title: Text(
+        'Choisir la couleur cle',
+        style: TextStyle(color: AppTheme.onSurface),
+      ),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -1742,7 +2426,10 @@ class _ChromaKeyColorPickerState extends State<_ChromaKeyColorPicker> {
             decoration: BoxDecoration(
               color: _selectedColor,
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: AppTheme.outlineVariant.withValues(alpha: 0.3), width: 2),
+              border: Border.all(
+                color: AppTheme.outlineVariant.withValues(alpha: 0.3),
+                width: 2,
+              ),
             ),
           ),
           const SizedBox(height: 16),
@@ -1763,36 +2450,60 @@ class _ChromaKeyColorPickerState extends State<_ChromaKeyColorPicker> {
           // Fine-tune with color picker
           Row(
             children: [
-              Text('R', style: TextStyle(color: Colors.red.shade400, fontSize: 12)),
+              Text(
+                'R',
+                style: TextStyle(color: Colors.red.shade400, fontSize: 12),
+              ),
               Expanded(
                 child: Slider(
                   value: _selectedColor.r,
-                  min: 0, max: 1,
-                  onChanged: (v) => setState(() => _selectedColor = _selectedColor.withRed((v * 255).round())),
+                  min: 0,
+                  max: 1,
+                  onChanged: (v) => setState(
+                    () => _selectedColor = _selectedColor.withRed(
+                      (v * 255).round(),
+                    ),
+                  ),
                 ),
               ),
             ],
           ),
           Row(
             children: [
-              Text('G', style: TextStyle(color: Colors.green.shade400, fontSize: 12)),
+              Text(
+                'G',
+                style: TextStyle(color: Colors.green.shade400, fontSize: 12),
+              ),
               Expanded(
                 child: Slider(
                   value: _selectedColor.g,
-                  min: 0, max: 1,
-                  onChanged: (v) => setState(() => _selectedColor = _selectedColor.withGreen((v * 255).round())),
+                  min: 0,
+                  max: 1,
+                  onChanged: (v) => setState(
+                    () => _selectedColor = _selectedColor.withGreen(
+                      (v * 255).round(),
+                    ),
+                  ),
                 ),
               ),
             ],
           ),
           Row(
             children: [
-              Text('B', style: TextStyle(color: Colors.blue.shade400, fontSize: 12)),
+              Text(
+                'B',
+                style: TextStyle(color: Colors.blue.shade400, fontSize: 12),
+              ),
               Expanded(
                 child: Slider(
                   value: _selectedColor.b,
-                  min: 0, max: 1,
-                  onChanged: (v) => setState(() => _selectedColor = _selectedColor.withBlue((v * 255).round())),
+                  min: 0,
+                  max: 1,
+                  onChanged: (v) => setState(
+                    () => _selectedColor = _selectedColor.withBlue(
+                      (v * 255).round(),
+                    ),
+                  ),
                 ),
               ),
             ],
@@ -1802,7 +2513,10 @@ class _ChromaKeyColorPickerState extends State<_ChromaKeyColorPicker> {
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: Text('Annuler', style: TextStyle(color: AppTheme.onSurface.withValues(alpha: 0.54))),
+          child: Text(
+            'Annuler',
+            style: TextStyle(color: AppTheme.onSurface.withValues(alpha: 0.54)),
+          ),
         ),
         TextButton(
           onPressed: () => Navigator.of(context).pop(_selectedColor),
@@ -1822,7 +2536,9 @@ class _ChromaKeyColorPickerState extends State<_ChromaKeyColorPicker> {
           color: color.withValues(alpha: 0.2),
           borderRadius: BorderRadius.circular(6),
           border: Border.all(
-            color: isSelected ? AppTheme.onSurface : color.withValues(alpha: 0.4),
+            color: isSelected
+                ? AppTheme.onSurface
+                : color.withValues(alpha: 0.4),
             width: isSelected ? 2 : 1,
           ),
         ),
@@ -1831,7 +2547,9 @@ class _ChromaKeyColorPickerState extends State<_ChromaKeyColorPicker> {
           style: TextStyle(
             fontSize: 10,
             fontWeight: FontWeight.w700,
-            color: isSelected ? AppTheme.onSurface : AppTheme.onSurface.withValues(alpha: 0.7),
+            color: isSelected
+                ? AppTheme.onSurface
+                : AppTheme.onSurface.withValues(alpha: 0.7),
           ),
         ),
       ),
@@ -1858,16 +2576,32 @@ class _BeatSyncSection extends StatelessWidget {
         Row(
           children: [
             Expanded(
-              child: Text('Beat Sync', style: TextStyle(fontSize: 13, color: AppTheme.onSurface.withValues(alpha: 0.54))),
+              child: Text(
+                'Beat Sync',
+                style: TextStyle(
+                  fontSize: 13,
+                  color: AppTheme.onSurface.withValues(alpha: 0.54),
+                ),
+              ),
             ),
             // Detect beats button
             if (!hasBeats)
               TextButton.icon(
-                onPressed: () => ref.read(editorProvider.notifier).detectBeats(),
+                onPressed: () =>
+                    ref.read(editorProvider.notifier).detectBeats(),
                 icon: const Icon(LucideIcons.music, size: 14),
-                label: Text('Detect', style: TextStyle(fontSize: 11, color: AppTheme.secondaryColor)),
+                label: Text(
+                  'Detect',
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: AppTheme.secondaryColor,
+                  ),
+                ),
                 style: TextButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
                   foregroundColor: AppTheme.secondaryColor,
                 ),
               ),
@@ -1875,7 +2609,9 @@ class _BeatSyncSection extends StatelessWidget {
             Switch(
               value: layer.beatSync,
               onChanged: hasBeats
-                  ? (v) => ref.read(editorProvider.notifier).toggleLayerBeatSync(layer.id)
+                  ? (v) => ref
+                        .read(editorProvider.notifier)
+                        .toggleLayerBeatSync(layer.id)
                   : null,
             ),
           ],
@@ -1885,7 +2621,10 @@ class _BeatSyncSection extends StatelessWidget {
             padding: const EdgeInsets.only(top: 4),
             child: Text(
               '${state.beatMarkers.length} beats detected',
-              style: TextStyle(fontSize: 10, color: AppTheme.onSurface.withValues(alpha: 0.38)),
+              style: TextStyle(
+                fontSize: 10,
+                color: AppTheme.onSurface.withValues(alpha: 0.38),
+              ),
             ),
           ),
       ],
@@ -1912,13 +2651,21 @@ class _NoiseGateSection extends StatelessWidget {
         Row(
           children: [
             Expanded(
-              child: Text('Noise Gate', style: TextStyle(fontSize: 13, color: AppTheme.onSurface.withValues(alpha: 0.54))),
+              child: Text(
+                'Noise Gate',
+                style: TextStyle(
+                  fontSize: 13,
+                  color: AppTheme.onSurface.withValues(alpha: 0.54),
+                ),
+              ),
             ),
             Text(
               isActive ? '${(threshold * 100).round()}%' : 'Off',
               style: TextStyle(
                 fontSize: 11,
-                color: isActive ? AppTheme.primaryColor : AppTheme.onSurface.withValues(alpha: 0.38),
+                color: isActive
+                    ? AppTheme.primaryColor
+                    : AppTheme.onSurface.withValues(alpha: 0.38),
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -1931,7 +2678,8 @@ class _NoiseGateSection extends StatelessWidget {
           min: 0,
           max: 1,
           divisions: 20,
-          onChanged: (v) => ref.read(editorProvider.notifier).updateNoiseGate(layer.id, v),
+          onChanged: (v) =>
+              ref.read(editorProvider.notifier).updateNoiseGate(layer.id, v),
           valueLabel: (v) => '${(v * 100).round()}%',
         ),
       ],
@@ -1974,7 +2722,9 @@ class _DuckingSection extends StatelessWidget {
               Icon(
                 LucideIcons.volume2,
                 size: 20,
-                color: project.duckingEnabled ? AppTheme.primaryColor : AppTheme.onSurface.withValues(alpha: 0.38),
+                color: project.duckingEnabled
+                    ? AppTheme.primaryColor
+                    : AppTheme.onSurface.withValues(alpha: 0.38),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -1991,14 +2741,18 @@ class _DuckingSection extends StatelessWidget {
                     ),
                     Text(
                       'Lower music when speech is present',
-                      style: TextStyle(fontSize: 10, color: AppTheme.onSurface.withValues(alpha: 0.38)),
+                      style: TextStyle(
+                        fontSize: 10,
+                        color: AppTheme.onSurface.withValues(alpha: 0.38),
+                      ),
                     ),
                   ],
                 ),
               ),
               Switch(
                 value: project.duckingEnabled,
-                onChanged: (v) => ref.read(editorProvider.notifier).toggleDucking(),
+                onChanged: (v) =>
+                    ref.read(editorProvider.notifier).toggleDucking(),
               ),
             ],
           ),
@@ -2007,4 +2761,3 @@ class _DuckingSection extends StatelessWidget {
     );
   }
 }
-

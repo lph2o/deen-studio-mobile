@@ -258,12 +258,24 @@ class QuranSubtitleGenerator {
   /// - Surah 9 (At-Tawbah): Has no Basmallah — nothing to strip.
   /// - All other surahs: Strip from ayah 1 if present.
   static String _stripBasmallah(String text, int surahNumber, int ayahNumberInSurah) {
-    // Only the first ayah of a surah can have the Basmallah prepended.
     if (ayahNumberInSurah != 1) return text;
-    // Surah 1 = the Basmallah IS the verse. Surah 9 = no Basmallah.
     if (surahNumber == 1 || surahNumber == 9) return text;
 
-    // Fast path for common exact variants.
+    final words = text.split(RegExp(r'\s+')).where((w) => w.isNotEmpty).toList();
+    if (words.length >= 4) {
+      final first4 = words.sublist(0, 4).join(' ');
+      // Remove all diacritics and normalize Alif variants for a bulletproof check
+      final normalized = first4
+          .replaceAll(RegExp(r'[\u064B-\u065F\u0670\u06D6-\u06ED\u06DF-\u06E8\u06EA-\u06ED]'), '')
+          .replaceAll('ٱ', 'ا')
+          .replaceAll('ـ', ''); // Remove tatweel
+          
+      if (normalized == "بسم الله الرحمن الرحيم") {
+        return words.sublist(4).join(' ');
+      }
+    }
+    
+    // Fallback for exact matches just in case
     const basmallahs = [
       'بِسْمِ ٱللَّهِ ٱلرَّحْمَـٰنِ ٱلرَّحِيمِ ',
       'بِسْمِ ٱللَّهِ ٱلرَّحْمَـٰنِ ٱلرَّحِيمِ',
@@ -279,16 +291,6 @@ class QuranSubtitleGenerator {
         return stripped;
       }
     }
-
-    // Robust fallback: strip if the first 4 normalized words equal
-    // "بسم الله الرحمن الرحيم", regardless of diacritics/hamza variants.
-    final normalized = _normalizeArabicForPrefix(text);
-    if (normalized.startsWith('بسم الله الرحمن الرحيم')) {
-      final stripped = _dropLeadingWordCount(text, 4);
-      debugPrint('[QuranSubtitleGenerator] Stripped Basmallah (normalized) from S$surahNumber:A1');
-      return stripped;
-    }
-
     return text;
   }
 

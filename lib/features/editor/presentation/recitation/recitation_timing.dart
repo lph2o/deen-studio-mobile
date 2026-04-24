@@ -78,7 +78,7 @@ class RecitationTiming {
   }) {
     if (lastSwitchAt == null) return false;
     final sinceSwitchMs = now.difference(lastSwitchAt).inMilliseconds;
-    if (sinceSwitchMs > 350) return false;
+    if (sinceSwitchMs > 500) return false;
 
     final offsetMs = ((currentTime - layerStartTime) * 1000).round();
     final boundaryMs = (boundaryWindowSeconds(playbackSpeed) * 1000).round() + 80;

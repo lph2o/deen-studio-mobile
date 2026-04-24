@@ -12,6 +12,8 @@ class ParticlePainter extends CustomPainter {
   final int particleCount;
   final bool isGolden;
   final double particleSize;
+  final double intensity;
+  final double direction;
 
   ParticlePainter({
     required this.progress,
@@ -19,17 +21,32 @@ class ParticlePainter extends CustomPainter {
     this.particleCount = 60,
     this.isGolden = true,
     this.particleSize = 3.0,
+    this.intensity = 0.5,
+    this.direction = 0.0,
   });
 
   @override
   void paint(Canvas canvas, Size size) {
     final rng = math.Random(42);
+    final count = (particleCount * (0.5 + intensity)).round();
+    final pSizeBase = particleSize * (0.5 + intensity);
+    final angleRad = direction * math.pi / 180;
+
     final particles = <({Offset pos, double size, double opacity})>[];
-    for (var i = 0; i < particleCount; i++) {
-      final px = rng.nextDouble() * size.width;
-      final py = rng.nextDouble() * size.height;
-      final pSize = rng.nextDouble() * particleSize + 1;
-      final revealThreshold = i / particleCount;
+    for (var i = 0; i < count; i++) {
+      final baseX = rng.nextDouble() * size.width;
+      final baseY = rng.nextDouble() * size.height;
+
+      // Apply direction drift based on progress
+      final driftDist = progress * 40 * intensity;
+      final dx = math.cos(angleRad) * driftDist;
+      final dy = math.sin(angleRad) * driftDist;
+
+      final px = baseX + dx;
+      final py = baseY + dy;
+
+      final pSize = rng.nextDouble() * pSizeBase + 1;
+      final revealThreshold = i / count;
       if (progress >= revealThreshold) {
         final fadeIn = math.min(1.0, (progress - revealThreshold) * 5);
         final shimmer = 0.7 + 0.3 * math.sin(progress * math.pi * 2 + i);
@@ -68,6 +85,8 @@ class WavePainter extends CustomPainter {
   final Color waveColor;
   final int waveCount;
   final double frequency;
+  final double intensity;
+  final double direction;
 
   WavePainter({
     required this.progress,
@@ -75,14 +94,23 @@ class WavePainter extends CustomPainter {
     this.waveColor = const Color(0xFF4FC3F7),
     this.waveCount = 3,
     this.frequency = 0.02,
+    this.intensity = 0.5,
+    this.direction = 0.0,
   });
 
   @override
   void paint(Canvas canvas, Size size) {
+    final effectiveAmplitude = amplitude * (0.5 + intensity);
+    final effectiveFrequency = frequency * (0.5 + intensity);
+    final phaseShift = direction * math.pi / 180;
+
     for (var w = 0; w < waveCount; w++) {
       final path = Path();
       final waveOffset = w * 0.33;
-      final waveProgress = math.max(0.0, math.min(1.0, (progress - waveOffset) * 2));
+      final waveProgress = math.max(
+        0.0,
+        math.min(1.0, (progress - waveOffset) * 2),
+      );
       if (waveProgress <= 0) continue;
 
       final visibleWidth = size.width * waveProgress;
@@ -90,9 +118,15 @@ class WavePainter extends CustomPainter {
 
       path.moveTo(0, yBase);
       for (var x = 0; x <= visibleWidth; x += 2) {
-        final y = yBase +
-            math.sin(x * frequency + progress * math.pi * 2 + w) *
-                amplitude *
+        final y =
+            yBase +
+            math.sin(
+                  x * effectiveFrequency +
+                      progress * math.pi * 2 +
+                      w +
+                      phaseShift,
+                ) *
+                effectiveAmplitude *
                 waveProgress;
         path.lineTo(x.toDouble(), y);
       }
@@ -115,15 +149,20 @@ class CalligraphyStrokePainter extends CustomPainter {
   final double progress;
   final Color inkColor;
   final double strokeThickness;
+  final double intensity;
+  final double direction;
 
   CalligraphyStrokePainter({
     required this.progress,
     this.inkColor = const Color(0xFF1A1A2E),
     this.strokeThickness = 3.0,
+    this.intensity = 0.5,
+    this.direction = 0.0,
   });
 
   @override
   void paint(Canvas canvas, Size size) {
+    final effectiveThickness = strokeThickness * (0.5 + intensity);
     final path = Path();
     final drawLength = size.width * progress;
 
@@ -131,9 +170,16 @@ class CalligraphyStrokePainter extends CustomPainter {
     var x = 0.0;
     while (x <= drawLength) {
       final t = x / size.width;
-      final y = size.height * 0.5 +
-          math.sin(t * math.pi * 4) * 15 * progress +
-          math.sin(t * math.pi * 8) * 5 * progress;
+      final y =
+          size.height * 0.5 +
+          math.sin(t * math.pi * 4 + direction * math.pi / 180) *
+              15 *
+              progress *
+              (0.5 + intensity) +
+          math.sin(t * math.pi * 8 + direction * math.pi / 180) *
+              5 *
+              progress *
+              (0.5 + intensity);
       path.lineTo(x, y);
       x += 2;
     }
@@ -141,14 +187,15 @@ class CalligraphyStrokePainter extends CustomPainter {
     final paint = Paint()
       ..color = inkColor.withValues(alpha: 0.6)
       ..style = PaintingStyle.stroke
-      ..strokeWidth = strokeThickness
+      ..strokeWidth = effectiveThickness
       ..strokeCap = StrokeCap.round;
     canvas.drawPath(path, paint);
 
     // Ink drip effect at leading edge
     if (progress > 0.05 && progress < 0.95) {
       final tipX = drawLength;
-      final tipY = size.height * 0.5 +
+      final tipY =
+          size.height * 0.5 +
           math.sin(progress * math.pi * 4) * 15 * progress +
           math.sin(progress * math.pi * 8) * 5 * progress;
       for (var i = 0; i < 5; i++) {
@@ -212,7 +259,11 @@ class CrescentMoonPainter extends CustomPainter {
       Paint(),
     );
     canvas.drawCircle(Offset(cx, cy), s, moonPaint);
-    canvas.drawCircle(Offset(cx + s * 0.4, cy - s * 0.1), s * 0.85, cutoutPaint);
+    canvas.drawCircle(
+      Offset(cx + s * 0.4, cy - s * 0.1),
+      s * 0.85,
+      cutoutPaint,
+    );
     canvas.restore();
 
     // Small stars around moon
@@ -251,15 +302,17 @@ class ConstellationPainter extends CustomPainter {
     final rng = math.Random(99);
     final stars = <Offset>[];
     for (var i = 0; i < starCount; i++) {
-      stars.add(Offset(
-        rng.nextDouble() * size.width,
-        rng.nextDouble() * size.height,
-      ));
+      stars.add(
+        Offset(rng.nextDouble() * size.width, rng.nextDouble() * size.height),
+      );
     }
 
     // Draw connecting lines
     for (var i = 0; i < stars.length - 1; i++) {
-      final revealProgress = math.max(0.0, math.min(1.0, (progress - i / starCount) * starCount));
+      final revealProgress = math.max(
+        0.0,
+        math.min(1.0, (progress - i / starCount) * starCount),
+      );
       if (revealProgress > 0) {
         final linePaint = Paint()
           ..color = starColor.withValues(alpha: 0.2 * revealProgress)
@@ -346,15 +399,17 @@ class FallingObjectsPainter extends CustomPainter {
   }
 
   void _drawButterfly(Canvas canvas, Offset pos, double alpha) {
-    final paint = Paint()
-      ..color = objectColor.withValues(alpha: alpha * 0.8);
+    final paint = Paint()..color = objectColor.withValues(alpha: alpha * 0.8);
     // Wings
     canvas.save();
     canvas.translate(pos.dx, pos.dy);
     canvas.drawOval(Rect.fromLTWH(-6, -4, 5, 8), paint);
     canvas.drawOval(Rect.fromLTWH(1, -4, 5, 8), paint);
     // Body
-    canvas.drawOval(Rect.fromLTWH(-0.5, -3, 1, 6), Paint()..color = const Color(0xFF333333).withValues(alpha: alpha));
+    canvas.drawOval(
+      Rect.fromLTWH(-0.5, -3, 1, 6),
+      Paint()..color = const Color(0xFF333333).withValues(alpha: alpha),
+    );
     canvas.restore();
   }
 
@@ -421,23 +476,28 @@ class SmokePainter extends CustomPainter {
       final path = Path();
       path.moveTo(baseX, size.height);
 
-      final streamProgress = math.max(0.0, math.min(1.0, (progress - s * 0.1) * 1.3));
+      final streamProgress = math.max(
+        0.0,
+        math.min(1.0, (progress - s * 0.1) * 1.3),
+      );
       final maxHeight = size.height * streamProgress;
 
       for (var y = 0; y <= maxHeight; y += 4) {
         final t = y / size.height;
-        final x = baseX +
-            math.sin(t * math.pi * 3 + s * 2 + progress * math.pi) * (20 + t * 30) +
+        final x =
+            baseX +
+            math.sin(t * math.pi * 3 + s * 2 + progress * math.pi) *
+                (20 + t * 30) +
             math.sin(t * math.pi * 5) * 10;
         path.lineTo(x, size.height - y);
       }
 
       final paint = Paint()
-        ..color = smokeColor.withValues(alpha: 0.15 * streamProgress)
+        ..color = smokeColor.withValues(alpha: 0.10 * streamProgress)
         ..style = PaintingStyle.stroke
         ..strokeWidth = 8 + (1 - streamProgress) * 5
         ..strokeCap = StrokeCap.round
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 10);
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4);
       canvas.drawPath(path, paint);
     }
   }
@@ -478,8 +538,7 @@ class GradientSweepPainter extends CustomPainter {
             colors: colors,
           );
 
-    final paint = Paint()
-      ..shader = gradient.createShader(rect);
+    final paint = Paint()..shader = gradient.createShader(rect);
 
     canvas.save();
     canvas.clipRect(rect);
@@ -547,7 +606,9 @@ class SpiralPainter extends CustomPainter {
         final sx = cx + math.cos(starAngle) * starDist;
         final sy = cy + math.sin(starAngle) * starDist;
         final starPaint = Paint()
-          ..color = Colors.white.withValues(alpha: rng.nextDouble() * 0.5 * progress);
+          ..color = Colors.white.withValues(
+            alpha: rng.nextDouble() * 0.5 * progress,
+          );
         canvas.drawCircle(Offset(sx, sy), 1 + rng.nextDouble() * 2, starPaint);
       }
     }
@@ -571,7 +632,10 @@ class FirePainter extends CustomPainter {
 
     for (var i = 0; i < flameCount; i++) {
       final baseX = size.width * (0.2 + rng.nextDouble() * 0.6);
-      final flameProgress = math.max(0.0, math.min(1.0, (progress - i / 40) * 2));
+      final flameProgress = math.max(
+        0.0,
+        math.min(1.0, (progress - i / 40) * 2),
+      );
       if (flameProgress <= 0) continue;
 
       final maxHeight = size.height * 0.6 * flameProgress;
@@ -581,19 +645,21 @@ class FirePainter extends CustomPainter {
       for (var y = 0; y <= maxHeight; y += 3) {
         final t = y / maxHeight;
         const flicker = 8.0;
-        final x = baseX +
+        final x =
+            baseX +
             math.sin(y * 0.15 + progress * 10 + i) * flicker * (1 - t) +
             math.sin(y * 0.05 - progress * 5) * flicker * 0.5;
         path.lineTo(x, size.height - y);
       }
 
       final firePaint = Paint()
-        ..color = (i % 3 == 0
-                ? const Color(0xFFFF4500)
-                : i % 3 == 1
+        ..color =
+            (i % 3 == 0
+                    ? const Color(0xFFFF4500)
+                    : i % 3 == 1
                     ? const Color(0xFFFFD700)
                     : const Color(0xFFFF6B35))
-            .withValues(alpha: 0.5 * flameProgress * (1 - i / 40))
+                .withValues(alpha: 0.5 * flameProgress * (1 - i / 40))
         ..style = PaintingStyle.stroke
         ..strokeWidth = 3
         ..strokeCap = StrokeCap.round
@@ -659,7 +725,9 @@ class LightningPainter extends CustomPainter {
             branchPath.lineTo(bx, by);
           }
           final branchPaint = Paint()
-            ..color = const Color(0xFFADD8E6).withValues(alpha: flashIntensity * 0.4)
+            ..color = const Color(
+              0xFFADD8E6,
+            ).withValues(alpha: flashIntensity * 0.4)
             ..style = PaintingStyle.stroke
             ..strokeWidth = 1.5
             ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3);
@@ -668,7 +736,9 @@ class LightningPainter extends CustomPainter {
       }
 
       final boltPaint = Paint()
-        ..color = const Color(0xFFADD8E6).withValues(alpha: flashIntensity * 0.8)
+        ..color = const Color(
+          0xFFADD8E6,
+        ).withValues(alpha: flashIntensity * 0.8)
         ..style = PaintingStyle.stroke
         ..strokeWidth = 2.5
         ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8);

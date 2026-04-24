@@ -5,7 +5,8 @@ import 'package:lucide_icons/lucide_icons.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:deen_studio_01/core/services/persistent_media_store.dart';
 import '../../auth/presentation/auth_state.dart';
-import '../../quran_studio/domain/generate_quran_subtitles.dart';
+import '../../quran_studio/domain/quran_com_api_service.dart';
+import '../../quran_studio/domain/quran_subtitle_generator_v2.dart';
 import '../../quran_studio/presentation/state/quran_studio_notifier.dart';
 
 class SelectReciterScreen extends ConsumerStatefulWidget {
@@ -20,103 +21,109 @@ class _SelectReciterScreenState extends ConsumerState<SelectReciterScreen> {
 
   Future<void> _createProject() async {
     final state = ref.read(quranStudioProvider).value;
-    if (state == null || state.selectedAudio == null) return;
-    
+    if (state == null || state.selectedReciter == null) return;
+
     setState(() => _isCreatingProject = true);
 
     try {
       final authState = ref.read(authProvider);
       final userId = authState.user?.id;
-
-      if (userId == null) {
-        throw Exception('User not authenticated');
-      }
+      if (userId == null) throw Exception('User not authenticated');
 
       final surah = state.selectedSurah;
-      if (surah == null) {
-        throw Exception('No Surah selected');
-      }
+      if (surah == null) throw Exception('No Surah selected');
 
-      // Generate the subtitle clips using the new engine
-      final subtitleGenerator = QuranSubtitleGenerator();
-      final clips = await subtitleGenerator.generateQuranSubtitles(
+      // ── Generate subtitles with real word timestamps ────────────────────
+      final generator = QuranSubtitleGeneratorV2();
+      final clips = await generator.generateSubtitles(
         surahNumber: surah.number,
         startAyah: state.startAyah,
         endAyah: state.endAyah,
-        audioIdentifier: state.selectedAudio!.identifier,
-        translationIdentifier: state.selectedTranslation?.identifier,
+        reciter: state.selectedReciter!,
+        translationIdentifier: state.selectedTranslation?.identifier ?? 'fr.hamidullah',
         includePhonetic: state.includePhonetic,
       );
 
-      // Convert clips to Layers array for Supabase
+      // ── Build layer data for Supabase ───────────────────────────────────
       List<Map<String, dynamic>> layersData = [];
-      for (var clip in clips) {
-        final durationSecs = clip.duration.inMilliseconds / 1000.0;
+      String? persistedAudioPath;
 
-        // Copy audio file to persistent storage so it survives app restarts
-        String persistentAudioPath = clip.audioPath;
-        if (clip.audioPath.isNotEmpty) {
-          try {
-            persistentAudioPath = await PersistentMediaStore.persistFile(clip.audioPath);
-          } catch (e) {
-            debugPrint('[SelectReciter] Failed to persist audio for ayah ${clip.ayahNumber}: $e');
-          }
+      // All clips share one chapter audio file — persist it once.
+      if (clips.isNotEmpty && clips.first.audioPath.isNotEmpty) {
+        try {
+          persistedAudioPath = await PersistentMediaStore.persistFile(clips.first.audioPath);
+        } catch (e) {
+          debugPrint('[SelectReciter] Failed to persist audio: $e');
+          persistedAudioPath = clips.first.audioPath;
+        }
+      }
+
+      double currentStartTime = 0.0;
+      for (final clip in clips) {
+        final ts = clip.ayahNumber;
+
+        // Word timings from generator are already relative to the start of the entire sequence (0.0).
+        // So they are already absolute timeline timestamps. No need to add currentStartTime.
+        final rebasedWordTimings = clip.wordTimings.map((wt) => {
+          'word': wt['word'],
+          'start': wt['start'],
+          'end': wt['end'],
+        }).toList();
+
+        if (persistedAudioPath != null) {
+          layersData.add({
+            'id': 'audio_$ts',
+            'type': 'audio',
+            'content': persistedAudioPath,
+            'startTime': currentStartTime,
+            'inPoint': clip.audioInPointSecs,
+            'duration': clip.durationSecs,
+            'style': {},
+          });
         }
 
-        // 1. Audio Layer
         layersData.add({
-          'id': 'audio_${clip.ayahNumber}',
-          'type': 'audio',
-          'content': persistentAudioPath,
-          'startTime': clip.startTime,
-          'duration': durationSecs,
-          'style': {},
-        });
-        
-        // 2. Arabic Text Layer with word timings for recitation sync
-        layersData.add({
-          'id': 'arabic_${clip.ayahNumber}',
+          'id': 'arabic_$ts',
           'type': 'arabic',
           'content': clip.arabic,
-          'startTime': clip.startTime,
-          'duration': durationSecs,
+          'startTime': currentStartTime,
+          'duration': clip.durationSecs,
           'style': {},
           'textStyle': {'fontFamily': 'UthmanicRegular', 'fontSize': 26, 'isRTL': true},
           'transform': {'x': 0.5, 'y': 0.35},
-          'wordTimings': clip.wordTimings,
+          'wordTimings': rebasedWordTimings,
         });
-        
-        // 3. Translation Layer
+
         if (clip.translation.isNotEmpty) {
           layersData.add({
-            'id': 'translation_${clip.ayahNumber}',
+            'id': 'translation_$ts',
             'type': 'translation',
             'content': clip.translation,
-            'startTime': clip.startTime,
-            'duration': durationSecs,
+            'startTime': currentStartTime,
+            'duration': clip.durationSecs,
             'style': {},
             'textStyle': {'fontSize': 14},
+            'transform': {'x': 0.5, 'y': 0.65},
+          });
+        }
+
+        if (state.includePhonetic && clip.phonetic?.isNotEmpty == true) {
+          layersData.add({
+            'id': 'phonetic_$ts',
+            'type': 'phonetic',
+            'content': clip.phonetic ?? '',
+            'startTime': currentStartTime,
+            'duration': clip.durationSecs,
+            'style': {},
+            'textStyle': {'fontSize': 12, 'isItalic': true},
             'transform': {'x': 0.5, 'y': 0.85},
           });
         }
 
-        // 4. Phonetic Layer (if available)
-        final phonetic = clip.phonetic;
-        if (phonetic != null && phonetic.isNotEmpty) {
-          layersData.add({
-            'id': 'phonetic_${clip.ayahNumber}',
-            'type': 'phonetic',
-            'content': phonetic,
-            'startTime': clip.startTime,
-            'duration': durationSecs,
-            'style': {},
-            'textStyle': {'fontSize': 12, 'isItalic': true},
-            'transform': {'x': 0.5, 'y': 0.65},
-          });
-        }
-      } // end for (clip in clips)
+        currentStartTime += clip.durationSecs;
+      }
 
-      final title = '${surah.englishName} Verses ${state.startAyah}-${state.endAyah}';
+      final title = '${surah.englishName} Versets ${state.startAyah}-${state.endAyah}';
 
       final response = await Supabase.instance.client
           .from('projects')
@@ -125,7 +132,7 @@ class _SelectReciterScreenState extends ConsumerState<SelectReciterScreen> {
             'title': title,
             'surah_id': surah.number,
             'ayah_range': {'start': state.startAyah, 'end': state.endAyah},
-            'reciter_id': state.selectedAudio!.identifier,
+            'reciter_id': '${state.selectedReciter!.id}',
             'layers': layersData,
             'updated_at': DateTime.now().toIso8601String(),
           })
@@ -138,7 +145,7 @@ class _SelectReciterScreenState extends ConsumerState<SelectReciterScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Error creating project: $e'),
+          content: Text('Erreur: $e'),
           backgroundColor: Theme.of(context).colorScheme.error,
         ),
       );
@@ -167,8 +174,8 @@ class _SelectReciterScreenState extends ConsumerState<SelectReciterScreen> {
         loading: () => Center(child: CircularProgressIndicator(color: theme.colorScheme.primary)),
         error: (e, st) => Center(child: Text('Error: $e')),
         data: (quranState) {
-          final audioEditions = quranState.audioEditions;
-          final selectedAudioId = quranState.selectedAudio?.identifier;
+          final reciters = quranState.reciters;
+          final selectedReciterId = quranState.selectedReciter?.id;
 
           return Stack(
             children: [
@@ -273,15 +280,13 @@ class _SelectReciterScreenState extends ConsumerState<SelectReciterScreen> {
                     sliver: SliverList(
                       delegate: SliverChildBuilderDelegate(
                         (context, index) {
-                          final edition = audioEditions[index];
-                          final isSelected = selectedAudioId == edition.identifier;
+                          final reciter = reciters[index];
+                          final isSelected = selectedReciterId == reciter.id;
 
                           return Padding(
                             padding: const EdgeInsets.only(bottom: 16),
                             child: InkWell(
-                              onTap: () {
-                                ref.read(quranStudioProvider.notifier).selectAudio(edition);
-                              },
+                              onTap: () => ref.read(quranStudioProvider.notifier).selectReciter(reciter),
                               borderRadius: BorderRadius.circular(16),
                               child: AnimatedContainer(
                                 duration: const Duration(milliseconds: 300),
@@ -313,7 +318,7 @@ class _SelectReciterScreenState extends ConsumerState<SelectReciterScreen> {
                                           ),
                                           alignment: Alignment.center,
                                           child: Text(
-                                            edition.englishName.substring(0, 1),
+                                            reciter.name.substring(0, 1),
                                             style: TextStyle(
                                               fontSize: 24,
                                               fontWeight: FontWeight.bold,
@@ -342,28 +347,17 @@ class _SelectReciterScreenState extends ConsumerState<SelectReciterScreen> {
                                         crossAxisAlignment: CrossAxisAlignment.start,
                                         children: [
                                           Text(
-                                            edition.englishName,
+                                            reciter.name,
                                             style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
                                           ),
                                           const SizedBox(height: 4),
-                                          Row(
-                                            children: [
-                                              if (isSelected) 
-                                                Icon(LucideIcons.music, size: 12, color: theme.colorScheme.primary),
-                                              if (isSelected) 
-                                                const SizedBox(width: 4),
-                                              Expanded(
-                                                child: Text(
-                                                  edition.format,
-                                                  style: TextStyle(
-                                                    fontSize: 12,
-                                                    color: isSelected ? theme.colorScheme.primary : theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
-                                                  ),
-                                                  overflow: TextOverflow.ellipsis,
-                                                ),
-                                              ),
-                                            ],
-                                          )
+                                          Text(
+                                            '${reciter.style} • ${reciter.qirat}',
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              color: isSelected ? theme.colorScheme.primary : theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+                                            ),
+                                          ),
                                         ],
                                       ),
                                     ),
@@ -382,7 +376,7 @@ class _SelectReciterScreenState extends ConsumerState<SelectReciterScreen> {
                             ),
                           );
                         },
-                        childCount: audioEditions.length,
+                        childCount: reciters.length,
                       ),
                     ),
                   ),
@@ -390,7 +384,7 @@ class _SelectReciterScreenState extends ConsumerState<SelectReciterScreen> {
               ),
 
               // Bottom CTA
-              if (selectedAudioId != null)
+              if (selectedReciterId != null)
                 Positioned(
                   bottom: 40,
                   left: 24,

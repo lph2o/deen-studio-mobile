@@ -58,7 +58,9 @@ class _AnimatedTextLayerState extends State<AnimatedTextLayer>
   @override
   void initState() {
     super.initState();
-    final inDuration = widget.style.animationInDuration;
+    final inDuration =
+        widget.style.animationInDuration *
+        widget.style.animationConfig.durationMultiplier;
     _controller = AnimationController(
       vsync: this,
       duration: Duration(
@@ -77,10 +79,27 @@ class _AnimatedTextLayerState extends State<AnimatedTextLayer>
   void didUpdateWidget(covariant AnimatedTextLayer oldWidget) {
     super.didUpdateWidget(oldWidget);
 
+    // Update duration if config changed
+    if (oldWidget.style.animationConfig.durationMultiplier !=
+            widget.style.animationConfig.durationMultiplier ||
+        oldWidget.style.animationInDuration !=
+            widget.style.animationInDuration) {
+      final inDuration =
+          widget.style.animationInDuration *
+          widget.style.animationConfig.durationMultiplier;
+      _controller.duration = Duration(
+        milliseconds: inDuration > 0 ? (inDuration * 1000).round() : 500,
+      );
+    }
+
     // Calculate progress
     final elapsed = widget.currentTime - widget.layerStartTime;
-    final inDuration = widget.style.animationInDuration;
-    final outDuration = widget.style.animationOutDuration;
+    final inDuration =
+        widget.style.animationInDuration *
+        widget.style.animationConfig.durationMultiplier;
+    final outDuration =
+        widget.style.animationOutDuration *
+        widget.style.animationConfig.durationMultiplier;
     final totalDuration = widget.layerDuration;
 
     if (elapsed <= 0 || elapsed > totalDuration) return;
@@ -89,7 +108,8 @@ class _AnimatedTextLayerState extends State<AnimatedTextLayer>
     if (elapsed < inDuration) {
       progress = elapsed / inDuration;
     } else if (outDuration > 0 && elapsed > totalDuration - outDuration) {
-      progress = 1.0 - ((elapsed - (totalDuration - outDuration)) / outDuration);
+      progress =
+          1.0 - ((elapsed - (totalDuration - outDuration)) / outDuration);
     } else {
       progress = 1.0;
     }
@@ -228,12 +248,16 @@ class _AnimatedTextLayerState extends State<AnimatedTextLayer>
 
           case TextAnimationPreset.bounceIn:
             return SlideTransition(
-              position: Tween<Offset>(
-                begin: const Offset(0.0, -0.5),
-                end: Offset.zero,
-              ).animate(
-                CurvedAnimation(parent: _controller, curve: Curves.bounceOut),
-              ),
+              position:
+                  Tween<Offset>(
+                    begin: const Offset(0.0, -0.5),
+                    end: Offset.zero,
+                  ).animate(
+                    CurvedAnimation(
+                      parent: _controller,
+                      curve: Curves.bounceOut,
+                    ),
+                  ),
               child: textWidget,
             );
 
@@ -274,7 +298,10 @@ class _AnimatedTextLayerState extends State<AnimatedTextLayer>
       animation: _controller,
       builder: (context, _) {
         final progress = _controller.value;
-        final charCount = (progress * text.length).round().clamp(0, text.length);
+        final charCount = (progress * text.length).round().clamp(
+          0,
+          text.length,
+        );
         final visibleText = isRTL
             ? text.substring(text.length - charCount)
             : text.substring(0, charCount);
@@ -299,11 +326,29 @@ class _AnimatedTextLayerState extends State<AnimatedTextLayer>
 
     if (words.isEmpty) return widget.textWidget;
 
+    // Calculate elapsed time relative to the layer's start
+    final elapsed = widget.currentTime - widget.layerStartTime;
+
     return AnimatedBuilder(
       animation: _controller,
       builder: (context, _) {
-        final progress = _controller.value;
-        final activeWordIndex = (progress * words.length).round().clamp(0, words.length - 1);
+        int activeWordIndex = 0;
+        
+        if (widget.layer.wordTimings.isNotEmpty) {
+          // Use precise real word timestamps (which are relative to layer start)
+          for (int i = widget.layer.wordTimings.length - 1; i >= 0; i--) {
+            if ((widget.layer.wordTimings[i]['start'] as double) <= elapsed) {
+              activeWordIndex = i;
+              break;
+            }
+          }
+          // Clamp just in case words array length differs from timings length due to splits
+          activeWordIndex = activeWordIndex.clamp(0, words.length - 1);
+        } else {
+          // Fallback: linear calculation
+          final progress = _controller.value;
+          activeWordIndex = (progress * words.length).round().clamp(0, words.length - 1);
+        }
 
         if (preset == TextAnimationPreset.wordByWord) {
           // Show only the active word
@@ -328,7 +373,9 @@ class _AnimatedTextLayerState extends State<AnimatedTextLayer>
                   color: isHighlighted
                       ? Theme.of(context).colorScheme.primary
                       : flutterStyle.color?.withValues(alpha: 0.5),
-                  fontWeight: isHighlighted ? FontWeight.w700 : flutterStyle.fontWeight,
+                  fontWeight: isHighlighted
+                      ? FontWeight.w700
+                      : flutterStyle.fontWeight,
                 ),
               );
             }).toList(),
@@ -370,7 +417,10 @@ class _AnimatedTextLayerState extends State<AnimatedTextLayer>
               opacity: 0.5,
               child: ShaderMask(
                 shaderCallback: (bounds) => LinearGradient(
-                  colors: [Colors.red.withValues(alpha: 0.3), Colors.transparent],
+                  colors: [
+                    Colors.red.withValues(alpha: 0.3),
+                    Colors.transparent,
+                  ],
                 ).createShader(bounds),
                 child: child,
               ),
@@ -384,17 +434,17 @@ class _AnimatedTextLayerState extends State<AnimatedTextLayer>
               opacity: 0.5,
               child: ShaderMask(
                 shaderCallback: (bounds) => LinearGradient(
-                  colors: [Colors.blue.withValues(alpha: 0.3), Colors.transparent],
+                  colors: [
+                    Colors.blue.withValues(alpha: 0.3),
+                    Colors.transparent,
+                  ],
                 ).createShader(bounds),
                 child: child,
               ),
             ),
           ),
         // Main text
-        Opacity(
-          opacity: progress,
-          child: child,
-        ),
+        Opacity(opacity: progress, child: child),
       ],
     );
   }
@@ -417,17 +467,26 @@ class _AnimatedTextLayerState extends State<AnimatedTextLayer>
             size: size,
             painter: ParticlePainter(
               progress: progress,
-              particleColor: const Color(0xFFFFD700),
+              particleColor: TextLayerStyle.parseHexColor(
+                widget.style.animationConfig.color,
+              ),
               particleCount: 40,
               isGolden: true,
+              intensity: widget.style.animationConfig.intensity,
+              direction: widget.style.animationConfig.direction,
             ),
           ),
           textBuilder: (progress) => ShaderMask(
             shaderCallback: (bounds) => RadialGradient(
               center: Alignment.center,
-              radius: progress * 0.5,
+              radius:
+                  progress *
+                  0.5 *
+                  (0.5 + widget.style.animationConfig.frequency),
               colors: [
-                const Color(0xFFFFD700).withValues(alpha: progress),
+                TextLayerStyle.parseHexColor(
+                  widget.style.animationConfig.color,
+                ).withValues(alpha: progress),
                 TextLayerStyle.parseHexColor(widget.style.color),
               ],
             ).createShader(bounds),
@@ -443,12 +502,18 @@ class _AnimatedTextLayerState extends State<AnimatedTextLayer>
             size: size,
             painter: GradientSweepPainter(
               progress: progress,
-              colors: const [
-                Color(0xFFFFFFCC),
-                Color(0xFFFFF8DC),
-                Color(0x00FFFFFF),
+              colors: [
+                TextLayerStyle.parseHexColor(
+                  widget.style.animationConfig.color,
+                ).withValues(alpha: 0.8),
+                TextLayerStyle.parseHexColor(
+                  widget.style.animationConfig.color,
+                ).withValues(alpha: 0.5),
+                const Color(0x00FFFFFF),
               ],
-              isVertical: true,
+              isVertical:
+                  widget.style.animationConfig.direction % 180 < 45 ||
+                  widget.style.animationConfig.direction % 180 > 135,
             ),
           ),
           textBuilder: (progress) => ClipPath(
@@ -465,10 +530,15 @@ class _AnimatedTextLayerState extends State<AnimatedTextLayer>
             size: size,
             painter: ParticlePainter(
               progress: progress,
-              particleColor: const Color(0xFFFFD700),
-              particleCount: 80,
+              particleColor: TextLayerStyle.parseHexColor(
+                widget.style.animationConfig.color,
+              ),
+              particleCount:
+                  (80 * (0.5 + widget.style.animationConfig.frequency)).round(),
               isGolden: true,
-              particleSize: 4,
+              particleSize: 4 * (0.5 + widget.style.animationConfig.intensity),
+              intensity: widget.style.animationConfig.intensity,
+              direction: widget.style.animationConfig.direction,
             ),
           ),
           textBuilder: (progress) => _buildTextWidget(textDirection),
@@ -482,15 +552,21 @@ class _AnimatedTextLayerState extends State<AnimatedTextLayer>
             size: size,
             painter: ParticlePainter(
               progress: progress,
-              particleColor: const Color(0xFFFFD700),
+              particleColor: TextLayerStyle.parseHexColor(
+                widget.style.animationConfig.color,
+              ),
               particleCount: 20,
               isGolden: true,
+              intensity: widget.style.animationConfig.intensity,
+              direction: widget.style.animationConfig.direction,
             ),
           ),
           textBuilder: (progress) => ShaderMask(
             shaderCallback: (bounds) => LinearGradient(
               colors: [
-                const Color(0xFFFFD700),
+                TextLayerStyle.parseHexColor(
+                  widget.style.animationConfig.color,
+                ),
                 TextLayerStyle.parseHexColor(widget.style.color),
               ],
             ).createShader(bounds),
@@ -555,12 +631,17 @@ class _VerticalRevealClipper extends CustomClipper<Path> {
   @override
   Path getClip(Size size) {
     final revealedHeight = size.height * progress;
-    return Path()
-      ..addRect(Rect.fromLTWH(0, size.height - revealedHeight, size.width, revealedHeight));
+    return Path()..addRect(
+      Rect.fromLTWH(
+        0,
+        size.height - revealedHeight,
+        size.width,
+        revealedHeight,
+      ),
+    );
   }
 
   @override
   bool shouldReclip(covariant _VerticalRevealClipper oldClipper) =>
       oldClipper.progress != progress;
 }
-

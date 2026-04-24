@@ -99,14 +99,17 @@ class _TimelineState extends ConsumerState<Timeline> {
                           ref
                               .read(editorProvider.notifier)
                               .setDraggingTimeline(false);
-                        } else if (notification is ScrollUpdateNotification &&
-                            notification.dragDetails != null) {
-                          final newTime = (_hScrollController.offset / pxPerSec)
-                              .clamp(0.0, totalDuration);
-                          ref.read(playbackTimeProvider).value = newTime;
-                          ref
-                              .read(editorProvider.notifier)
-                              .setCurrentTime(newTime);
+                        } else if (notification is ScrollUpdateNotification) {
+                          final isPlaying = ref.read(editorProvider).isPlaying;
+                          // Update time if user is actively dragging OR if paused (handles deceleration flings)
+                          if (notification.dragDetails != null || !isPlaying) {
+                            final newTime = (_hScrollController.offset / pxPerSec)
+                                .clamp(0.0, totalDuration);
+                            ref.read(playbackTimeProvider).value = newTime;
+                            ref
+                                .read(editorProvider.notifier)
+                                .setCurrentTime(newTime);
+                          }
                         }
                         return true;
                       },

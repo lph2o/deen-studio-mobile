@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'package:deen_studio_01/models/text_layer_style.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Quran Animation Export Rendering
@@ -8,131 +9,259 @@ import 'package:flutter/material.dart';
 // Extracted from CustomPainters to work directly with Canvas during export.
 // ─────────────────────────────────────────────────────────────────────────────
 
-void paintDivineRevelation(Canvas canvas, Rect rect, double progress, {Color glowColor = const Color(0xFFFFD700)}) {
+void paintDivineRevelation(
+  Canvas canvas,
+  Rect rect,
+  double progress, {
+  Color? glowColor,
+  AnimationConfig config = const AnimationConfig(),
+}) {
   final rng = math.Random(42);
-  const particleCount = 40;
-  for (var i = 0; i < particleCount; i++) {
-    final px = rng.nextDouble() * rect.width;
-    final py = rng.nextDouble() * rect.height;
-    final pSize = rng.nextDouble() * 3.0 + 1;
-    final revealThreshold = i / particleCount;
+  final color = glowColor ?? TextLayerStyle.parseHexColor(config.color);
+  final count = (40 * (0.5 + config.frequency)).round();
+  final intensity = config.intensity;
+  final angleRad = config.direction * math.pi / 180;
+
+  for (var i = 0; i < count; i++) {
+    final baseX = rng.nextDouble() * rect.width;
+    final baseY = rng.nextDouble() * rect.height;
+
+    // Apply direction drift based on progress
+    final driftDist = progress * 40 * intensity;
+    final dx = math.cos(angleRad) * driftDist;
+    final dy = math.sin(angleRad) * driftDist;
+
+    final px = rect.left + baseX + dx;
+    final py = rect.top + baseY + dy;
+
+    final pSize = (rng.nextDouble() * 3.0 + 1) * (0.5 + intensity);
+    final revealThreshold = i / count;
     if (progress >= revealThreshold) {
       final fadeIn = math.min(1.0, (progress - revealThreshold) * 5);
       final shimmer = 0.7 + 0.3 * math.sin(progress * math.pi * 2 + i);
       final opacity = fadeIn * shimmer;
       final paint = Paint()
-        ..color = glowColor.withValues(alpha: opacity)
+        ..color = color.withValues(alpha: opacity)
         ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2);
-      canvas.drawCircle(Offset(rect.left + px, rect.top + py), pSize, paint);
+      canvas.drawCircle(Offset(px, py), pSize, paint);
       final glowPaint = Paint()
-        ..color = glowColor.withValues(alpha: opacity * 0.3)
+        ..color = color.withValues(alpha: opacity * 0.3)
         ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 6);
-      canvas.drawCircle(Offset(rect.left + px, rect.top + py), pSize * 2.5, glowPaint);
+      canvas.drawCircle(Offset(px, py), pSize * 2.5, glowPaint);
     }
   }
 }
 
-void paintCelestialLight(Canvas canvas, Rect rect, double progress) {
+void paintCelestialLight(
+  Canvas canvas,
+  Rect rect,
+  double progress, {
+  AnimationConfig config = const AnimationConfig(),
+}) {
   final sweepLength = progress * rect.height;
   final sweepRect = Rect.fromLTWH(rect.left, rect.top, rect.width, sweepLength);
+  final color = TextLayerStyle.parseHexColor(config.color);
+  final isVertical =
+      config.direction % 180 < 45 || config.direction % 180 > 135;
+
   final gradient = LinearGradient(
-    begin: Alignment.topCenter,
-    end: Alignment.bottomCenter,
-    colors: const [Color(0xFFFFFFCC), Color(0xFFFFF8DC), Color(0x00FFFFFF)],
+    begin: isVertical ? Alignment.topCenter : Alignment.centerLeft,
+    end: isVertical ? Alignment.bottomCenter : Alignment.centerRight,
+    colors: [
+      color.withValues(alpha: 0.8),
+      color.withValues(alpha: 0.5),
+      const Color(0x00FFFFFF),
+    ],
   );
   final paint = Paint()..shader = gradient.createShader(sweepRect);
   canvas.drawRect(sweepRect, paint);
 }
 
-void paintGoldenParticles(Canvas canvas, Rect rect, double progress) {
+void paintGoldenParticles(
+  Canvas canvas,
+  Rect rect,
+  double progress, {
+  AnimationConfig config = const AnimationConfig(),
+}) {
   final rng = math.Random(42);
-  const particleCount = 80;
-  for (var i = 0; i < particleCount; i++) {
-    final px = rng.nextDouble() * rect.width;
-    final py = rng.nextDouble() * rect.height;
-    final pSize = rng.nextDouble() * 4.0 + 1;
-    final revealThreshold = i / particleCount;
+  final color = TextLayerStyle.parseHexColor(config.color);
+  final count = (80 * (0.5 + config.frequency)).round();
+  final intensity = config.intensity;
+  final angleRad = config.direction * math.pi / 180;
+
+  for (var i = 0; i < count; i++) {
+    final baseX = rng.nextDouble() * rect.width;
+    final baseY = rng.nextDouble() * rect.height;
+
+    final driftDist = progress * 40 * intensity;
+    final dx = math.cos(angleRad) * driftDist;
+    final dy = math.sin(angleRad) * driftDist;
+
+    final px = rect.left + baseX + dx;
+    final py = rect.top + baseY + dy;
+
+    final pSize = (rng.nextDouble() * 4.0 + 1) * (0.5 + intensity);
+    final revealThreshold = i / count;
     if (progress >= revealThreshold) {
       final fadeIn = math.min(1.0, (progress - revealThreshold) * 5);
       final shimmer = 0.7 + 0.3 * math.sin(progress * math.pi * 2 + i);
       final opacity = fadeIn * shimmer;
       final paint = Paint()
-        ..color = const Color(0xFFFFD700).withValues(alpha: opacity)
+        ..color = color.withValues(alpha: opacity)
         ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2);
-      canvas.drawCircle(Offset(rect.left + px, rect.top + py), pSize, paint);
+      canvas.drawCircle(Offset(px, py), pSize, paint);
       final glowPaint = Paint()
-        ..color = const Color(0xFFFFD700).withValues(alpha: opacity * 0.3)
+        ..color = color.withValues(alpha: opacity * 0.3)
         ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 6);
-      canvas.drawCircle(Offset(rect.left + px, rect.top + py), pSize * 2.5, glowPaint);
+      canvas.drawCircle(Offset(px, py), pSize * 2.5, glowPaint);
     }
   }
 }
 
-void paintDivineRadiance(Canvas canvas, Rect rect, double progress) {
+void paintDivineRadiance(
+  Canvas canvas,
+  Rect rect,
+  double progress, {
+  AnimationConfig config = const AnimationConfig(),
+}) {
   final cx = rect.center.dx;
   final cy = rect.center.dy;
-  final maxRadius = math.max(rect.width, rect.height) * progress * 0.5;
+  final color = TextLayerStyle.parseHexColor(config.color);
+  final maxRadius =
+      math.max(rect.width, rect.height) *
+      progress *
+      0.5 *
+      (0.5 + config.intensity);
+
   final glowPaint = Paint()
-    ..color = const Color(0xFFFFD700).withValues(alpha: 0.2 * progress)
-    ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 20);
+    ..color = color.withValues(alpha: 0.2 * progress)
+    ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 10);
   canvas.drawCircle(Offset(cx, cy), maxRadius, glowPaint);
+
   // Particles
   final rng = math.Random(42);
-  const particleCount = 50;
-  for (var i = 0; i < particleCount; i++) {
-    final angle = rng.nextDouble() * math.pi * 2;
+  final count = (50 * (0.5 + config.frequency)).round();
+  final angleOffset = config.direction * math.pi / 180;
+
+  for (var i = 0; i < count; i++) {
+    final angle = rng.nextDouble() * math.pi * 2 + angleOffset;
     final dist = rng.nextDouble() * maxRadius;
     final px = cx + math.cos(angle) * dist;
     final py = cy + math.sin(angle) * dist;
-    final revealThreshold = i / particleCount;
+    final revealThreshold = i / count;
     if (progress >= revealThreshold) {
       final fadeIn = math.min(1.0, (progress - revealThreshold) * 5);
-      final pSize = rng.nextDouble() * 5.0 + 1;
+      final pSize = (rng.nextDouble() * 5.0 + 1) * (0.5 + config.intensity);
       final paint = Paint()
-        ..color = const Color(0xFFFFD700).withValues(alpha: fadeIn * 0.6)
+        ..color = color.withValues(alpha: fadeIn * 0.6)
         ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2);
       canvas.drawCircle(Offset(px, py), pSize, paint);
     }
   }
 }
 
-void paintEtherealGlow(Canvas canvas, Rect rect, double progress) {
+void paintEtherealGlow(
+  Canvas canvas,
+  Rect rect,
+  double progress, {
+  AnimationConfig config = const AnimationConfig(),
+}) {
   final cx = rect.center.dx;
   final cy = rect.center.dy;
-  final maxRadius = math.max(rect.width, rect.height) * 0.5;
+  final color = TextLayerStyle.parseHexColor(config.color);
+  final maxRadius =
+      math.max(rect.width, rect.height) * 0.5 * (0.5 + config.intensity);
+
   final glowPaint = Paint()
-    ..color = const Color(0xFFE0B0FF).withValues(alpha: 0.3 * progress)
+    ..color = color.withValues(alpha: 0.3 * progress)
     ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 15);
   canvas.drawCircle(Offset(cx, cy), maxRadius * progress, glowPaint);
 }
 
-void paintSacredRipple(Canvas canvas, Rect rect, double progress) {
-  _paintWave(canvas, rect, progress, const Color(0xFF4FC3F7), 15.0, 3);
+void paintSacredRipple(
+  Canvas canvas,
+  Rect rect,
+  double progress, {
+  AnimationConfig config = const AnimationConfig(),
+}) {
+  _paintWave(
+    canvas,
+    rect,
+    progress,
+    TextLayerStyle.parseHexColor(config.color),
+    15.0,
+    3,
+    config: config,
+  );
 }
 
-void paintMercyWave(Canvas canvas, Rect rect, double progress) {
-  _paintWave(canvas, rect, progress, const Color(0xFF64B5F6), 15.0, 3);
+void paintMercyWave(
+  Canvas canvas,
+  Rect rect,
+  double progress, {
+  AnimationConfig config = const AnimationConfig(),
+}) {
+  _paintWave(
+    canvas,
+    rect,
+    progress,
+    TextLayerStyle.parseHexColor(config.color),
+    15.0,
+    3,
+    config: config,
+  );
 }
 
-void paintRiverFlow(Canvas canvas, Rect rect, double progress) {
-  _paintWave(canvas, rect, progress, const Color(0xFF4DD0E1), 15.0, 3);
+void paintRiverFlow(
+  Canvas canvas,
+  Rect rect,
+  double progress, {
+  AnimationConfig config = const AnimationConfig(),
+}) {
+  _paintWave(
+    canvas,
+    rect,
+    progress,
+    TextLayerStyle.parseHexColor(config.color),
+    15.0,
+    3,
+    config: config,
+  );
 }
 
-void _paintWave(Canvas canvas, Rect rect, double progress, Color waveColor, double amplitude, int waveCount) {
-  const frequency = 0.02;
+void _paintWave(
+  Canvas canvas,
+  Rect rect,
+  double progress,
+  Color waveColor,
+  double amplitude,
+  int waveCount, {
+  AnimationConfig config = const AnimationConfig(),
+}) {
+  final frequency = 0.02 * (0.5 + config.frequency);
+  final effectiveAmplitude = amplitude * (0.5 + config.intensity);
+  final phaseShift = config.direction * math.pi / 180;
+
   for (var w = 0; w < waveCount; w++) {
     final path = Path();
     final waveOffset = w * 0.33;
-    final waveProgress = math.max(0.0, math.min(1.0, (progress - waveOffset) * 2));
+    final waveProgress = math.max(
+      0.0,
+      math.min(1.0, (progress - waveOffset) * 2),
+    );
     if (waveProgress <= 0) continue;
     final visibleWidth = rect.width * waveProgress;
     final yBase = rect.height * (0.5 + w * 0.12);
-    
+
     // Arabic is RTL: start from the right edge
     path.moveTo(rect.right, rect.top + yBase);
     for (var x = 0; x <= visibleWidth; x += 2) {
-      final y = rect.top + yBase +
-          math.sin(x * frequency + progress * math.pi * 2 + w) * amplitude * waveProgress;
+      final y =
+          rect.top +
+          yBase +
+          math.sin(x * frequency + progress * math.pi * 2 + w + phaseShift) *
+              effectiveAmplitude *
+              waveProgress;
       // Draw towards the left edge
       path.lineTo(rect.right - x, y);
     }
@@ -144,59 +273,154 @@ void _paintWave(Canvas canvas, Rect rect, double progress, Color waveColor, doub
   }
 }
 
-void paintBlessedRain(Canvas canvas, Rect rect, double progress) {
-  _paintFallingDrops(canvas, rect, progress, const Color(0xFF4FC3F7), 30);
+void paintBlessedRain(
+  Canvas canvas,
+  Rect rect,
+  double progress, {
+  AnimationConfig config = const AnimationConfig(),
+}) {
+  _paintFallingDrops(
+    canvas,
+    rect,
+    progress,
+    TextLayerStyle.parseHexColor(config.color),
+    (30 * (0.5 + config.frequency)).round(),
+    config: config,
+  );
 }
 
-void paintWaterDrops(Canvas canvas, Rect rect, double progress) {
-  _paintFallingDrops(canvas, rect, progress, const Color(0xFF4FC3F7), 30);
+void paintWaterDrops(
+  Canvas canvas,
+  Rect rect,
+  double progress, {
+  AnimationConfig config = const AnimationConfig(),
+}) {
+  _paintFallingDrops(
+    canvas,
+    rect,
+    progress,
+    TextLayerStyle.parseHexColor(config.color),
+    (30 * (0.5 + config.frequency)).round(),
+    config: config,
+  );
 }
 
-void _paintFallingDrops(Canvas canvas, Rect rect, double progress, Color dropColor, int objectCount) {
+void _paintFallingDrops(
+  Canvas canvas,
+  Rect rect,
+  double progress,
+  Color dropColor,
+  int objectCount, {
+  AnimationConfig config = const AnimationConfig(),
+}) {
   final rng = math.Random(55);
+  final intensity = config.intensity;
+  final angleRad = config.direction * math.pi / 180;
+
   for (var i = 0; i < objectCount; i++) {
     final revealThreshold = i / objectCount;
     if (progress < revealThreshold) continue;
     final baseX = rect.left + rng.nextDouble() * rect.width;
     final fallProgress = (progress - revealThreshold) / (1 - revealThreshold);
-    final y = rect.top - 20 + fallProgress * (rect.height + 40);
-    if (y < rect.top - 20 || y > rect.bottom + 20) continue;
-    final sway = math.sin(progress * math.pi * 4 + i * 0.7) * 15;
-    final x = baseX + sway;
+
+    // Base fall + direction drift
+    final verticalFall = fallProgress * (rect.height + 40);
+    final driftDist = fallProgress * 100 * intensity;
+
+    final x =
+        baseX +
+        math.cos(angleRad) * driftDist +
+        math.sin(progress * math.pi * 4 + i * 0.7) * 15;
+    final y = rect.top - 20 + verticalFall + math.sin(angleRad) * driftDist;
+
+    if (y < rect.top - 40 || y > rect.bottom + 40) continue;
+
     final fadeIn = math.min(1.0, fallProgress * 3);
     final fadeOut = math.max(0.0, 1 - fallProgress * 0.5);
     final alpha = fadeIn * fadeOut * 0.6;
     final paint = Paint()..color = dropColor.withValues(alpha: alpha);
+
     // Teardrop
     canvas.save();
     canvas.translate(x, y);
+    canvas.rotate(angleRad + math.pi / 2); // Orient drop towards movement
     final path = Path()
-      ..moveTo(0, -5)
-      ..quadraticBezierTo(3, 0, 3, 2)
-      ..arcTo(Rect.fromLTWH(-3, 0, 6, 4), 0, math.pi, false)
-      ..quadraticBezierTo(3, 0, 0, -5);
+      ..moveTo(0, -5 * (0.5 + intensity))
+      ..quadraticBezierTo(
+        3 * (0.5 + intensity),
+        0,
+        3 * (0.5 + intensity),
+        2 * (0.5 + intensity),
+      )
+      ..arcTo(
+        Rect.fromLTWH(
+          -3 * (0.5 + intensity),
+          0,
+          6 * (0.5 + intensity),
+          4 * (0.5 + intensity),
+        ),
+        0,
+        math.pi,
+        false,
+      )
+      ..quadraticBezierTo(3 * (0.5 + intensity), 0, 0, -5 * (0.5 + intensity));
     canvas.drawPath(path, paint);
     canvas.restore();
   }
 }
 
 void paintAutumnLeaves(Canvas canvas, Rect rect, double progress) {
-  _paintFallingObjects(canvas, rect, progress, 'leaf', const Color(0xFFFF8C00), 25);
+  _paintFallingObjects(
+    canvas,
+    rect,
+    progress,
+    'leaf',
+    const Color(0xFFFF8C00),
+    25,
+  );
 }
 
 void paintFlowerBloom(Canvas canvas, Rect rect, double progress) {
-  _paintFallingObjects(canvas, rect, progress, 'petal', const Color(0xFFFF69B4), 20);
+  _paintFallingObjects(
+    canvas,
+    rect,
+    progress,
+    'petal',
+    const Color(0xFFFF69B4),
+    20,
+  );
 }
 
 void paintGentleWind(Canvas canvas, Rect rect, double progress) {
-  _paintFallingObjects(canvas, rect, progress, 'leaf', const Color(0xFF90EE90), 15);
+  _paintFallingObjects(
+    canvas,
+    rect,
+    progress,
+    'leaf',
+    const Color(0xFF90EE90),
+    15,
+  );
 }
 
 void paintLightButterflies(Canvas canvas, Rect rect, double progress) {
-  _paintFallingObjects(canvas, rect, progress, 'butterfly', const Color(0xFFDDA0DD), 15);
+  _paintFallingObjects(
+    canvas,
+    rect,
+    progress,
+    'butterfly',
+    const Color(0xFFDDA0DD),
+    15,
+  );
 }
 
-void _paintFallingObjects(Canvas canvas, Rect rect, double progress, String objectType, Color objectColor, int objectCount) {
+void _paintFallingObjects(
+  Canvas canvas,
+  Rect rect,
+  double progress,
+  String objectType,
+  Color objectColor,
+  int objectCount,
+) {
   final rng = math.Random(55);
   for (var i = 0; i < objectCount; i++) {
     final revealThreshold = i / objectCount;
@@ -230,7 +454,10 @@ void _drawButterfly(Canvas canvas, Offset pos, double alpha, Color color) {
   canvas.translate(pos.dx, pos.dy);
   canvas.drawOval(Rect.fromLTWH(-6, -4, 5, 8), paint);
   canvas.drawOval(Rect.fromLTWH(1, -4, 5, 8), paint);
-  canvas.drawOval(Rect.fromLTWH(-0.5, -3, 1, 6), Paint()..color = const Color(0xFF333333).withValues(alpha: alpha));
+  canvas.drawOval(
+    Rect.fromLTWH(-0.5, -3, 1, 6),
+    Paint()..color = const Color(0xFF333333).withValues(alpha: alpha),
+  );
   canvas.restore();
 }
 
@@ -264,13 +491,23 @@ void paintRainbow(Canvas canvas, Rect rect, double progress) {
     begin: Alignment.centerRight, // RTL: Start gradient from Right
     end: Alignment.centerLeft,
     colors: const [
-      Color(0xFFFF0000), Color(0xFFFF7F00), Color(0xFFFFFF00),
-      Color(0xFF00FF00), Color(0xFF0000FF), Color(0xFF4B0082), Color(0xFF9400D3),
+      Color(0xFFFF0000),
+      Color(0xFFFF7F00),
+      Color(0xFFFFFF00),
+      Color(0xFF00FF00),
+      Color(0xFF0000FF),
+      Color(0xFF4B0082),
+      Color(0xFF9400D3),
     ],
   );
   // RTL: The sweep reveals right-to-left
   final sweepLength = progress * rect.width;
-  final sweepRect = Rect.fromLTRB(rect.right - sweepLength, rect.top, rect.right, rect.bottom);
+  final sweepRect = Rect.fromLTRB(
+    rect.right - sweepLength,
+    rect.top,
+    rect.right,
+    rect.bottom,
+  );
   final paint = Paint()..shader = gradient.createShader(sweepRect);
   canvas.save();
   canvas.clipRect(sweepRect);
@@ -278,7 +515,12 @@ void paintRainbow(Canvas canvas, Rect rect, double progress) {
   canvas.restore();
 }
 
-void paintLivingCalligraphy(Canvas canvas, Rect rect, double progress, Color inkColor) {
+void paintLivingCalligraphy(
+  Canvas canvas,
+  Rect rect,
+  double progress,
+  Color inkColor,
+) {
   _paintCalligraphyStroke(canvas, rect, progress, inkColor, 2.5);
 }
 
@@ -294,7 +536,13 @@ void paintQuillWriting(Canvas canvas, Rect rect, double progress) {
   _paintCalligraphyStroke(canvas, rect, progress, const Color(0xFF2F4F4F), 2.0);
 }
 
-void _paintCalligraphyStroke(Canvas canvas, Rect rect, double progress, Color inkColor, double strokeThickness) {
+void _paintCalligraphyStroke(
+  Canvas canvas,
+  Rect rect,
+  double progress,
+  Color inkColor,
+  double strokeThickness,
+) {
   final path = Path();
   final drawLength = rect.width * progress;
   // Arabic is RTL: Start from the right edge
@@ -302,7 +550,9 @@ void _paintCalligraphyStroke(Canvas canvas, Rect rect, double progress, Color in
   var x = 0.0;
   while (x <= drawLength) {
     final t = x / rect.width;
-    final y = rect.top + rect.height * 0.5 +
+    final y =
+        rect.top +
+        rect.height * 0.5 +
         math.sin(t * math.pi * 4) * 15 * progress +
         math.sin(t * math.pi * 8) * 5 * progress;
     // Draw towards the left edge
@@ -315,12 +565,14 @@ void _paintCalligraphyStroke(Canvas canvas, Rect rect, double progress, Color in
     ..strokeWidth = strokeThickness
     ..strokeCap = StrokeCap.round;
   canvas.drawPath(path, paint);
-  
+
   // Ink drip at leading edge (moving leftward)
   if (progress > 0.05 && progress < 0.95) {
     // Current tip is at the left-most extreme of the current drawLength
     final tipX = rect.right - drawLength;
-    final tipY = rect.top + rect.height * 0.5 +
+    final tipY =
+        rect.top +
+        rect.height * 0.5 +
         math.sin(progress * math.pi * 4) * 15 * progress +
         math.sin(progress * math.pi * 8) * 5 * progress;
     for (var i = 0; i < 5; i++) {
@@ -328,7 +580,11 @@ void _paintCalligraphyStroke(Canvas canvas, Rect rect, double progress, Color in
         ..color = inkColor.withValues(alpha: 0.3 - i * 0.05)
         ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3);
       // Trailing drips appear slightly to the right of the tip (since movement is leftward) + i*3
-      canvas.drawCircle(Offset(tipX + i * 3, tipY + i * 4), 1.5 - i * 0.2, dropPaint);
+      canvas.drawCircle(
+        Offset(tipX + i * 3, tipY + i * 4),
+        1.5 - i * 0.2,
+        dropPaint,
+      );
     }
   }
 }
@@ -345,7 +601,13 @@ void paintPersianCarpet(Canvas canvas, Rect rect, double progress) {
   _paintMosaic(canvas, rect, progress, const Color(0xFF8B0000), 14);
 }
 
-void _paintMosaic(Canvas canvas, Rect rect, double progress, Color tileColor, double tileSize) {
+void _paintMosaic(
+  Canvas canvas,
+  Rect rect,
+  double progress,
+  Color tileColor,
+  double tileSize,
+) {
   final cols = (rect.width / tileSize).ceil();
   final rows = (rect.height / tileSize).ceil();
   final totalTiles = cols * rows;
@@ -365,7 +627,8 @@ void _paintMosaic(Canvas canvas, Rect rect, double progress, Color tileColor, do
     final x = rect.left + col * tileSize;
     final y = rect.top + row * tileSize;
     final fadeIn = math.min(1.0, (progress * totalTiles - t) * 2);
-    final tilePaint = Paint()..color = tileColor.withValues(alpha: 0.4 * fadeIn);
+    final tilePaint = Paint()
+      ..color = tileColor.withValues(alpha: 0.4 * fadeIn);
     final tileRect = Rect.fromLTWH(x + 1, y + 1, tileSize - 2, tileSize - 2);
     canvas.drawRect(tileRect, tilePaint);
     final borderPaint = Paint()
@@ -388,7 +651,13 @@ void paintGalaxy(Canvas canvas, Rect rect, double progress) {
   _paintSpiral(canvas, rect, progress, const Color(0xFFDDA0DD), true);
 }
 
-void _paintSpiral(Canvas canvas, Rect rect, double progress, Color spiralColor, bool isGalaxy) {
+void _paintSpiral(
+  Canvas canvas,
+  Rect rect,
+  double progress,
+  Color spiralColor,
+  bool isGalaxy,
+) {
   final cx = rect.center.dx;
   final cy = rect.center.dy;
   final maxRadius = math.min(rect.width, rect.height) * 0.4;
@@ -422,7 +691,9 @@ void _paintSpiral(Canvas canvas, Rect rect, double progress, Color spiralColor, 
       final sx = cx + math.cos(starAngle) * starDist;
       final sy = cy + math.sin(starAngle) * starDist;
       final starPaint = Paint()
-        ..color = Colors.white.withValues(alpha: rng.nextDouble() * 0.5 * progress);
+        ..color = Colors.white.withValues(
+          alpha: rng.nextDouble() * 0.5 * progress,
+        );
       canvas.drawCircle(Offset(sx, sy), 1 + rng.nextDouble() * 2, starPaint);
     }
   }
@@ -449,16 +720,18 @@ void paintHoneycomb(Canvas canvas, Rect rect, double progress) {
     final col = idx % cols;
     final row = idx ~/ cols;
     final cx = rect.left + col * hexWidth * 0.75;
-    final cy = rect.top + row * hexHeight + (col % 2 == 1 ? hexHeight * 0.5 : 0);
+    final cy =
+        rect.top + row * hexHeight + (col % 2 == 1 ? hexHeight * 0.5 : 0);
     final fadeIn = math.min(1.0, (progress * totalHexes - h) * 2);
     final hexPath = _createHexagon(cx, cy, hexRadius - 1);
-    final hexPaint = Paint()..color = const Color(0xFFFFA500).withValues(alpha: 0.3 * fadeIn);
+    final hexPaint = Paint()
+      ..color = const Color(0xFFFFA500).withValues(alpha: 0.3 * fadeIn);
     canvas.drawPath(hexPath, hexPaint);
     final borderPaint = Paint()
       ..color = const Color(0xFFFFD700).withValues(alpha: 0.4 * fadeIn)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1;
-  canvas.drawPath(hexPath, borderPaint);
+    canvas.drawPath(hexPath, borderPaint);
   }
 }
 
@@ -493,7 +766,8 @@ void paintCrescentMoon(Canvas canvas, Rect rect, double progress) {
     Rect.fromLTWH(cx - s * 2, cy - s * 2, s * 4, s * 4),
     Paint(),
   );
-  final moonPaint = Paint()..color = const Color(0xFFFFF8DC).withValues(alpha: 0.9 * progress);
+  final moonPaint = Paint()
+    ..color = const Color(0xFFFFF8DC).withValues(alpha: 0.9 * progress);
   canvas.drawCircle(Offset(cx, cy), s, moonPaint);
   final cutoutPaint = Paint()
     ..color = const Color(0xFF000000)
@@ -519,7 +793,12 @@ void paintPrayerBeads(Canvas canvas, Rect rect, double progress) {
   final visibleBeads = (progress * beadCount).round();
   final cx = rect.center.dx;
   final cy = rect.center.dy;
-  final radius = math.min(math.min(cx - rect.left, rect.right - cx), math.min(cy - rect.top, rect.bottom - cy)) * 0.7;
+  final radius =
+      math.min(
+        math.min(cx - rect.left, rect.right - cx),
+        math.min(cy - rect.top, rect.bottom - cy),
+      ) *
+      0.7;
   final actualRadius = math.max(20.0, radius);
   for (var i = 0; i < visibleBeads; i++) {
     final angle = (i / beadCount) * math.pi * 2 - math.pi / 2;
@@ -529,7 +808,8 @@ void paintPrayerBeads(Canvas canvas, Rect rect, double progress) {
     final beadPaint = Paint()
       ..color = const Color(0xFF8B4513).withValues(alpha: 0.8 * fadeIn);
     canvas.drawCircle(Offset(x, y), 5, beadPaint);
-    final highlightPaint = Paint()..color = Colors.white.withValues(alpha: 0.3 * fadeIn);
+    final highlightPaint = Paint()
+      ..color = Colors.white.withValues(alpha: 0.3 * fadeIn);
     canvas.drawCircle(Offset(x - 1.5, y - 1.5), 2, highlightPaint);
   }
   // String
@@ -560,21 +840,26 @@ void paintIncenseSmoke(Canvas canvas, Rect rect, double progress) {
     final baseX = rect.left + rect.width * (0.3 + s * 0.2);
     final path = Path();
     path.moveTo(baseX, rect.bottom);
-    final streamProgress = math.max(0.0, math.min(1.0, (progress - s * 0.1) * 1.3));
+    final streamProgress = math.max(
+      0.0,
+      math.min(1.0, (progress - s * 0.1) * 1.3),
+    );
     final maxHeight = rect.height * streamProgress;
     for (var y = 0; y <= maxHeight; y += 4) {
       final t = y / rect.height;
-      final x = baseX +
-          math.sin(t * math.pi * 3 + s * 2 + progress * math.pi) * (20 + t * 30) +
+      final x =
+          baseX +
+          math.sin(t * math.pi * 3 + s * 2 + progress * math.pi) *
+              (20 + t * 30) +
           math.sin(t * math.pi * 5) * 10;
       path.lineTo(x, rect.bottom - y);
     }
     final paint = Paint()
-      ..color = smokeColor.withValues(alpha: 0.15 * streamProgress)
+      ..color = smokeColor.withValues(alpha: 0.10 * streamProgress)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 8 + (1 - streamProgress) * 5
       ..strokeCap = StrokeCap.round
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 10);
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4);
     canvas.drawPath(path, paint);
   }
 }
@@ -592,18 +877,20 @@ void paintSacredFire(Canvas canvas, Rect rect, double progress) {
     for (var y = 0; y <= maxHeight; y += 3) {
       final t = y / maxHeight;
       const flicker = 8.0;
-      final x = baseX +
+      final x =
+          baseX +
           math.sin(y * 0.15 + progress * 10 + i) * flicker * (1 - t) +
           math.sin(y * 0.05 - progress * 5) * flicker * 0.5;
       path.lineTo(x, rect.bottom - y);
     }
     final firePaint = Paint()
-      ..color = (i % 3 == 0
-              ? const Color(0xFFFF4500)
-              : i % 3 == 1
+      ..color =
+          (i % 3 == 0
+                  ? const Color(0xFFFF4500)
+                  : i % 3 == 1
                   ? const Color(0xFFFFD700)
                   : const Color(0xFFFF6B35))
-          .withValues(alpha: 0.5 * flameProgress * (1 - i / 40))
+              .withValues(alpha: 0.5 * flameProgress * (1 - i / 40))
       ..style = PaintingStyle.stroke
       ..strokeWidth = 3
       ..strokeCap = StrokeCap.round
@@ -614,12 +901,18 @@ void paintSacredFire(Canvas canvas, Rect rect, double progress) {
   final glowPaint = Paint()
     ..color = const Color(0xFFFF4500).withValues(alpha: 0.15 * progress)
     ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 20);
-  canvas.drawRect(Rect.fromLTWH(rect.left, rect.bottom - 20, rect.width, 20), glowPaint);
+  canvas.drawRect(
+    Rect.fromLTWH(rect.left, rect.bottom - 20, rect.width, 20),
+    glowPaint,
+  );
 }
 
 void paintNightOfPower(Canvas canvas, Rect rect, double progress) {
   // Dark overlay that fades out
-  canvas.drawRect(rect, Paint()..color = const Color(0xFF0A0A2E).withValues(alpha: 1 - progress));
+  canvas.drawRect(
+    rect,
+    Paint()..color = const Color(0xFF0A0A2E).withValues(alpha: 1 - progress),
+  );
   // Radial glow
   final cx = rect.center.dx;
   final cy = rect.center.dy;
@@ -635,17 +928,24 @@ void paintConstellation(Canvas canvas, Rect rect, double progress) {
   const starCount = 15;
   final stars = <Offset>[];
   for (var i = 0; i < starCount; i++) {
-    stars.add(Offset(
-      rect.left + rng.nextDouble() * rect.width,
-      rect.top + rng.nextDouble() * rect.height,
-    ));
+    stars.add(
+      Offset(
+        rect.left + rng.nextDouble() * rect.width,
+        rect.top + rng.nextDouble() * rect.height,
+      ),
+    );
   }
   // Lines
   for (var i = 0; i < stars.length - 1; i++) {
-    final revealProgress = math.max(0.0, math.min(1.0, (progress - i / starCount) * starCount));
+    final revealProgress = math.max(
+      0.0,
+      math.min(1.0, (progress - i / starCount) * starCount),
+    );
     if (revealProgress > 0) {
       final linePaint = Paint()
-        ..color = const Color(0xFFFFD700).withValues(alpha: 0.2 * revealProgress)
+        ..color = const Color(
+          0xFFFFD700,
+        ).withValues(alpha: 0.2 * revealProgress)
         ..strokeWidth = 1.0;
       canvas.drawLine(stars[i], stars[i + 1], linePaint);
     }
@@ -657,7 +957,9 @@ void paintConstellation(Canvas canvas, Rect rect, double progress) {
       final fadeIn = math.min(1.0, (progress - revealThreshold) * 4);
       final twinkle = 0.7 + 0.3 * math.sin(progress * math.pi * 4 + i);
       final glowPaint = Paint()
-        ..color = const Color(0xFFFFD700).withValues(alpha: fadeIn * twinkle * 0.3)
+        ..color = const Color(
+          0xFFFFD700,
+        ).withValues(alpha: fadeIn * twinkle * 0.3)
         ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8);
       canvas.drawCircle(stars[i], 12, glowPaint);
       final starPaint = Paint()
@@ -679,11 +981,15 @@ void paintStardust(Canvas canvas, Rect rect, double progress) {
       final fadeIn = math.min(1.0, (progress - revealThreshold) * 5);
       final shimmer = 0.7 + 0.3 * math.sin(progress * math.pi * 2 + i);
       final paint = Paint()
-        ..color = const Color(0xFFE0B0FF).withValues(alpha: fadeIn * shimmer * 0.8)
+        ..color = const Color(
+          0xFFE0B0FF,
+        ).withValues(alpha: fadeIn * shimmer * 0.8)
         ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2);
       canvas.drawCircle(Offset(px, py), pSize, paint);
       final glowPaint = Paint()
-        ..color = const Color(0xFFE0B0FF).withValues(alpha: fadeIn * shimmer * 0.3)
+        ..color = const Color(
+          0xFFE0B0FF,
+        ).withValues(alpha: fadeIn * shimmer * 0.3)
         ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 6);
       canvas.drawCircle(Offset(px, py), pSize * 2.5, glowPaint);
     }
@@ -694,7 +1000,12 @@ void paintAurora(Canvas canvas, Rect rect, double progress) {
   final gradient = LinearGradient(
     begin: Alignment.topCenter,
     end: Alignment.bottomCenter,
-    colors: const [Color(0xFF00FF88), Color(0xFF00DDFF), Color(0xFF8800FF), Color(0xFFFF00AA)],
+    colors: const [
+      Color(0xFF00FF88),
+      Color(0xFF00DDFF),
+      Color(0xFF8800FF),
+      Color(0xFFFF00AA),
+    ],
   );
   final sweepLength = progress * rect.height;
   final sweepRect = Rect.fromLTWH(rect.left, rect.top, rect.width, sweepLength);
@@ -717,11 +1028,15 @@ void paintDiamondSparkle(Canvas canvas, Rect rect, double progress) {
       final fadeIn = math.min(1.0, (progress - revealThreshold) * 5);
       final shimmer = 0.7 + 0.3 * math.sin(progress * math.pi * 2 + i);
       final paint = Paint()
-        ..color = const Color(0xFFB9F2FF).withValues(alpha: fadeIn * shimmer * 0.8)
+        ..color = const Color(
+          0xFFB9F2FF,
+        ).withValues(alpha: fadeIn * shimmer * 0.8)
         ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2);
       canvas.drawCircle(Offset(px, py), pSize, paint);
       final glowPaint = Paint()
-        ..color = const Color(0xFFB9F2FF).withValues(alpha: fadeIn * shimmer * 0.3)
+        ..color = const Color(
+          0xFFB9F2FF,
+        ).withValues(alpha: fadeIn * shimmer * 0.3)
         ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 6);
       canvas.drawCircle(Offset(px, py), pSize * 2.5, glowPaint);
     }
@@ -733,8 +1048,11 @@ void paintSunset(Canvas canvas, Rect rect, double progress) {
     begin: Alignment.topCenter,
     end: Alignment.bottomCenter,
     colors: const [
-      Color(0xFFFF4500), Color(0xFFFF8C00), Color(0xFFFFD700),
-      Color(0xFFFF6347), Color(0xFF8B008B),
+      Color(0xFFFF4500),
+      Color(0xFFFF8C00),
+      Color(0xFFFFD700),
+      Color(0xFFFF6347),
+      Color(0xFF8B008B),
     ],
   );
   final sweepLength = progress * rect.height;
@@ -777,7 +1095,9 @@ void paintLightning(Canvas canvas, Rect rect, double progress) {
           branchPath.lineTo(bx, rect.top + by);
         }
         final branchPaint = Paint()
-          ..color = const Color(0xFFADD8E6).withValues(alpha: flashIntensity * 0.4)
+          ..color = const Color(
+            0xFFADD8E6,
+          ).withValues(alpha: flashIntensity * 0.4)
           ..style = PaintingStyle.stroke
           ..strokeWidth = 1.5
           ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3);
@@ -792,7 +1112,10 @@ void paintLightning(Canvas canvas, Rect rect, double progress) {
     canvas.drawPath(path, boltPaint);
   }
   // Flash overlay
-  canvas.drawRect(rect, Paint()..color = Colors.white.withValues(alpha: flashIntensity * 0.1));
+  canvas.drawRect(
+    rect,
+    Paint()..color = Colors.white.withValues(alpha: flashIntensity * 0.1),
+  );
 }
 
 void paintEarthShake(Canvas canvas, Rect rect, double progress) {
@@ -810,7 +1133,12 @@ void paintEarthShake(Canvas canvas, Rect rect, double progress) {
 void paintCompass(Canvas canvas, Rect rect, double progress) {
   final cx = rect.center.dx;
   final cy = rect.center.dy;
-  final radius = math.min(math.min(cx - rect.left, rect.right - cx), math.min(cy - rect.top, rect.bottom - cy)) * 0.8;
+  final radius =
+      math.min(
+        math.min(cx - rect.left, rect.right - cx),
+        math.min(cy - rect.top, rect.bottom - cy),
+      ) *
+      0.8;
   final actualRadius = math.max(30.0, radius);
   // Ring
   final ringPaint = Paint()
@@ -826,7 +1154,12 @@ void paintCompass(Canvas canvas, Rect rect, double progress) {
   canvas.drawCircle(Offset(cx, cy), actualRadius * 0.85, innerRingPaint);
   // Cardinal directions
   final cardinalDirs = ['N', 'E', 'S', 'W'];
-  final cardinalColors = [const Color(0xFFE53E3E), const Color(0xFFA0A0A0), const Color(0xFFA0A0A0), const Color(0xFFA0A0A0)];
+  final cardinalColors = [
+    const Color(0xFFE53E3E),
+    const Color(0xFFA0A0A0),
+    const Color(0xFFA0A0A0),
+    const Color(0xFFA0A0A0),
+  ];
   for (var i = 0; i < 4; i++) {
     final angle = i * math.pi / 2 - math.pi / 2;
     final x = cx + math.cos(angle) * actualRadius * 0.9;
@@ -843,12 +1176,18 @@ void paintCompass(Canvas canvas, Rect rect, double progress) {
       textDirection: TextDirection.ltr,
     );
     textPainter.layout();
-    textPainter.paint(canvas, Offset(x - textPainter.width / 2, y - textPainter.height / 2));
+    textPainter.paint(
+      canvas,
+      Offset(x - textPainter.width / 2, y - textPainter.height / 2),
+    );
   }
   // Needle
   final needleAngle = progress * math.pi * 4 - math.pi / 2;
   final needleLength = actualRadius * 0.75;
-  final needleTip = Offset(cx + math.cos(needleAngle) * needleLength, cy + math.sin(needleAngle) * needleLength);
+  final needleTip = Offset(
+    cx + math.cos(needleAngle) * needleLength,
+    cy + math.sin(needleAngle) * needleLength,
+  );
   final needleTail = Offset(
     cx + math.cos(needleAngle + math.pi) * actualRadius * 0.25,
     cy + math.sin(needleAngle + math.pi) * actualRadius * 0.25,
@@ -864,7 +1203,11 @@ void paintCompass(Canvas canvas, Rect rect, double progress) {
     ..strokeCap = StrokeCap.round;
   canvas.drawLine(Offset(cx, cy), needleTail, southPaint);
   // Center dot
-  canvas.drawCircle(Offset(cx, cy), 4, Paint()..color = const Color(0xFFC0C0C0));
+  canvas.drawCircle(
+    Offset(cx, cy),
+    4,
+    Paint()..color = const Color(0xFFC0C0C0),
+  );
   // Degree marks
   for (var d = 0; d < 360; d += 30) {
     final angle = d * math.pi / 180 - math.pi / 2;
@@ -890,7 +1233,9 @@ void paintMinaretRise(Canvas canvas, Rect rect, double progress) {
   // This animation is mainly a slide-up transform
   // Add a subtle silhouette overlay
   if (progress < 0.8) {
-    final minaretColor = const Color(0xFF2C3E50).withValues(alpha: 0.1 * (1 - progress));
+    final minaretColor = const Color(
+      0xFF2C3E50,
+    ).withValues(alpha: 0.1 * (1 - progress));
     final paint = Paint()..color = minaretColor;
     // Simple minaret shape
     final mw = 12.0 * progress;
@@ -905,35 +1250,42 @@ void paintMinaretRise(Canvas canvas, Rect rect, double progress) {
 
 /// Dispatch function: given an animation ID, progress, and rect,
 /// calls the appropriate painting function.
-void paintQuranAnimation(Canvas canvas, Rect rect, String animationId, double progress, {Color? textColor}) {
-  final inkColor = textColor ?? const Color(0xFFFFFFFF);
+void paintQuranAnimation(
+  Canvas canvas,
+  Rect rect,
+  String animationId,
+  double progress, {
+  Color? textColor,
+  AnimationConfig config = const AnimationConfig(),
+}) {
+  final inkColor = textColor ?? TextLayerStyle.parseHexColor(config.color);
   switch (animationId) {
     // REVELATION
     case 'divine_revelation':
-      paintDivineRevelation(canvas, rect, progress);
+      paintDivineRevelation(canvas, rect, progress, config: config);
       break;
     case 'celestial_light':
-      paintCelestialLight(canvas, rect, progress);
+      paintCelestialLight(canvas, rect, progress, config: config);
       break;
     case 'golden_particles':
-      paintGoldenParticles(canvas, rect, progress);
+      paintGoldenParticles(canvas, rect, progress, config: config);
       break;
     case 'divine_radiance':
-      paintDivineRadiance(canvas, rect, progress);
+      paintDivineRadiance(canvas, rect, progress, config: config);
       break;
     case 'ethereal_glow':
-      paintEtherealGlow(canvas, rect, progress);
+      paintEtherealGlow(canvas, rect, progress, config: config);
       break;
 
     // NATURE
     case 'sacred_ripple':
-      paintSacredRipple(canvas, rect, progress);
+      paintSacredRipple(canvas, rect, progress, config: config);
       break;
     case 'mercy_wave':
-      paintMercyWave(canvas, rect, progress);
+      paintMercyWave(canvas, rect, progress, config: config);
       break;
     case 'blessed_rain':
-      paintBlessedRain(canvas, rect, progress);
+      paintBlessedRain(canvas, rect, progress, config: config);
       break;
     case 'autumn_leaves':
       paintAutumnLeaves(canvas, rect, progress);
@@ -945,13 +1297,13 @@ void paintQuranAnimation(Canvas canvas, Rect rect, String animationId, double pr
       paintGentleWind(canvas, rect, progress);
       break;
     case 'water_drops':
-      paintWaterDrops(canvas, rect, progress);
+      paintWaterDrops(canvas, rect, progress, config: config);
       break;
     case 'rainbow':
       paintRainbow(canvas, rect, progress);
       break;
     case 'river_flow':
-      paintRiverFlow(canvas, rect, progress);
+      paintRiverFlow(canvas, rect, progress, config: config);
       break;
 
     // CALLIGRAPHY

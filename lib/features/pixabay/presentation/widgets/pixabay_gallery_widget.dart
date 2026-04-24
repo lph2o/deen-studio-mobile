@@ -253,6 +253,7 @@ class _PixabayGalleryWidgetState extends ConsumerState<PixabayGalleryWidget> {
           mediaType: state.mediaType,
           onTap: () async {
             HapticFeedback.lightImpact();
+            final nav = Navigator.of(context);
             final filePath = await ref
                 .read(pixabayProvider.notifier)
                 .downloadAndImport(item);
@@ -262,7 +263,7 @@ class _PixabayGalleryWidgetState extends ConsumerState<PixabayGalleryWidget> {
                 state.mediaType == PixabayMediaType.videos,
               );
               // Dismiss the bottom sheet after import
-              Navigator.of(context).pop();
+              nav.pop();
             }
           },
         );

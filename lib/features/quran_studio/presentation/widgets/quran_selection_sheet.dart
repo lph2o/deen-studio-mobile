@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:deen_studio_01/features/quran_studio/presentation/state/quran_studio_notifier.dart';
-import 'package:deen_studio_01/features/quran_studio/domain/generate_quran_subtitles.dart';
+import 'package:deen_studio_01/features/quran_studio/domain/quran_com_api_service.dart';
+import 'package:deen_studio_01/features/quran_studio/domain/quran_subtitle_generator_v2.dart';
 import 'package:deen_studio_01/features/editor/presentation/editor_state.dart';
 import 'package:deen_studio_01/core/services/persistent_media_store.dart';
 import 'package:deen_studio_01/models/project.dart';
@@ -29,6 +30,7 @@ class _QuranSelectionSheetState extends ConsumerState<QuranSelectionSheet> {
   final PageController _pageController = PageController();
   int _currentPage = 0;
   bool _isGenerating = false;
+  String _generatingStatus = '';
 
   void _nextPage() {
     if (_currentPage < 2) {
@@ -45,106 +47,141 @@ class _QuranSelectionSheetState extends ConsumerState<QuranSelectionSheet> {
   }
 
   Future<void> _generateAndAddToProject() async {
-    final state = ref.read(quranStudioProvider).value;
-    if (state == null || state.selectedSurah == null || state.selectedAudio == null) return;
+    final studioState = ref.read(quranStudioProvider).value;
+    if (studioState == null ||
+        studioState.selectedSurah == null ||
+        studioState.selectedReciter == null) return;
 
-    if (state.endAyah - state.startAyah > 15) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('L\'éditeur est optimisé pour 15 versets maximum.')));
+    if (studioState.endAyah - studioState.startAyah > 15) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("L'éditeur est optimisé pour 15 versets maximum.")),
+      );
       return;
     }
 
-    setState(() => _isGenerating = true);
+    setState(() {
+      _isGenerating = true;
+      _generatingStatus = 'Récupération des données du Coran...';
+    });
 
     try {
-      final subtitleGenerator = QuranSubtitleGenerator();
-      final clips = await subtitleGenerator.generateQuranSubtitles(
-        surahNumber: state.selectedSurah!.number,
-        startAyah: state.startAyah,
-        endAyah: state.endAyah,
-        audioIdentifier: state.selectedAudio!.identifier,
-        translationIdentifier: state.selectedTranslation?.identifier ?? 'fr.hamidullah',
-        includePhonetic: state.includePhonetic,
+      final generator = QuranSubtitleGeneratorV2();
+
+      setState(() => _generatingStatus = 'Téléchargement de l\'audio de ${studioState.selectedReciter!.name}...');
+
+      final clips = await generator.generateSubtitles(
+        surahNumber: studioState.selectedSurah!.number,
+        startAyah: studioState.startAyah,
+        endAyah: studioState.endAyah,
+        reciter: studioState.selectedReciter!,
+        translationIdentifier: studioState.selectedTranslation?.identifier ?? 'fr.hamidullah',
+        includePhonetic: studioState.includePhonetic,
       );
+
+      setState(() => _generatingStatus = 'Persistance des médias...');
 
       List<Layer> newLayers = [];
       double currentStartTime = 0.0;
-      
-      // Calculate start time offset based on timeline constraints
+
+      // Calculate start time offset based on existing layers
       final proj = ref.read(editorProvider).currentProject;
       if (proj != null && proj.layers.isNotEmpty) {
-        // Just place them after existing clips, or at 0.0 if clean.
-        final lastClip = proj.layers.fold(0.0, (maxId, l) => (l.startTime + l.duration) > maxId ? l.startTime + l.duration : maxId);
-        currentStartTime = lastClip;
+        final lastClipEnd = proj.layers.fold(0.0, (max, l) {
+          final end = l.startTime + l.duration;
+          return end > max ? end : max;
+        });
+        currentStartTime = lastClipEnd;
       }
 
-      for (var clip in clips) {
-        final durationSecs = clip.duration.inMilliseconds / 1000.0;
-        String persistentAudioPath = clip.audioPath;
-        if (clip.audioPath.isNotEmpty) {
-          try {
-            persistentAudioPath = await PersistentMediaStore.persistFile(clip.audioPath);
-          } catch (e) {
-            debugPrint('Error persisting audio: $e');
-          }
+      // All clips share the same audio file (full chapter), so we only
+      // persist it once. The layer startTime + duration handle segmentation.
+      String? persistedAudioPath;
+      if (clips.isNotEmpty && clips.first.audioPath.isNotEmpty) {
+        try {
+          persistedAudioPath = await PersistentMediaStore.persistFile(clips.first.audioPath);
+        } catch (e) {
+          debugPrint('[QuranSelectionSheet] Audio persist error: $e');
+          persistedAudioPath = clips.first.audioPath;
+        }
+      }
+
+      final baseOffset = currentStartTime;
+
+      for (final clip in clips) {
+        final ts = DateTime.now().millisecondsSinceEpoch;
+
+        // Word timings from generator are already relative to the layer start (0.0).
+        final rebasedWordTimings = clip.wordTimings.map((wt) {
+          return {
+            'word': wt['word'],
+            'start': wt['start'],
+            'end': wt['end'],
+          };
+        }).toList();
+
+        // Audio layer — points to full chapter audio
+        if (persistedAudioPath != null) {
+          newLayers.add(Layer(
+            id: 'audio_${clip.ayahNumber}_$ts',
+            type: 'audio',
+            content: persistedAudioPath,
+            startTime: currentStartTime,
+            inPoint: clip.audioInPointSecs,
+            duration: clip.durationSecs,
+            style: const {},
+          ));
         }
 
+        // Arabic text layer
         newLayers.add(Layer(
-          id: 'audio_\${clip.ayahNumber}_\${DateTime.now().millisecondsSinceEpoch}',
-          type: 'audio',
-          content: persistentAudioPath,
-          startTime: currentStartTime,
-          duration: durationSecs,
-          style: {},
-        ));
-
-        newLayers.add(Layer(
-          id: 'arabic_\${clip.ayahNumber}_\${DateTime.now().millisecondsSinceEpoch}',
+          id: 'arabic_${clip.ayahNumber}_$ts',
           type: 'arabic',
           content: clip.arabic,
           startTime: currentStartTime,
-          duration: durationSecs,
-          style: {},
+          duration: clip.durationSecs,
+          style: const {},
           textStyle: const TextLayerStyle(fontFamily: 'UthmanicRegular', fontSize: 26, isRTL: true),
           transform: const ClipTransform(x: 0.5, y: 0.35),
-          wordTimings: clip.wordTimings,
+          wordTimings: rebasedWordTimings,
         ));
 
+        // Translation layer
         if (clip.translation.isNotEmpty) {
           newLayers.add(Layer(
-            id: 'trans_\${clip.ayahNumber}_\${DateTime.now().millisecondsSinceEpoch}',
+            id: 'trans_${clip.ayahNumber}_$ts',
             type: 'translation',
             content: clip.translation,
             startTime: currentStartTime,
-            duration: durationSecs,
-            style: {},
+            duration: clip.durationSecs,
+            style: const {},
             textStyle: const TextLayerStyle(fontSize: 14),
             transform: const ClipTransform(x: 0.5, y: 0.65),
           ));
         }
 
-        if (state.includePhonetic && clip.phonetic?.isNotEmpty == true) {
+        // Phonetic layer
+        if (studioState.includePhonetic && clip.phonetic?.isNotEmpty == true) {
           newLayers.add(Layer(
-            id: 'phon_\${clip.ayahNumber}_\${DateTime.now().millisecondsSinceEpoch}',
+            id: 'phon_${clip.ayahNumber}_$ts',
             type: 'phonetic',
             content: clip.phonetic ?? '',
             startTime: currentStartTime,
-            duration: durationSecs,
-            style: {},
+            duration: clip.durationSecs,
+            style: const {},
             textStyle: const TextLayerStyle(fontSize: 12),
             transform: const ClipTransform(x: 0.5, y: 0.85),
           ));
         }
 
-        currentStartTime += durationSecs;
+        currentStartTime += clip.durationSecs;
       }
 
-      for (var layer in newLayers) {
+      for (final layer in newLayers) {
         ref.read(editorProvider.notifier).addLayer(layer);
       }
-      
+
       if (!mounted) return;
       Navigator.pop(context);
-
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Erreur: $e')));
@@ -167,7 +204,14 @@ class _QuranSelectionSheetState extends ConsumerState<QuranSelectionSheet> {
           children: [
             const CircularProgressIndicator(),
             const SizedBox(height: 24),
-            Text('Téléchargement de l\'audio et du texte...', style: TextStyle(color: Theme.of(context).colorScheme.primary)),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 32),
+              child: Text(
+                _generatingStatus,
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Theme.of(context).colorScheme.primary),
+              ),
+            ),
           ],
         ),
       );
@@ -193,19 +237,20 @@ class _QuranSelectionSheetState extends ConsumerState<QuranSelectionSheet> {
                 if (_currentPage > 0)
                   IconButton(icon: const Icon(LucideIcons.arrowLeft, size: 20), onPressed: _prevPage)
                 else
-                  const SizedBox(width: 48), // Spacer
-                
+                  const SizedBox(width: 48),
                 Text(
-                  _currentPage == 0 ? 'Choisir une Sourate' : _currentPage == 1 ? 'Quels versets ?' : 'Choix du Réciteur',
+                  _currentPage == 0
+                      ? 'Choisir une Sourate'
+                      : _currentPage == 1
+                          ? 'Quels versets ?'
+                          : 'Choix du Récitateur',
                   style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, fontFamily: 'Manrope'),
                 ),
-                
                 IconButton(icon: const Icon(LucideIcons.x, size: 20), onPressed: () => Navigator.pop(context)),
               ],
             ),
           ),
           const Divider(height: 1),
-          
           Expanded(
             child: PageView(
               controller: _pageController,
@@ -241,14 +286,20 @@ class _QuranSelectionSheetState extends ConsumerState<QuranSelectionSheet> {
                 _nextPage();
               },
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-              tileColor: isSelected ? Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.3) : Theme.of(context).colorScheme.surfaceContainerLow,
+              tileColor: isSelected
+                  ? Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.3)
+                  : Theme.of(context).colorScheme.surfaceContainerLow,
               leading: CircleAvatar(
-                backgroundColor: isSelected ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.surfaceContainerHighest,
-                child: Text('\${surah.number}', style: TextStyle(color: isSelected ? Colors.white : Theme.of(context).colorScheme.onSurface)),
+                backgroundColor: isSelected
+                    ? Theme.of(context).colorScheme.primary
+                    : Theme.of(context).colorScheme.surfaceContainerHighest,
+                child: Text('${surah.number}',
+                    style: TextStyle(color: isSelected ? Colors.white : Theme.of(context).colorScheme.onSurface)),
               ),
               title: Text(surah.englishName, style: const TextStyle(fontWeight: FontWeight.bold)),
-              subtitle: Text('\${surah.numberOfAyahs} Versets'),
-              trailing: Text(surah.name, style: TextStyle(fontFamily: 'serif', fontSize: 18, color: Theme.of(context).colorScheme.secondary)),
+              subtitle: Text('${surah.numberOfAyahs} Versets'),
+              trailing: Text(surah.name,
+                  style: TextStyle(fontFamily: 'serif', fontSize: 18, color: Theme.of(context).colorScheme.secondary)),
             );
           },
         );
@@ -259,9 +310,8 @@ class _QuranSelectionSheetState extends ConsumerState<QuranSelectionSheet> {
   Widget _buildVersesSelection() {
     final state = ref.watch(quranStudioProvider).value;
     if (state == null || state.selectedSurah == null) return const SizedBox.shrink();
-    
     final surah = state.selectedSurah!;
-    
+
     return Padding(
       padding: const EdgeInsets.all(24.0),
       child: Column(
@@ -275,13 +325,15 @@ class _QuranSelectionSheetState extends ConsumerState<QuranSelectionSheet> {
             ),
             child: Column(
               children: [
-                Text(surah.name, style: TextStyle(fontFamily: 'serif', fontSize: 32, color: Theme.of(context).colorScheme.primary)),
+                Text(surah.name,
+                    style: TextStyle(fontFamily: 'serif', fontSize: 32, color: Theme.of(context).colorScheme.primary)),
                 const SizedBox(height: 8),
-                Text(surah.englishNameTranslation.toUpperCase(), style: const TextStyle(fontSize: 12, letterSpacing: 2.0)),
+                Text(surah.englishNameTranslation.toUpperCase(),
+                    style: const TextStyle(fontSize: 12, letterSpacing: 2.0)),
               ],
             ),
           ),
-          const SizedBox(height: 48),
+          const SizedBox(height: 32),
           const Text('Plage de Versets', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
           const SizedBox(height: 16),
           RangeSlider(
@@ -289,13 +341,28 @@ class _QuranSelectionSheetState extends ConsumerState<QuranSelectionSheet> {
             max: surah.numberOfAyahs.toDouble(),
             values: RangeValues(state.startAyah.toDouble(), state.endAyah.toDouble()),
             divisions: surah.numberOfAyahs > 1 ? surah.numberOfAyahs - 1 : 1,
-            labels: RangeLabels('\${state.startAyah}', '\${state.endAyah}'),
+            labels: RangeLabels('${state.startAyah}', '${state.endAyah}'),
             onChanged: (RangeValues values) {
-              ref.read(quranStudioProvider.notifier).updateVersesRange(values.start.round(), values.end.round());
+              ref.read(quranStudioProvider.notifier).updateVersesRange(
+                    values.start.round(),
+                    values.end.round(),
+                  );
             },
           ),
-          const SizedBox(height: 16),
-          Text('\${state.endAyah - state.startAyah + 1} Versets sélectionnés', textAlign: TextAlign.center, style: TextStyle(color: Theme.of(context).colorScheme.secondary)),
+          const SizedBox(height: 8),
+          Text(
+            '${state.endAyah - state.startAyah + 1} Versets sélectionnés',
+            textAlign: TextAlign.center,
+            style: TextStyle(color: Theme.of(context).colorScheme.secondary),
+          ),
+          // Include phonetic toggle
+          const SizedBox(height: 24),
+          SwitchListTile(
+            title: const Text('Inclure la phonétique'),
+            subtitle: const Text('Translittération latine du texte arabe'),
+            value: state.includePhonetic,
+            onChanged: (v) => ref.read(quranStudioProvider.notifier).setIncludePhonetic(v),
+          ),
           const Spacer(),
           ElevatedButton(
             onPressed: _nextPage,
@@ -320,21 +387,50 @@ class _QuranSelectionSheetState extends ConsumerState<QuranSelectionSheet> {
       data: (state) {
         return Column(
           children: [
+            // Info banner about real timestamps
+            Container(
+              margin: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.3),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.3)),
+              ),
+              child: Row(
+                children: [
+                  Icon(LucideIcons.zap, color: Theme.of(context).colorScheme.primary, size: 16),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Synchronisation mot-par-mot réelle — timestamps enregistrés pour chaque récitateur',
+                      style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.primary),
+                    ),
+                  ),
+                ],
+              ),
+            ),
             Expanded(
               child: ListView.separated(
-                padding: const EdgeInsets.all(16),
-                itemCount: state.audioEditions.length,
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                itemCount: state.reciters.length,
                 separatorBuilder: (c, i) => const SizedBox(height: 8),
                 itemBuilder: (context, index) {
-                  final reciter = state.audioEditions[index];
-                  final isSelected = state.selectedAudio?.identifier == reciter.identifier;
+                  final reciter = state.reciters[index];
+                  final isSelected = state.selectedReciter?.id == reciter.id;
                   return ListTile(
-                    onTap: () => ref.read(quranStudioProvider.notifier).selectAudio(reciter),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16), side: BorderSide(color: isSelected ? Theme.of(context).colorScheme.primary : Colors.transparent)),
+                    onTap: () => ref.read(quranStudioProvider.notifier).selectReciter(reciter),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      side: BorderSide(
+                        color: isSelected ? Theme.of(context).colorScheme.primary : Colors.transparent,
+                      ),
+                    ),
                     tileColor: Theme.of(context).colorScheme.surfaceContainerLow,
-                    title: Text(reciter.englishName, style: const TextStyle(fontWeight: FontWeight.bold)),
-                    subtitle: Text(reciter.format),
-                    trailing: isSelected ? Icon(LucideIcons.checkCircle2, color: Theme.of(context).colorScheme.primary) : null,
+                    title: Text(reciter.name, style: const TextStyle(fontWeight: FontWeight.bold)),
+                    subtitle: Text('${reciter.style} • ${reciter.qirat}'),
+                    trailing: isSelected
+                        ? Icon(LucideIcons.checkCircle2, color: Theme.of(context).colorScheme.primary)
+                        : null,
                   );
                 },
               ),
@@ -343,7 +439,7 @@ class _QuranSelectionSheetState extends ConsumerState<QuranSelectionSheet> {
               child: Padding(
                 padding: const EdgeInsets.all(24),
                 child: ElevatedButton.icon(
-                  onPressed: state.selectedAudio == null ? null : _generateAndAddToProject,
+                  onPressed: state.selectedReciter == null ? null : _generateAndAddToProject,
                   icon: const Icon(LucideIcons.wand2),
                   label: const Text('GÉNÉRER MNT'),
                   style: ElevatedButton.styleFrom(

@@ -14,6 +14,8 @@ import '../../../../models/text_layer_style.dart';
 import '../recitation/recitation_timing.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../editor_state.dart';
+import 'glyph_deformation_renderer.dart';
+import '../../../../core/theme.dart';
 
 class _TextChunk {
   final String text;
@@ -33,17 +35,7 @@ class _TextChunk {
 
 const double _kQuranTextHorizontalPadding = 16.0;
 
-_TextChunk _pickChunkAtTime(List<_TextChunk> chunks, double time) {
-  if (chunks.isEmpty) {
-    return _TextChunk(text: '', start: 0, end: 0);
-  }
-  if (time <= chunks.first.start) return chunks.first;
-  if (time >= chunks.last.end) return chunks.last;
-  return chunks.firstWhere(
-    (c) => time >= c.start && time < c.end,
-    orElse: () => chunks.first,
-  );
-}
+
 
 List<_TextChunk> _chunkWordTimings(
   List<dynamic> timings, {
@@ -241,7 +233,7 @@ class _VideoPreviewState extends ConsumerState<VideoPreview>
     Layer? anchor;
     if (_currentAudioPath != null) {
       anchor = audioLayers.firstWhere(
-        (l) => l.content == _currentAudioPath,
+        (l) => l.content == _currentAudioPath && l.activeAt(fallbackTimelineTime),
         orElse: () => Layer(
           id: '',
           type: '',
@@ -277,7 +269,7 @@ class _VideoPreviewState extends ConsumerState<VideoPreview>
     return RecitationTiming.computeEffectiveRecitationTime(
       fallbackTimelineTime: fallbackTimelineTime,
       isAudioReady: ready && sourceMatches,
-      audioPosition: _audioPlayer.position,
+      audioPosition: _audioPlayer.position - Duration(milliseconds: ((anchor.inPoint ?? 0.0) * 1000).round()),
       audioLayerStartTime: anchor.startTime,
       audioLayerDuration: anchor.effectiveDuration,
     );
@@ -312,8 +304,9 @@ class _VideoPreviewState extends ConsumerState<VideoPreview>
     }
     final file = File(audioPath);
     if (!await file.exists()) {
-      if (!_failedAudioPaths.contains(audioPath))
+      if (!_failedAudioPaths.contains(audioPath)) {
         _failedAudioPaths.add(audioPath);
+      }
       if (_audioPlayer.playing) await _audioPlayer.pause();
       return;
     }
@@ -332,14 +325,17 @@ class _VideoPreviewState extends ConsumerState<VideoPreview>
           }
         }
         playbackSpeed = playbackSpeed.clamp(0.25, 4.0);
+        final inPoint = activeLayer.inPoint ?? 0.0;
         final expectedPosition = RecitationTiming.computeSwitchSeekPosition(
           isPlaying: state.isPlaying,
           currentTime: currentTime,
           layerStartTime: activeLayer.startTime,
           playbackSpeed: playbackSpeed,
         );
+        // Add inPoint so we seek to the correct chapter position
+        final seekWithInPoint = expectedPosition + Duration(milliseconds: (inPoint * 1000).round());
         await _audioPlayer.setFilePath(audioPath);
-        await _audioPlayer.seek(expectedPosition);
+        await _audioPlayer.seek(seekWithInPoint);
         _lastAudioSwitchAt = DateTime.now();
       } catch (e) {
         _failedAudioPaths.add(audioPath);
@@ -351,8 +347,9 @@ class _VideoPreviewState extends ConsumerState<VideoPreview>
           _audioPlayer.processingState == ProcessingState.ready ||
           _audioPlayer.processingState == ProcessingState.completed;
       if (isReady) {
+        final inPoint = activeLayer.inPoint ?? 0.0;
         final expectedPosition = Duration(
-          milliseconds: ((currentTime - activeLayer.startTime) * 1000).toInt(),
+          milliseconds: ((currentTime - activeLayer.startTime + inPoint) * 1000).toInt(),
         );
         final drift = (_audioPlayer.position - expectedPosition).inMilliseconds
             .abs();
@@ -371,7 +368,7 @@ class _VideoPreviewState extends ConsumerState<VideoPreview>
         // Optimization: keep playing uninterrupted; only correct significant drift,
         // and never during the immediate post-switch window.
         if (isPlaying && !delayCorrection && drift > 1500) {
-          // Massive drift > 1.5s, force a resync (usually happens if video lagged hard but audio kept going)
+          // Massive drift > 1.5s, force a resync
           await _audioPlayer.seek(expectedPosition);
         } else if (!isPlaying && drift > 150) {
           // Scrubbing validation: precise sync when paused
@@ -414,8 +411,9 @@ class _VideoPreviewState extends ConsumerState<VideoPreview>
     } else {
       baseVolume *= currentDuckVol;
     }
-    if (activeLayer.noiseGateThreshold > 0)
+    if (activeLayer.noiseGateThreshold > 0) {
       baseVolume *= (1.0 - activeLayer.noiseGateThreshold * 0.5);
+    }
     final fadeInSec = (activeLayer.style['fadeIn'] as num?)?.toDouble() ?? 0.0;
     final fadeOutSec =
         (activeLayer.style['fadeOut'] as num?)?.toDouble() ?? 0.0;
@@ -706,9 +704,9 @@ class _VideoPreviewState extends ConsumerState<VideoPreview>
       final transform = notifier.getTransformAtTime(layer.id, currentTime);
       // ignore: deprecated_member_use
       return Matrix4.identity()
-        ..translate(transform.x, transform.y)
+        ..translate(transform.x, transform.y, 0.0)
         ..rotateZ(transform.rotation * math.pi / 180)
-        ..scale(transform.scaleX, transform.scaleY);
+        ..scale(transform.scaleX, transform.scaleY, 1.0);
     }
     final scale = layer.style['scale']?.toDouble() ?? 1.0;
     final rotation = layer.style['rotation']?.toDouble() ?? 0.0;
@@ -716,9 +714,9 @@ class _VideoPreviewState extends ConsumerState<VideoPreview>
     final offsetY = layer.style['offsetY']?.toDouble() ?? 0.0;
     // ignore: deprecated_member_use
     return Matrix4.identity()
-      ..translate(offsetX, offsetY)
+      ..translate(offsetX, offsetY, 0.0)
       ..rotateZ(rotation * math.pi / 180)
-      ..scale(scale);
+      ..scale(scale, scale, 1.0);
   }
 
   Widget _applyBlendMode(Widget child, String blendModeName) {
@@ -858,7 +856,7 @@ class _VideoPreviewState extends ConsumerState<VideoPreview>
     if (stickerAnim != null && stickerAnim > 0) {
       switch (stickerAnim) {
         case 2:
-          if (layerProgress < 0.4)
+          if (layerProgress < 0.4) {
             stickerWidget = Transform.translate(
               offset: Offset(
                 0,
@@ -868,9 +866,10 @@ class _VideoPreviewState extends ConsumerState<VideoPreview>
               ),
               child: stickerWidget,
             );
+          }
           break;
         case 3:
-          if (layerProgress < 0.5)
+          if (layerProgress < 0.5) {
             stickerWidget = Transform.rotate(
               angle:
                   math.sin(layerProgress * math.pi * 4) *
@@ -878,20 +877,23 @@ class _VideoPreviewState extends ConsumerState<VideoPreview>
                   (1.0 - layerProgress * 2),
               child: stickerWidget,
             );
+          }
           break;
         case 4:
-          if (layerProgress < 0.3)
+          if (layerProgress < 0.3) {
             stickerWidget = Transform.scale(
               scale: 0.5 + 0.5 * (layerProgress / 0.3),
               child: stickerWidget,
             );
+          }
           break;
         case 5:
-          if (layerProgress < 0.3)
+          if (layerProgress < 0.3) {
             stickerWidget = Transform.translate(
               offset: Offset(-50 * (1.0 - layerProgress / 0.3), 0),
               child: stickerWidget,
             );
+          }
           break;
       }
     }
@@ -905,7 +907,7 @@ class _VideoPreviewState extends ConsumerState<VideoPreview>
           duration: const Duration(milliseconds: 100),
           child: Transform(
             transform: Matrix4.identity()
-              ..scale(scaleX, scaleY)
+              ..scale(scaleX, scaleY, 1.0)
               ..rotateZ(layer.transform.rotation * math.pi / 180),
             alignment: Alignment.center,
             child: stickerWidget,
@@ -934,8 +936,9 @@ class _VideoPreviewState extends ConsumerState<VideoPreview>
         );
 
     final family = style?.fontFamily ?? fallbackFont;
-    if (FontCatalogue.isLocal(family))
+    if (FontCatalogue.isLocal(family)) {
       return baseStyle.copyWith(fontFamily: family);
+    }
 
     try {
       return GoogleFonts.getFont(family, textStyle: baseStyle);
@@ -944,12 +947,289 @@ class _VideoPreviewState extends ConsumerState<VideoPreview>
     }
   }
 
+  double _resolveTextOpacity(Layer layer, TextLayerStyle? style) {
+    final legacyOpacity = (layer.style['opacity'] as num?)?.toDouble();
+    final unifiedOpacity = style?.opacity ?? legacyOpacity ?? 1.0;
+    return unifiedOpacity.clamp(0.0, 1.0);
+  }
+
+  Widget _wrapWithCaptionStyle(Widget child, TextLayerStyle? style) {
+    if (style == null ||
+        style.captionStyleId != 'bubble' ||
+        style.backgroundColor == null) {
+      return child;
+    }
+
+    final alignment = style.textAlign == TextAlign.left
+        ? Alignment.centerLeft
+        : (style.textAlign == TextAlign.right
+              ? Alignment.centerRight
+              : Alignment.center);
+
+    return Align(
+      alignment: alignment,
+      child: IntrinsicWidth(
+        child: Container(
+          padding: EdgeInsets.symmetric(
+            horizontal: style.backgroundPadding * 1.5,
+            vertical: style.backgroundPadding,
+          ),
+          decoration: BoxDecoration(
+            color: TextLayerStyle.parseHexColor(
+              style.backgroundColor!,
+            ).withValues(alpha: style.opacity),
+            borderRadius: BorderRadius.circular(style.borderRadius),
+          ),
+          child: child,
+        ),
+      ),
+    );
+  }
+
+  /// Detects if a word is one of the Muqatta'at letters (extended duration)
+  bool _isMuqattaat(String word) {
+    final clean = word
+        .replaceAll(RegExp(r'[\u064B-\u065F\u0670]'), '') // Remove Harakat
+        .trim();
+
+    const list = [
+      'الم',
+      'المص',
+      'الر',
+      'المر',
+      'كهيعص',
+      'طه',
+      'طسم',
+      'طس',
+      'يس',
+      'ص',
+      'حم',
+      'عسق',
+      'ق',
+      'ن',
+    ];
+
+    // Also check for phonetic versions (case insensitive)
+    final phonetic = word
+        .toUpperCase()
+        .replaceAll(RegExp(r'[^A-Z\s]'), '')
+        .trim();
+    const phoneticList = [
+      'ALM',
+      'ALMR',
+      'ALMS',
+      'ALR',
+      'KHYAS',
+      'TH',
+      'TSM',
+      'TS',
+      'YS',
+      'HM',
+      'ASQ',
+    ];
+
+    return list.contains(clean) || phoneticList.contains(phonetic);
+  }
+
+  /// Calculates weights for words based on Tajwid rules and character length
+  List<double> _calculateWordWeights(String text) {
+    final words = text.split(RegExp(r'\s+'));
+    return words.map((w) {
+      double weight = 0.0;
+
+      // 1. Base phonetic weight (consonants)
+      final consonants = w.replaceAll(RegExp(r'[ًٌٍَُِّْٓ]'), '').length;
+      weight += consonants * 2.0;
+
+      // 2. Muqatta'at (Special handling for Alif-Lam-Mim-Ra in Ar-Ra'd)
+      if (_isMuqattaat(w)) {
+        // Alif-Lam-Mim-Ra in Ar-Ra'd (الٓمّٓر) is exceptionally long (9s-10s)
+        if (w.contains('الٓمّٓر') || w.contains('ALMR')) return 130.0;
+        return 90.0;
+      }
+
+      // 3. Tajwid: Madd (Prolongations) ٓ - can be 2, 4, 5 or 6 beats
+      final maddCount = 'ٓ'.allMatches(w).length;
+      weight += maddCount * 18.0;
+
+      // 4. Tajwid: Shaddah (Doubled letters) ّ - doubling the duration
+      final shaddahCount = 'ّ'.allMatches(w).length;
+      weight += shaddahCount * 8.0;
+
+      // 5. Tajwid: Ghunnah (Noon/Meem with Shaddah or Tanween)
+      // Noon/Meem Mushaddadah are the strongest Ghunnah
+      final ghunnahLetters = RegExp(r'[نم]ّ').allMatches(w).length;
+      weight += ghunnahLetters * 10.0;
+
+      if (w.contains('ً') || w.contains('ٍ') || w.contains('ٌ')) {
+        weight += 4.0;
+      }
+
+      // 6. Long vowels (Alif, Waw, Ya)
+      final longVowels = RegExp(r'[اوي]').allMatches(w).length;
+      weight += longVowels * 3.0;
+
+      // 7. Short vowels (Harakat) - adds rhythmic density
+      final harakat = RegExp(r'[َُِ]').allMatches(w).length;
+      weight += harakat * 1.5;
+
+      // 8. Sukun (Pause/Stop weight) - often at end of words (Sukun de pause)
+      if (w.endsWith('ْ') || !RegExp(r'[ًٌٍَُِ]$').hasMatch(w)) {
+        weight += 4.0;
+      }
+
+      return weight.clamp(1.0, 500.0);
+    }).toList();
+  }
+
+  /// Resolves the current word index based on time and word weights
+  int _resolveWeightedWordIndex(double progress, List<double> weights) {
+    if (weights.isEmpty) return -1;
+    final totalWeight = weights.reduce((a, b) => a + b);
+    if (totalWeight <= 0) return -1;
+
+    double cumulative = 0;
+    final target = progress * totalWeight;
+    for (int i = 0; i < weights.length; i++) {
+      cumulative += weights[i];
+      if (target <= cumulative) return i;
+    }
+    return weights.length - 1;
+  }
+
+  Widget _buildWordByWordBubbleText(
+    String text,
+    int activeWordIndex,
+    TextLayerStyle? style,
+    TextStyle baseStyle,
+    TextAlign textAlign,
+  ) {
+    final words = text.split(RegExp(r'\s+'));
+    final isBubble = style?.captionStyleId == 'bubble';
+
+    return Wrap(
+      alignment: textAlign == TextAlign.left
+          ? WrapAlignment.start
+          : (textAlign == TextAlign.right
+                ? WrapAlignment.end
+                : WrapAlignment.center),
+      spacing: 8.0,
+      runSpacing: 4.0,
+      children: words.asMap().entries.map((entry) {
+        final word = entry.value;
+        final isActive = entry.key == activeWordIndex;
+        final isPast = entry.key < activeWordIndex;
+
+        if (isBubble) {
+          return AnimatedContainer(
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeInOutCubic,
+            padding: EdgeInsets.symmetric(
+              horizontal: style!.backgroundPadding * (isActive ? 1.4 : 1.2),
+              vertical: style.backgroundPadding * 0.6,
+            ),
+            decoration: BoxDecoration(
+              color: isActive
+                  ? TextLayerStyle.parseHexColor(
+                      style.backgroundColor ?? '#000000',
+                    ).withValues(alpha: style.opacity)
+                  : (isPast
+                        ? TextLayerStyle.parseHexColor(
+                            style.backgroundColor ?? '#000000',
+                          ).withValues(alpha: style.opacity * 0.3)
+                        : Colors.transparent),
+              borderRadius: BorderRadius.circular(style.borderRadius),
+              boxShadow: isActive
+                  ? [
+                      BoxShadow(
+                        color: TextLayerStyle.parseHexColor(
+                          style.backgroundColor ?? '#000000',
+                        ).withValues(alpha: 0.3),
+                        blurRadius: 10,
+                        spreadRadius: 2,
+                      ),
+                    ]
+                  : null,
+            ),
+            child: AnimatedDefaultTextStyle(
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.easeInOutCubic,
+              style: baseStyle.copyWith(
+                color: isActive
+                    ? TextLayerStyle.parseHexColor(style.color)
+                    : (isPast
+                          ? TextLayerStyle.parseHexColor(
+                              style.color,
+                            ).withValues(alpha: 0.5)
+                          : TextLayerStyle.parseHexColor(
+                              style.color,
+                            ).withValues(alpha: 0.3)),
+                fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
+              ),
+              child: Text(word),
+            ),
+          );
+        }
+
+        return Text(
+          word,
+          style: baseStyle.copyWith(
+            color: isActive
+                ? AppTheme.primaryColor
+                : (isPast
+                      ? baseStyle.color?.withValues(alpha: 0.5)
+                      : baseStyle.color),
+          ),
+        );
+      }).toList(),
+    );
+  }
+
+  String _resolveTextAnimation(Layer layer, TextLayerStyle? style) {
+    final legacy = layer.style['animation'] as String?;
+    if (style == null) return legacy ?? 'fade';
+
+    switch (style.animationPreset) {
+      case TextAnimationPreset.none:
+        return legacy ?? 'none';
+      case TextAnimationPreset.fadeIn:
+        return 'fadeIn';
+      case TextAnimationPreset.fadeOut:
+        return 'fadeOut';
+      case TextAnimationPreset.fadeInOut:
+        return 'fadeInOut';
+      case TextAnimationPreset.slideInLeft:
+        return 'slideInLeft';
+      case TextAnimationPreset.slideInRight:
+        return 'slideInRight';
+      case TextAnimationPreset.slideInTop:
+        return 'slideInTop';
+      case TextAnimationPreset.slideInBottom:
+        return 'slideInBottom';
+      case TextAnimationPreset.typewriter:
+        return 'typewriter';
+      case TextAnimationPreset.bounceIn:
+        return 'bounceIn';
+      case TextAnimationPreset.scaleIn:
+        return 'scaleIn';
+      case TextAnimationPreset.scaleOut:
+        return 'fadeOut';
+      case TextAnimationPreset.glitchIn:
+        return 'fadeIn';
+      case TextAnimationPreset.karaokeRTL:
+      case TextAnimationPreset.wordByWord:
+      case TextAnimationPreset.wordHighlight:
+        return 'typewriter';
+    }
+  }
+
   Widget _buildArabicLayer(
     Layer layer,
     double currentTime,
     double previewWidth,
-    double previewHeight,
-  ) {
+    double previewHeight, {
+    String? selectedLayerId,
+  }) {
     final style = layer.textStyle;
     final scaleFactor = previewWidth / 360.0;
     final baseFontSize = style?.fontSize ?? 26;
@@ -957,7 +1237,7 @@ class _VideoPreviewState extends ConsumerState<VideoPreview>
     final color = style != null ? _parseColor(style.color) : Colors.white;
     final fontFamily =
         style?.fontFamily ?? layer.fontFamily ?? 'UthmanicRegular';
-    final opacity = (layer.style['opacity'] as num?)?.toDouble() ?? 1.0;
+    final opacity = _resolveTextOpacity(layer, style);
     final transformY = layer.transform.y;
     final styleY = (layer.style['y'] as num?)?.toDouble();
     final hasLegacyQuranAutoY =
@@ -975,6 +1255,7 @@ class _VideoPreviewState extends ConsumerState<VideoPreview>
 
     String displayText = layer.content;
     List<TextSpan>? wordSpans;
+    TextSpan? deformationSpan;
     Widget? textWidget;
     double localProgress =
         (currentTime - layer.startTime) / layer.effectiveDuration;
@@ -986,29 +1267,53 @@ class _VideoPreviewState extends ConsumerState<VideoPreview>
     ).copyWith(height: 1.6);
 
     if (hasWordTimings) {
+      // Use slightly larger chunks (10 words) for smooth Tajwid weighting across each verse
       final chunks = _chunkWordTimings(layer.wordTimings, wordsPerChunk: 10);
       if (chunks.isNotEmpty) {
-        final activeChunk = _pickChunkAtTime(chunks, currentTime);
+        // Use elapsed time relative to this layer's start —
+        // word timings are stored relative (0.0 = start of this ayah),
+        // so we must compare them against elapsed, not the absolute clock.
+        final elapsedTime = currentTime - layer.startTime;
+
+        // Find chunk that matches the current elapsed time.
+        // Use <= c.end (inclusive) to prevent the last chunk from
+        // disappearing prematurely before the next verse begins.
+        final activeChunk = chunks.firstWhere(
+          (c) => elapsedTime >= c.start && elapsedTime <= c.end,
+          orElse: () =>
+              elapsedTime < chunks.first.start ? chunks.first : chunks.last,
+        );
 
         displayText = activeChunk.text;
 
         final chunkDuration = activeChunk.duration;
         if (chunkDuration > 0) {
-          localProgress = ((currentTime - activeChunk.start) / chunkDuration)
+          localProgress = ((elapsedTime - activeChunk.start) / chunkDuration)
               .clamp(0.0, 1.0);
         }
 
         if (activeChunk.wordTimings != null) {
           final chunkTimings = activeChunk.wordTimings!;
           int currentWordIndex = 0;
+
           for (int i = 0; i < chunkTimings.length; i++) {
             final wordStart = (chunkTimings[i]['start'] as num).toDouble();
             final wordEnd = (chunkTimings[i]['end'] as num).toDouble();
-            if (currentTime >= wordStart && currentTime < wordEnd) {
+            if (elapsedTime >= wordStart && elapsedTime <= wordEnd) {
               currentWordIndex = i;
               break;
             }
-            if (currentTime >= wordEnd) currentWordIndex = i + 1;
+            if (elapsedTime > wordEnd) currentWordIndex = i + 1;
+          }
+
+          // Override index for Muqattaat letters which require special weighting.
+          final words = activeChunk.text.split(RegExp(r'\s+'));
+          if (words.any((w) => _isMuqattaat(w))) {
+            final weights = _calculateWordWeights(activeChunk.text);
+            currentWordIndex = _resolveWeightedWordIndex(
+              localProgress,
+              weights,
+            );
           }
 
           final isEtherealGlow = quranAnimationId == 'ethereal_glow';
@@ -1029,54 +1334,49 @@ class _VideoPreviewState extends ConsumerState<VideoPreview>
                   ),
                 ]
               : null;
+          final mergedShadows = [...?resolvedStyle.shadows, ...?glowShadows];
 
-          final words = activeChunk.text.split(RegExp(r'\s+'));
+          final wordsList = activeChunk.text.split(RegExp(r'\s+'));
 
-          // When using a shader animation, we split into TWO layers: base and active
-          // This solves the multi-line bleed by making the karaoke literally draw the shader!
-          wordSpans = words.asMap().entries.map((entry) {
+          // When using a shader animation, split into TWO layers: base and active
+          wordSpans = wordsList.asMap().entries.map((entry) {
             final isActive = entry.key <= currentWordIndex;
 
             Color textColor;
             if (isShaderDriven) {
-              textColor = isActive
-                  ? Colors.transparent
-                  : color; // Active is handled by shader overlay
+              textColor = isActive ? Colors.transparent : color;
             } else {
-              textColor = isActive
-                  ? const Color(0xFFFFD700)
-                  : color; // Standard Gold karaoke
+              textColor = isActive ? const Color(0xFFFFD700) : color;
             }
 
             return TextSpan(
-              text: entry.value + (entry.key < words.length - 1 ? ' ' : ''),
-              style: TextStyle(
-                fontFamily: fontFamily,
-                fontSize: fontSize,
+              text:
+                  (style?.isUppercase == true
+                      ? entry.value.toUpperCase()
+                      : entry.value) +
+                  (entry.key < wordsList.length - 1 ? ' ' : ''),
+              style: resolvedStyle.copyWith(
                 color: textColor,
-                height: 1.6,
-                shadows: glowShadows,
+                shadows: mergedShadows.isEmpty ? null : mergedShadows,
               ),
             );
           }).toList();
+          deformationSpan = TextSpan(children: wordSpans);
 
-          // If shader driven, we need a secondary active span list for the ShaderMask Top Layer
+          // If shader driven, secondary active span list for the ShaderMask top layer
           if (isShaderDriven) {
-            final activeSpans = words.asMap().entries.map((entry) {
+            final activeSpans = wordsList.asMap().entries.map((entry) {
               final isActive = entry.key <= currentWordIndex;
               final wordText =
-                  entry.value + (entry.key < words.length - 1 ? ' ' : '');
+                  entry.value + (entry.key < wordsList.length - 1 ? ' ' : '');
               final parsedWord = style?.isUppercase == true
                   ? wordText.toUpperCase()
                   : wordText;
               return TextSpan(
                 text: parsedWord,
                 style: resolvedStyle.copyWith(
-                  color: isActive
-                      ? Colors.white
-                      : Colors
-                            .transparent, // Only color the active words to mask the Shader
-                  shadows: glowShadows,
+                  color: isActive ? Colors.white : Colors.transparent,
+                  shadows: mergedShadows.isEmpty ? null : mergedShadows,
                 ),
               );
             }).toList();
@@ -1141,42 +1441,60 @@ class _VideoPreviewState extends ConsumerState<VideoPreview>
               ],
             );
           }
+
+          if (style?.captionStyleId == 'bubble') {
+            textWidget = _buildWordByWordBubbleText(
+              activeChunk.text,
+              currentWordIndex,
+              style,
+              resolvedStyle,
+              style?.textAlign ?? TextAlign.center,
+            );
+          }
         }
       }
     }
 
-    textWidget ??= RichText(
-      text: TextSpan(
-        children:
-            wordSpans ??
-            [
-              TextSpan(
-                text: style?.isUppercase == true
-                    ? displayText.toUpperCase()
-                    : displayText,
-                style: resolvedStyle.copyWith(
-                  shadows: quranAnimationId == 'ethereal_glow'
-                      ? [
-                          Shadow(
-                            color: const Color(
-                              0xFFE0B0FF,
-                            ).withValues(alpha: 0.8),
-                            blurRadius: (math.sin(localProgress * math.pi) * 20)
-                                .clamp(0.0, 20.0),
-                          ),
-                        ]
-                      : resolvedStyle.shadows,
-                ),
+    final fallbackSpan = TextSpan(
+      children:
+          wordSpans ??
+          [
+            TextSpan(
+              text: style?.isUppercase == true
+                  ? displayText.toUpperCase()
+                  : displayText,
+              style: resolvedStyle.copyWith(
+                shadows: quranAnimationId == 'ethereal_glow'
+                    ? [
+                        ...?resolvedStyle.shadows,
+                        Shadow(
+                          color: const Color(0xFFE0B0FF).withValues(alpha: 0.8),
+                          blurRadius: (math.sin(localProgress * math.pi) * 20)
+                              .clamp(0.0, 20.0),
+                        ),
+                      ]
+                    : resolvedStyle.shadows,
               ),
-            ],
-      ),
-      textAlign: TextAlign.center,
+            ),
+          ],
+    );
+    deformationSpan ??= fallbackSpan;
+    textWidget ??= RichText(
+      text: fallbackSpan,
+      textAlign: style?.textAlign ?? TextAlign.center,
       textDirection: TextDirection.rtl,
     );
 
     if (hasQuranAnimation) {
       final shaderAnimations = ['rainbow', 'sunset', 'aurora'];
       final overlayAnimations = [
+        'ethereal_glow',
+        'divine_revelation',
+        'celestial_light',
+        'divine_radiance',
+        'sacred_ripple',
+        'mercy_wave',
+        'incense_smoke',
         'golden_particles',
         'stardust',
         'diamond_sparkle',
@@ -1191,6 +1509,19 @@ class _VideoPreviewState extends ConsumerState<VideoPreview>
         'ink_flow',
         'quill_writing',
         'living_calligraphy',
+      ];
+      final glyphDeformationAnimations = [
+        'sacred_ripple',
+        'mercy_wave',
+        'river_flow',
+        'ethereal_glow',
+        'divine_radiance',
+        'divine_revelation',
+        'celestial_light',
+        'night_of_power',
+        'lightning',
+        'earth_shake',
+        'galaxy',
       ];
 
       Widget mappedWidget = textWidget;
@@ -1265,9 +1596,26 @@ class _VideoPreviewState extends ConsumerState<VideoPreview>
         );
       }
 
+      final isGlyphDeformation = glyphDeformationAnimations.contains(
+        quranAnimationId,
+      );
+      if (isGlyphDeformation && !shaderAnimations.contains(quranAnimationId)) {
+        mappedWidget = GlyphDeformationText(
+          text: deformationSpan,
+          textAlign: style?.textAlign ?? TextAlign.center,
+          textDirection: TextDirection.rtl,
+          animationId: quranAnimationId,
+          progress: localProgress,
+          config: style?.animationConfig ?? const AnimationConfig(),
+        );
+      }
+
       // 2. Foreground vs Background rendering of the CustomPainter
       final isOverlay = overlayAnimations.contains(quranAnimationId);
       final isGlow = quranAnimationId == 'ethereal_glow';
+      final disablePainterForGlyph = isGlyphDeformation;
+
+      mappedWidget = _wrapWithCaptionStyle(mappedWidget, style);
 
       final wrapperChild = Opacity(
         opacity: opacity.clamp(0.0, 1.0),
@@ -1277,7 +1625,8 @@ class _VideoPreviewState extends ConsumerState<VideoPreview>
           ),
           child: CustomPaint(
             painter:
-                isOverlay ||
+                disablePainterForGlyph ||
+                    isOverlay ||
                     isGlow ||
                     shaderAnimations.contains(quranAnimationId)
                 ? null // Let Text take precedence, Shader/Glow handles it
@@ -1285,12 +1634,16 @@ class _VideoPreviewState extends ConsumerState<VideoPreview>
                     animationId: quranAnimationId,
                     progress: localProgress,
                     textColor: color,
+                    config: style?.animationConfig ?? const AnimationConfig(),
                   ),
-            foregroundPainter: isOverlay
+            foregroundPainter: disablePainterForGlyph
+                ? null
+                : (isOverlay || isGlow)
                 ? _QuranAnimationPainter(
                     animationId: quranAnimationId,
                     progress: localProgress,
                     textColor: color,
+                    config: style?.animationConfig ?? const AnimationConfig(),
                   )
                 : null,
             child: Padding(
@@ -1305,7 +1658,7 @@ class _VideoPreviewState extends ConsumerState<VideoPreview>
         layer: layer,
         previewWidth: previewWidth,
         previewHeight: previewHeight,
-        isSelected: ref.read(editorProvider).selectedLayerId == layer.id,
+        isSelected: selectedLayerId == layer.id,
         defaultX: 0,
         defaultY: y - 40,
         defaultWidthRatio: 1.0,
@@ -1314,11 +1667,13 @@ class _VideoPreviewState extends ConsumerState<VideoPreview>
       );
     }
 
+    textWidget = _wrapWithCaptionStyle(textWidget, style);
+
     return _buildSmartBoundingBoxWrapper(
       layer: layer,
       previewWidth: previewWidth,
       previewHeight: previewHeight,
-      isSelected: ref.read(editorProvider).selectedLayerId == layer.id,
+      isSelected: selectedLayerId == layer.id,
       defaultX: 0,
       defaultY: y,
       defaultWidthRatio: 1.0,
@@ -1326,7 +1681,7 @@ class _VideoPreviewState extends ConsumerState<VideoPreview>
       child: RepaintBoundary(
         child: _applyMask(
           Opacity(
-            opacity: opacity.clamp(0.0, 1.0),
+            opacity: opacity,
             child: Padding(
               padding: const EdgeInsets.symmetric(
                 horizontal: _kQuranTextHorizontalPadding,
@@ -1345,14 +1700,15 @@ class _VideoPreviewState extends ConsumerState<VideoPreview>
     double currentTime,
     double previewWidth,
     double previewHeight,
-    List<Layer> activeLayers,
-  ) {
+    List<Layer> activeLayers, {
+    String? selectedLayerId,
+  }) {
     final style = layer.textStyle;
     final scaleFactor = previewWidth / 360.0;
     final baseFontSize = style?.fontSize ?? 14;
     final fontSize = baseFontSize * scaleFactor;
     final color = style != null ? _parseColor(style.color) : Colors.white70;
-    final opacity = (layer.style['opacity'] as num?)?.toDouble() ?? 1.0;
+    final opacity = _resolveTextOpacity(layer, style);
     final transformY = layer.transform.y;
     final styleY = (layer.style['y'] as num?)?.toDouble();
     final hasLegacyQuranAutoY =
@@ -1369,21 +1725,6 @@ class _VideoPreviewState extends ConsumerState<VideoPreview>
               l.type == 'arabic' && (l.startTime - layer.startTime).abs() < 0.1,
         )
         .firstOrNull;
-    if (arabicLayer != null && arabicLayer.wordTimings.isNotEmpty) {
-      final arabicChunks = _chunkWordTimings(
-        arabicLayer.wordTimings,
-        wordsPerChunk: 10,
-      );
-      final transChunks = _chunkStringProportionally(
-        layer.content,
-        arabicChunks,
-      );
-      if (transChunks.isNotEmpty) {
-        final activeChunk = _pickChunkAtTime(transChunks, currentTime);
-        displayText = activeChunk.text;
-      }
-    }
-
     final fontFamily = style?.fontFamily ?? layer.fontFamily ?? 'Inter';
     final parsedText = style?.isUppercase == true
         ? displayText.toUpperCase()
@@ -1395,17 +1736,67 @@ class _VideoPreviewState extends ConsumerState<VideoPreview>
       color,
     ).copyWith(height: 1.4);
 
-    Widget tWidget = Text(
-      parsedText,
-      style: resolvedStyle,
-      textAlign: TextAlign.center,
-    );
+    Widget tWidget;
+    final hasAnimation = style?.animationPreset != null && style?.animationPreset != TextAnimationPreset.none;
+    if (hasAnimation && arabicLayer != null && arabicLayer.wordTimings.isNotEmpty) {
+      final arabicChunks = _chunkWordTimings(
+        arabicLayer.wordTimings,
+        wordsPerChunk: 10,
+      );
+      final transChunks = _chunkStringProportionally(
+        layer.content,
+        arabicChunks,
+      );
+
+      if (transChunks.isNotEmpty) {
+        final elapsedTime = currentTime - layer.startTime;
+
+        // Find chunk matching elapsed time; use inclusive end to prevent premature disappearance
+        final activeChunk = transChunks.firstWhere(
+          (c) => elapsedTime >= c.start && elapsedTime <= c.end,
+          orElse: () => elapsedTime < transChunks.first.start
+              ? transChunks.first
+              : transChunks.last,
+        );
+        final chunkDuration = activeChunk.end - activeChunk.start;
+
+        // Approximate current word index within the chunk using weights
+        int currentWordIndex = -1;
+        if (chunkDuration > 0) {
+          final progress = (elapsedTime - activeChunk.start) / chunkDuration;
+          final weights = _calculateWordWeights(activeChunk.text);
+          currentWordIndex = _resolveWeightedWordIndex(progress, weights);
+        }
+
+        tWidget = _buildWordByWordBubbleText(
+          activeChunk.text,
+          currentWordIndex,
+          style,
+          resolvedStyle,
+          style?.textAlign ?? TextAlign.center,
+        );
+      } else {
+        tWidget = Text(
+          parsedText,
+          style: resolvedStyle,
+          textAlign: style?.textAlign ?? TextAlign.center,
+        );
+      }
+    } else {
+      tWidget = Text(
+        parsedText,
+        style: resolvedStyle,
+        textAlign: style?.textAlign ?? TextAlign.center,
+      );
+    }
+
+    tWidget = _wrapWithCaptionStyle(tWidget, style);
 
     return _buildSmartBoundingBoxWrapper(
       layer: layer,
       previewWidth: previewWidth,
       previewHeight: previewHeight,
-      isSelected: ref.read(editorProvider).selectedLayerId == layer.id,
+      isSelected: selectedLayerId == layer.id,
       defaultX: 0,
       defaultY: y,
       defaultWidthRatio: 1.0,
@@ -1413,7 +1804,7 @@ class _VideoPreviewState extends ConsumerState<VideoPreview>
       child: _applyMask(
         _applyBlendMode(
           Opacity(
-            opacity: opacity.clamp(0.0, 1.0),
+            opacity: opacity,
             child: Padding(
               padding: const EdgeInsets.symmetric(
                 horizontal: _kQuranTextHorizontalPadding,
@@ -1433,14 +1824,15 @@ class _VideoPreviewState extends ConsumerState<VideoPreview>
     double currentTime,
     double previewWidth,
     double previewHeight,
-    List<Layer> activeLayers,
-  ) {
+    List<Layer> activeLayers, {
+    String? selectedLayerId,
+  }) {
     final style = layer.textStyle;
     final scaleFactor = previewWidth / 360.0;
     final baseFontSize = style?.fontSize ?? 12;
     final fontSize = baseFontSize * scaleFactor;
     final color = style != null ? _parseColor(style.color) : Colors.white70;
-    final opacity = (layer.style['opacity'] as num?)?.toDouble() ?? 1.0;
+    final opacity = _resolveTextOpacity(layer, style);
     final transformY = layer.transform.y;
     final styleY = (layer.style['y'] as num?)?.toDouble();
     final hasLegacyQuranAutoY =
@@ -1457,7 +1849,8 @@ class _VideoPreviewState extends ConsumerState<VideoPreview>
               l.type == 'arabic' && (l.startTime - layer.startTime).abs() < 0.1,
         )
         .firstOrNull;
-    if (arabicLayer != null && arabicLayer.wordTimings.isNotEmpty) {
+    final hasAnimation = style?.animationPreset != null && style?.animationPreset != TextAnimationPreset.none;
+    if (hasAnimation && arabicLayer != null && arabicLayer.wordTimings.isNotEmpty) {
       final arabicChunks = _chunkWordTimings(
         arabicLayer.wordTimings,
         wordsPerChunk: 10,
@@ -1467,7 +1860,14 @@ class _VideoPreviewState extends ConsumerState<VideoPreview>
         arabicChunks,
       );
       if (transChunks.isNotEmpty) {
-        final activeChunk = _pickChunkAtTime(transChunks, currentTime);
+        final elapsedTime = currentTime - layer.startTime;
+        // Inclusive end to prevent premature disappearance at verse boundary
+        final activeChunk = transChunks.firstWhere(
+          (c) => elapsedTime >= c.start && elapsedTime <= c.end,
+          orElse: () => elapsedTime < transChunks.first.start
+              ? transChunks.first
+              : transChunks.last,
+        );
         displayText = activeChunk.text;
       }
     }
@@ -1483,17 +1883,66 @@ class _VideoPreviewState extends ConsumerState<VideoPreview>
       color,
     ).copyWith(height: 1.4, fontStyle: FontStyle.italic);
 
-    Widget tWidget = Text(
-      parsedText,
-      style: resolvedStyle,
-      textAlign: TextAlign.center,
-    );
+    Widget tWidget;
+    if (hasAnimation && arabicLayer != null && arabicLayer.wordTimings.isNotEmpty) {
+      final arabicChunks = _chunkWordTimings(
+        arabicLayer.wordTimings,
+        wordsPerChunk: 10,
+      );
+      final transChunks = _chunkStringProportionally(
+        layer.content,
+        arabicChunks,
+      );
+
+      if (transChunks.isNotEmpty) {
+        final elapsedTime = currentTime - layer.startTime;
+
+        // Find chunk that EXACTLY matches current time
+        final activeChunk = transChunks.firstWhere(
+          (c) => elapsedTime >= c.start && elapsedTime < c.end,
+          orElse: () => elapsedTime < transChunks.first.start
+              ? transChunks.first
+              : transChunks.last,
+        );
+        final chunkDuration = activeChunk.end - activeChunk.start;
+
+        // Approximate current word index within the chunk using weights
+        int currentWordIndex = -1;
+        if (chunkDuration > 0) {
+          final progress = (elapsedTime - activeChunk.start) / chunkDuration;
+          final weights = _calculateWordWeights(activeChunk.text);
+          currentWordIndex = _resolveWeightedWordIndex(progress, weights);
+        }
+
+        tWidget = _buildWordByWordBubbleText(
+          activeChunk.text,
+          currentWordIndex,
+          style,
+          resolvedStyle,
+          style?.textAlign ?? TextAlign.center,
+        );
+      } else {
+        tWidget = Text(
+          parsedText,
+          style: resolvedStyle,
+          textAlign: style?.textAlign ?? TextAlign.center,
+        );
+      }
+    } else {
+      tWidget = Text(
+        parsedText,
+        style: resolvedStyle,
+        textAlign: style?.textAlign ?? TextAlign.center,
+      );
+    }
+
+    tWidget = _wrapWithCaptionStyle(tWidget, style);
 
     return _buildSmartBoundingBoxWrapper(
       layer: layer,
       previewWidth: previewWidth,
       previewHeight: previewHeight,
-      isSelected: ref.read(editorProvider).selectedLayerId == layer.id,
+      isSelected: selectedLayerId == layer.id,
       defaultX: 0,
       defaultY: y,
       defaultWidthRatio: 1.0,
@@ -1501,7 +1950,7 @@ class _VideoPreviewState extends ConsumerState<VideoPreview>
       child: _applyMask(
         _applyBlendMode(
           Opacity(
-            opacity: opacity.clamp(0.0, 1.0),
+            opacity: opacity,
             child: Padding(
               padding: const EdgeInsets.symmetric(
                 horizontal: _kQuranTextHorizontalPadding,
@@ -1570,13 +2019,14 @@ class _VideoPreviewState extends ConsumerState<VideoPreview>
   Widget build(BuildContext context) {
     // Structural selection: only rebuild when core project properties change.
     final project = ref.watch(editorProvider.select((s) => s.currentProject));
-    if (project == null)
+    if (project == null) {
       return const Center(
         child: Text(
           'No project loaded',
           style: TextStyle(color: Colors.white70),
         ),
       );
+    }
 
     // Watch for video content changes only
     ref.listen<String?>(
@@ -1631,6 +2081,7 @@ class _VideoPreviewState extends ConsumerState<VideoPreview>
             _videoController!.seekTo(Duration(milliseconds: seekMs));
           }
         }
+        _syncAudioPlayersImmediate();
       }
     });
 
@@ -1788,6 +2239,7 @@ class _VideoPreviewState extends ConsumerState<VideoPreview>
                                           recitationTime,
                                           previewWidth,
                                           previewHeight,
+                                          selectedLayerId: selectedLayerId,
                                         ),
                                       ),
                                   ...activeRecitationLayers
@@ -1799,6 +2251,7 @@ class _VideoPreviewState extends ConsumerState<VideoPreview>
                                           previewWidth,
                                           previewHeight,
                                           activeRecitationLayers,
+                                          selectedLayerId: selectedLayerId,
                                         ),
                                       ),
                                   ...activeRecitationLayers
@@ -1810,6 +2263,7 @@ class _VideoPreviewState extends ConsumerState<VideoPreview>
                                           previewWidth,
                                           previewHeight,
                                           activeRecitationLayers,
+                                          selectedLayerId: selectedLayerId,
                                         ),
                                       ),
                                   ...activeLayers
@@ -1970,9 +2424,9 @@ class _VideoPreviewState extends ConsumerState<VideoPreview>
             1.0,
           )
         : 0.0;
-    final opacity = (layer.style['opacity'] as num?)?.toDouble() ?? 1.0;
+    final opacity = _resolveTextOpacity(layer, style);
     String displayText = layer.content;
-    final animation = layer.style['animation'] as String? ?? 'fade';
+    final animation = _resolveTextAnimation(layer, style);
     double animOpacity = opacity;
     Offset slideOffset = Offset.zero;
     double animScale = 1.0;
@@ -2001,23 +2455,29 @@ class _VideoPreviewState extends ConsumerState<VideoPreview>
         displayText = layer.content.substring(0, charCount);
         break;
       case 'slideInLeft':
-        if (layerProgress < 0.3)
+        if (layerProgress < 0.3) {
           slideOffset = Offset(-previewWidth * (1.0 - layerProgress / 0.3), 0);
+        }
         break;
       case 'slideInRight':
-        if (layerProgress < 0.3)
+        if (layerProgress < 0.3) {
           slideOffset = Offset(previewWidth * (1.0 - layerProgress / 0.3), 0);
+        }
         break;
       case 'slideInTop':
-        if (layerProgress < 0.3)
+        if (layerProgress < 0.3) {
           slideOffset = Offset(0, -previewHeight * (1.0 - layerProgress / 0.3));
+        }
         break;
       case 'slideInBottom':
-        if (layerProgress < 0.3)
+        if (layerProgress < 0.3) {
           slideOffset = Offset(0, previewHeight * (1.0 - layerProgress / 0.3));
+        }
         break;
       case 'scaleIn':
-        if (layerProgress < 0.3) animScale = 0.5 + 0.5 * (layerProgress / 0.3);
+        if (layerProgress < 0.3) { 
+          animScale = 0.5 + 0.5 * (layerProgress / 0.3);
+        }
       case 'bounceIn':
         if (layerProgress < 0.4) {
           final t = layerProgress / 0.4;
@@ -2036,16 +2496,22 @@ class _VideoPreviewState extends ConsumerState<VideoPreview>
       color,
     ).copyWith(height: 1.4);
 
+    if (parsedText.trim().isEmpty) {
+      return const SizedBox.shrink();
+    }
+
     Widget contentWidget = RichText(
       text: TextSpan(text: parsedText, style: resolvedStyle),
       textAlign: style?.textAlign ?? TextAlign.center,
       softWrap: true,
     );
 
+    contentWidget = _wrapWithCaptionStyle(contentWidget, style);
+
     // Si on a une largeur custom, on l'utilise, sinon on s'adapte au texte
     Widget sizedContent = ConstrainedBox(
       constraints: BoxConstraints(maxWidth: previewWidth * 0.85),
-      child: customWidth != null
+      child: (customWidth != null && !customWidth.isNaN && customWidth > 10.0)
           ? SizedBox(width: customWidth, child: contentWidget)
           : IntrinsicWidth(child: contentWidget),
     );
@@ -2105,120 +2571,276 @@ class _VideoPreviewState extends ConsumerState<VideoPreview>
               ? transformY * previewHeight
               : defaultY);
     final scale = layer.style['scale']?.toDouble() ?? 1.0;
-    final customWidth = layer.style['width']?.toDouble();
+    
+    // Validate customWidth to prevent BoxConstraints negative width exceptions
+    double? customWidth;
+    final rawCustomWidth = layer.style['width']?.toDouble();
+    if (rawCustomWidth != null && !rawCustomWidth.isNaN && rawCustomWidth > 10.0) {
+      customWidth = rawCustomWidth;
+    }
 
-    Widget sizedContent = ConstrainedBox(
+    final effectiveWidth = customWidth ??
+        (fillWidthWhenNoCustom ? previewWidth * defaultWidthRatio : null);
+
+    // We consistently use IntrinsicWidth if no custom width is set.
+    // This ensures the bounding box hugs the text AND prevents any visual shift
+    // when toggling between selected and unselected states.
+    final Widget sizedContent = ConstrainedBox(
       constraints: BoxConstraints(maxWidth: previewWidth * defaultWidthRatio),
       child: customWidth != null
           ? SizedBox(width: customWidth, child: child)
-          : (fillWidthWhenNoCustom
-                ? SizedBox(
-                    width: previewWidth * defaultWidthRatio,
-                    child: child,
-                  )
-                : IntrinsicWidth(child: child)),
+          : IntrinsicWidth(child: child),
     );
 
-    if (isSelected) {
-      final borderColor = const Color(0xFF2196F3);
-      sizedContent = Stack(
-        clipBehavior: Clip.none,
-        alignment: Alignment.center,
-        children: [
-          Container(
-            decoration: BoxDecoration(
-              border: Border.all(
-                color: borderColor.withValues(alpha: 0.85),
-                width: 1.5 / scale,
-              ),
-              borderRadius: BorderRadius.circular(3 / scale),
-            ),
-            child: sizedContent,
-          ),
-          // Poignée droite (Ajuster la largeur)
-          Positioned(
-            right: -30 / scale,
-            top: 0,
-            bottom: 0,
-            child: GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onPanUpdate: (details) {
-                double newW =
-                    (customWidth ?? previewWidth * defaultWidthRatio) +
-                    (details.delta.dx / scale);
-                newW = newW.clamp(50.0, previewWidth);
-                ref
-                    .read(editorProvider.notifier)
-                    .updateLayer(
-                      layer.copyWith(style: {...layer.style, 'width': newW}),
-                    );
-              },
-              child: SizedBox(
-                width: 60 / scale, // Large zone tactile invisible
-                child: Center(
-                  child: Container(
-                    width: 6 / scale,
-                    height: 24 / scale, // Aspect visuel inchangé
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      border: Border.all(color: borderColor, width: 1 / scale),
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-          // Poignée en bas à droite (Ajuster l'échelle / zoom)
-          Positioned(
-            right: -30 / scale,
-            bottom: -30 / scale,
-            child: GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onPanUpdate: (details) {
-                double newScale =
-                    scale +
-                    (details.delta.dx * 0.01) +
-                    (details.delta.dy * 0.01);
-                newScale = newScale.clamp(0.2, 5.0);
-                ref
-                    .read(editorProvider.notifier)
-                    .updateLayer(
-                      layer.copyWith(
-                        style: {...layer.style, 'scale': newScale},
-                      ),
-                    );
-              },
-              child: SizedBox(
-                width: 60 / scale,
-                height: 60 / scale, // Large zone tactile invisible
-                child: Center(
-                  child: Container(
-                    width: 12 / scale,
-                    height: 12 / scale, // Aspect visuel inchangé
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      border: Border.all(
-                        color: borderColor,
-                        width: 1.5 / scale,
-                      ),
-                      shape: BoxShape.circle,
-                      boxShadow: const [
-                        BoxShadow(color: Colors.black26, blurRadius: 2),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ],
+    // ── Unselected: simple drag-to-move wrapper ───────────────────────────
+    if (!isSelected) {
+      return Positioned(
+        left: x,
+        top: y,
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTapDown: (_) =>
+              ref.read(editorProvider.notifier).setSelectedLayer(layer.id),
+          onPanStart: (details) {
+            ref.read(editorProvider.notifier).setSelectedLayer(layer.id);
+            _draggingLayerId = layer.id;
+            _dragStart = details.globalPosition;
+            _layerStartOffset = Offset(x, y);
+          },
+          onPanUpdate: (details) {
+            if (_draggingLayerId != layer.id) return;
+            final dx = details.globalPosition.dx - _dragStart.dx;
+            final dy = details.globalPosition.dy - _dragStart.dy;
+            final newX = (_layerStartOffset.dx + dx).clamp(-previewWidth, previewWidth * 2);
+            final newY = (_layerStartOffset.dy + dy).clamp(-previewHeight, previewHeight * 2);
+            ref.read(editorProvider.notifier).updateLayer(
+              layer.copyWith(style: {...layer.style, 'x': newX, 'y': newY}),
+            );
+          },
+          onPanEnd: (_) => _draggingLayerId = null,
+          child: Transform.scale(scale: scale, child: sizedContent),
+        ),
       );
     }
 
+    // ── Selected — professional handle system ─────────────────────────────
+    // Layout strategy: the Stack's FIRST non-positioned child is
+    // Padding(all:kOffset, child: borderedContent) — this gives the Stack its
+    // intrinsic size = content + 2*kOffset on each side.
+    // Handles are Positioned at the edges (left:0, right:0, top:0, bottom:0)
+    // so they sit on the padding area and are fully hittable.
+    const double kHandle = 10.0;
+    const double kHitArea = 40.0;
+    const double kOffset = kHitArea / 2; // = 20px padding on each side
+    final borderColor = const Color(0xFF2196F3);
+
+    Widget cornerDot({required bool filled, required void Function(DragUpdateDetails) onPan}) =>
+        GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onPanUpdate: onPan,
+          child: SizedBox(
+            width: kHitArea,
+            height: kHitArea,
+            child: Center(
+              child: Container(
+                width: kHandle,
+                height: kHandle,
+                decoration: BoxDecoration(
+                  color: filled ? borderColor : Colors.white,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: borderColor, width: 1.8),
+                  boxShadow: const [BoxShadow(color: Colors.black38, blurRadius: 4, offset: Offset(0, 1))],
+                ),
+              ),
+            ),
+          ),
+        );
+
+    Widget edgePill({required void Function(DragUpdateDetails) onPan}) =>
+        GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onPanUpdate: onPan,
+          child: SizedBox(
+            width: kHitArea,
+            height: kHitArea,
+            child: Center(
+              child: Container(
+                width: 6,
+                height: 22,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(3),
+                  border: Border.all(color: borderColor, width: 1.5),
+                  boxShadow: const [BoxShadow(color: Colors.black38, blurRadius: 3)],
+                ),
+              ),
+            ),
+          ),
+        );
+
+    // Bordered content — the non-positioned first child that sizes the Stack
+    final Widget borderedContent = Padding(
+      padding: EdgeInsets.all(kOffset),
+      child: Container(
+        decoration: BoxDecoration(
+          border: Border.all(color: borderColor.withValues(alpha: 0.9), width: 1.5),
+          borderRadius: BorderRadius.circular(3),
+        ),
+        child: sizedContent,
+      ),
+    );
+
+    final Widget selectionBox = Stack(
+      clipBehavior: Clip.none,
+      children: [
+        // ── Sized non-positioned child — gives Stack its intrinsic size ──
+        borderedContent,
+
+        // ── Font-size pill — top center ─────────────────────────────────
+        Positioned(
+          top: 0,
+          left: 0,
+          right: 0,
+          child: Center(
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onPanUpdate: (d) {
+                final current = (layer.textStyle?.fontSize ?? 26).toDouble();
+                final newSize = (current - d.delta.dy * 0.5).clamp(6.0, 200.0);
+                final ts = layer.textStyle;
+                if (ts == null) return;
+                ref.read(editorProvider.notifier).updateLayer(
+                  layer.copyWith(textStyle: ts.copyWith(fontSize: newSize)),
+                );
+              },
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: borderColor,
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: const [BoxShadow(color: Colors.black38, blurRadius: 4)],
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.format_size, color: Colors.white, size: 11),
+                    const SizedBox(width: 3),
+                    Text(
+                      '${((layer.textStyle?.fontSize ?? 26) * scale).round()}',
+                      style: const TextStyle(
+                        color: Colors.white, fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+
+        // ── TOP-LEFT corner ─────────────────────────────────────────────
+        Positioned(
+          left: 0,
+          top: 0,
+          child: cornerDot(
+            filled: false,
+            onPan: (d) {
+              final s = (scale + (-d.delta.dx - d.delta.dy) * 0.008).clamp(0.2, 5.0);
+              ref.read(editorProvider.notifier).updateLayer(
+                layer.copyWith(style: {...layer.style, 'scale': s}),
+              );
+            },
+          ),
+        ),
+
+        // ── TOP-RIGHT corner ────────────────────────────────────────────
+        Positioned(
+          right: 0,
+          top: 0,
+          child: cornerDot(
+            filled: false,
+            onPan: (d) {
+              final s = (scale + (d.delta.dx - d.delta.dy) * 0.008).clamp(0.2, 5.0);
+              ref.read(editorProvider.notifier).updateLayer(
+                layer.copyWith(style: {...layer.style, 'scale': s}),
+              );
+            },
+          ),
+        ),
+
+        // ── BOTTOM-LEFT corner ──────────────────────────────────────────
+        Positioned(
+          left: 0,
+          bottom: 0,
+          child: cornerDot(
+            filled: true,
+            onPan: (d) {
+              final s = (scale + (-d.delta.dx + d.delta.dy) * 0.008).clamp(0.2, 5.0);
+              ref.read(editorProvider.notifier).updateLayer(
+                layer.copyWith(style: {...layer.style, 'scale': s}),
+              );
+            },
+          ),
+        ),
+
+        // ── BOTTOM-RIGHT corner ─────────────────────────────────────────
+        Positioned(
+          right: 0,
+          bottom: 0,
+          child: cornerDot(
+            filled: true,
+            onPan: (d) {
+              final s = (scale + (d.delta.dx + d.delta.dy) * 0.008).clamp(0.2, 5.0);
+              ref.read(editorProvider.notifier).updateLayer(
+                layer.copyWith(style: {...layer.style, 'scale': s}),
+              );
+            },
+          ),
+        ),
+
+        // ── RIGHT edge pill — widen box ─────────────────────────────────
+        Positioned(
+          right: 0,
+          top: kOffset,
+          bottom: kOffset,
+          child: Center(
+            child: edgePill(
+              onPan: (d) {
+                final current = effectiveWidth ?? previewWidth * defaultWidthRatio;
+                final newW = (current + d.delta.dx).clamp(40.0, previewWidth);
+                ref.read(editorProvider.notifier).updateLayer(
+                  layer.copyWith(style: {...layer.style, 'width': newW}),
+                );
+              },
+            ),
+          ),
+        ),
+
+        // ── LEFT edge pill — widen box (from left) ──────────────────────
+        Positioned(
+          left: 0,
+          top: kOffset,
+          bottom: kOffset,
+          child: Center(
+            child: edgePill(
+              onPan: (d) {
+                final current = effectiveWidth ?? previewWidth * defaultWidthRatio;
+                final newW = (current - d.delta.dx).clamp(40.0, previewWidth);
+                ref.read(editorProvider.notifier).updateLayer(
+                  layer.copyWith(style: {...layer.style, 'width': newW}),
+                );
+              },
+            ),
+          ),
+        ),
+      ],
+    );
+
+    // Compensate the padding offset so the visible border appears at (x, y)
     return Positioned(
-      left: x,
-      top: y,
+      left: x - kOffset,
+      top: y - kOffset,
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTapDown: (_) =>
@@ -2233,35 +2855,34 @@ class _VideoPreviewState extends ConsumerState<VideoPreview>
           if (_draggingLayerId != layer.id) return;
           final dx = details.globalPosition.dx - _dragStart.dx;
           final dy = details.globalPosition.dy - _dragStart.dy;
-          final newX = (_layerStartOffset.dx + dx).clamp(
-            -previewWidth,
-            previewWidth * 2,
+          final newX = (_layerStartOffset.dx + dx).clamp(-previewWidth, previewWidth * 2);
+          final newY = (_layerStartOffset.dy + dy).clamp(-previewHeight, previewHeight * 2);
+          ref.read(editorProvider.notifier).updateLayer(
+            layer.copyWith(style: {...layer.style, 'x': newX, 'y': newY}),
           );
-          final newY = (_layerStartOffset.dy + dy).clamp(
-            -previewHeight,
-            previewHeight * 2,
-          );
-          final updated = layer.copyWith(
-            style: {...layer.style, 'x': newX, 'y': newY},
-          );
-          ref.read(editorProvider.notifier).updateLayer(updated);
         },
         onPanEnd: (_) => _draggingLayerId = null,
-        child: Transform.scale(scale: scale, child: sizedContent),
+        child: Transform.scale(scale: scale, child: selectionBox),
       ),
     );
   }
 }
 
+
+
 class _QuranAnimationPainter extends CustomPainter {
   final String animationId;
   final double progress;
   final Color textColor;
+  final AnimationConfig config;
+
   _QuranAnimationPainter({
     required this.animationId,
     required this.progress,
     required this.textColor,
+    this.config = const AnimationConfig(),
   });
+
   @override
   void paint(Canvas canvas, Size size) {
     paintQuranAnimation(
@@ -2270,6 +2891,7 @@ class _QuranAnimationPainter extends CustomPainter {
       animationId,
       progress,
       textColor: textColor,
+      config: config,
     );
   }
 
@@ -2277,7 +2899,8 @@ class _QuranAnimationPainter extends CustomPainter {
   bool shouldRepaint(covariant _QuranAnimationPainter oldDelegate) =>
       oldDelegate.progress != progress ||
       oldDelegate.animationId != animationId ||
-      oldDelegate.textColor != textColor;
+      oldDelegate.textColor != textColor ||
+      oldDelegate.config != config;
 }
 
 class _TriangleClipper extends CustomClipper<Path> {

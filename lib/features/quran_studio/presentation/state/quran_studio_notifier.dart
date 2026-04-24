@@ -1,37 +1,41 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:dio/dio.dart';
 import '../../data/models/quran_models.dart';
+import '../../domain/quran_com_api_service.dart';
+import 'package:dio/dio.dart';
 
 class QuranStudioState {
   // Metadata Data
   final List<Surah> surahs;
-  final List<Edition> audioEditions;
+  /// Reciters from Quran.com — have real word-level timestamps.
+  final List<QuranComReciter> reciters;
+
+  // Legacy (alquran.cloud) text editions used for translations
   final List<Edition> translationEditions;
 
   // Selected State
   final Surah? selectedSurah;
   final int startAyah;
   final int endAyah;
-  final Edition? selectedAudio;
+  final QuranComReciter? selectedReciter;
   final Edition? selectedTranslation;
   final bool includePhonetic;
-  
+
   // Preview Text Cache
   final List<String>? selectedSurahText;
   final List<String>? selectedSurahTranslation;
-  
+
   // UI State
   final int currentStep;
   final bool isGenerating;
 
   QuranStudioState({
     this.surahs = const [],
-    this.audioEditions = const [],
+    this.reciters = const [],
     this.translationEditions = const [],
     this.selectedSurah,
     this.startAyah = 1,
     this.endAyah = 10,
-    this.selectedAudio,
+    this.selectedReciter,
     this.selectedTranslation,
     this.includePhonetic = true,
     this.selectedSurahText,
@@ -42,12 +46,12 @@ class QuranStudioState {
 
   QuranStudioState copyWith({
     List<Surah>? surahs,
-    List<Edition>? audioEditions,
+    List<QuranComReciter>? reciters,
     List<Edition>? translationEditions,
     Surah? selectedSurah,
     int? startAyah,
     int? endAyah,
-    Edition? selectedAudio,
+    QuranComReciter? selectedReciter,
     Edition? selectedTranslation,
     bool? includePhonetic,
     List<String>? selectedSurahText,
@@ -57,12 +61,12 @@ class QuranStudioState {
   }) {
     return QuranStudioState(
       surahs: surahs ?? this.surahs,
-      audioEditions: audioEditions ?? this.audioEditions,
+      reciters: reciters ?? this.reciters,
       translationEditions: translationEditions ?? this.translationEditions,
       selectedSurah: selectedSurah ?? this.selectedSurah,
       startAyah: startAyah ?? this.startAyah,
       endAyah: endAyah ?? this.endAyah,
-      selectedAudio: selectedAudio ?? this.selectedAudio,
+      selectedReciter: selectedReciter ?? this.selectedReciter,
       selectedTranslation: selectedTranslation ?? this.selectedTranslation,
       includePhonetic: includePhonetic ?? this.includePhonetic,
       selectedSurahText: selectedSurahText ?? this.selectedSurahText,
@@ -74,7 +78,8 @@ class QuranStudioState {
 }
 
 class QuranStudioNotifier extends AsyncNotifier<QuranStudioState> {
-  final Dio _dio = Dio(BaseOptions(baseUrl: 'https://api.alquran.cloud/v1'));
+  final Dio _alquranDio = Dio(BaseOptions(baseUrl: 'https://api.alquran.cloud/v1'));
+  final QuranComApiService _quranComApi = QuranComApiService();
 
   @override
   Future<QuranStudioState> build() async {
@@ -83,30 +88,32 @@ class QuranStudioNotifier extends AsyncNotifier<QuranStudioState> {
 
   Future<QuranStudioState> _fetchMetadata() async {
     try {
+      // Fetch surahs from alquran.cloud + reciters from Quran.com in parallel
       final responses = await Future.wait([
-        _dio.get('/surah'),
-        _dio.get('/edition/format/audio'),
-        _dio.get('/edition/format/text'),
+        _alquranDio.get('/surah'),
+        _alquranDio.get('/edition/format/text'),
+        _quranComApi.fetchReciters(),
       ]);
 
-      final surahsData = responses[0].data['data'] as List;
-      final audioData = responses[1].data['data'] as List;
-      final textData = responses[2].data['data'] as List;
+      final surahsData = (responses[0] as Response).data['data'] as List;
+      final textData = (responses[1] as Response).data['data'] as List;
+      final reciters = responses[2] as List<QuranComReciter>;
 
       final surahs = surahsData.map((s) => Surah.fromJson(s)).toList();
-      final audioEditions = audioData.map((e) => Edition.fromJson(e)).toList();
-      
-      // Filter texts for translations only, maybe exclude transliteration except for the default one
       final translationEditions = textData
           .map((e) => Edition.fromJson(e))
           .where((e) => e.type == 'translation')
           .toList();
-          
+
       return QuranStudioState(
         surahs: surahs,
-        audioEditions: audioEditions,
+        reciters: reciters,
         translationEditions: translationEditions,
-        // Default translations setup can be done here if needed
+        // Default: Mishary Rashid
+        selectedReciter: reciters.firstWhere(
+          (r) => r.id == 7,
+          orElse: () => reciters.isNotEmpty ? reciters.first : const QuranComReciter(id: 7, name: "Mishari Rashid al-'Afasy", style: 'Murattal', qirat: 'Hafs'),
+        ),
       );
     } catch (e) {
       throw Exception('Failed to load Quran metadata: $e');
@@ -115,29 +122,25 @@ class QuranStudioNotifier extends AsyncNotifier<QuranStudioState> {
 
   void selectSurah(Surah surah) {
     if (state.value == null) return;
-    
-    // Auto-calculate default range (1 to min(10, numberOfAyahs))
     final end = surah.numberOfAyahs > 10 ? 10 : surah.numberOfAyahs;
-    
     state = AsyncData(state.value!.copyWith(
       selectedSurah: surah,
       startAyah: 1,
       endAyah: end,
-      currentStep: 2, // Move to step 2 automatically
-      selectedSurahText: null, // Clear previous cache
+      currentStep: 2,
+      selectedSurahText: null,
       selectedSurahTranslation: null,
     ));
-
     _fetchSurahText(surah.number);
   }
 
   Future<void> _fetchSurahText(int surahNumber) async {
     try {
-      final response = await _dio.get('/surah/$surahNumber/editions/quran-uthmani,en.asad');
+      final response = await _alquranDio.get('/surah/$surahNumber/editions/quran-uthmani,en.asad');
       final dataList = response.data['data'] as List<dynamic>;
       final arabicData = dataList.firstWhere((e) => e['edition']['identifier'] == 'quran-uthmani')['ayahs'] as List<dynamic>;
       final transData = dataList.firstWhere((e) => e['edition']['identifier'] == 'en.asad')['ayahs'] as List<dynamic>;
-      
+
       if (state.value != null && state.value!.selectedSurah?.number == surahNumber) {
         state = AsyncData(state.value!.copyWith(
           selectedSurahText: arabicData.map((a) => a['text'] as String).toList(),
@@ -151,10 +154,7 @@ class QuranStudioNotifier extends AsyncNotifier<QuranStudioState> {
 
   void updateVersesRange(int start, int end) {
     if (state.value == null) return;
-    state = AsyncData(state.value!.copyWith(
-      startAyah: start,
-      endAyah: end,
-    ));
+    state = AsyncData(state.value!.copyWith(startAyah: start, endAyah: end));
   }
 
   void setIncludePhonetic(bool value) {
@@ -167,9 +167,9 @@ class QuranStudioNotifier extends AsyncNotifier<QuranStudioState> {
     state = AsyncData(state.value!.copyWith(selectedTranslation: translation));
   }
 
-  void selectAudio(Edition audio) {
+  void selectReciter(QuranComReciter reciter) {
     if (state.value == null) return;
-    state = AsyncData(state.value!.copyWith(selectedAudio: audio));
+    state = AsyncData(state.value!.copyWith(selectedReciter: reciter));
   }
 
   void nextStep() {

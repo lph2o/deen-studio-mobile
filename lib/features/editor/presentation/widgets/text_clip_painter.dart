@@ -151,9 +151,7 @@ class TextClipPainter extends CustomPainter {
     for (int i = 0; i < layer.wordTimings.length; i++) {
       final wordStart = layer.wordTimings[i]['start'] as double;
       final wordEnd = layer.wordTimings[i]['end'] as double;
-      final adjustedStart = wordStart - layer.startTime;
-      final adjustedEnd = wordEnd - layer.startTime;
-      if (elapsed >= adjustedStart && elapsed < adjustedEnd) {
+      if (elapsed >= wordStart && elapsed < wordEnd) {
         return i;
       }
     }
