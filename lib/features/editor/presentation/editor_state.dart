@@ -280,14 +280,30 @@ class EditorNotifier extends Notifier<EditorState> {
     final layer = _findLayer(id);
     if (layer == null) return;
 
+    // Use effectiveDuration so trimmed clips are handled correctly.
+    final effective = layer.effectiveDuration;
     final splitOffset = atTime - layer.startTime;
-    if (splitOffset <= 0 || splitOffset >= layer.duration) return;
+    if (splitOffset <= 0.05 || splitOffset >= effective - 0.05) return;
 
-    final first = layer.copyWith(duration: splitOffset);
+    // For media layers (video/audio/image) the inPoint tracks the read-head
+    // into the underlying file. The second clip must advance inPoint by the
+    // same splitOffset so it starts reading from the correct position.
+    final baseIn = layer.inPoint ?? 0.0;
+
+    final first = layer.copyWith(
+      duration: splitOffset,
+      // Keep same inPoint; trim out-point to match new duration.
+      outPoint: baseIn + splitOffset,
+    );
+
     final second = layer.copyWith(
       id: '${layer.id}_split_${DateTime.now().millisecondsSinceEpoch}',
       startTime: atTime,
-      duration: layer.duration - splitOffset,
+      duration: effective - splitOffset,
+      // Advance inPoint to the cut position in the media file.
+      inPoint: baseIn + splitOffset,
+      // Clear outPoint so the clip plays to its natural end (or keep original).
+      outPoint: layer.outPoint, // already relative to file start, unchanged
     );
 
     _mutate((p) => p.copyWith(
