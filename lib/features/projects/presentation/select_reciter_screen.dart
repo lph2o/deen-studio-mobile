@@ -5,7 +5,6 @@ import 'package:lucide_icons/lucide_icons.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:deen_studio_01/core/services/persistent_media_store.dart';
 import '../../auth/presentation/auth_state.dart';
-import '../../quran_studio/domain/quran_com_api_service.dart';
 import '../../quran_studio/domain/quran_subtitle_generator_v2.dart';
 import '../../quran_studio/presentation/state/quran_studio_notifier.dart';
 

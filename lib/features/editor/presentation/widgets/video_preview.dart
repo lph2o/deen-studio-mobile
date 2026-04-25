@@ -1,11 +1,13 @@
 import 'dart:async';
 import 'dart:io';
 import 'dart:math' as math;
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:video_player/video_player.dart';
+import '../../../../core/utils/color_filters.dart';
 import '../../../../models/project.dart';
 import '../../../../core/models/voice_effect.dart';
 import '../../../../core/models/canvas_background.dart';
@@ -119,8 +121,9 @@ class _VideoPreviewState extends ConsumerState<VideoPreview>
 
   // Drag state for canvas layers
   String? _draggingLayerId;
-  Offset _dragStart = Offset.zero;
   Offset _layerStartOffset = Offset.zero;
+  Offset _dragStart = Offset.zero;
+  double _layerStartScale = 1.0;
 
   // Cinematic mode particle animation
   AnimationController? _cinematicController;
@@ -698,25 +701,22 @@ class _VideoPreviewState extends ConsumerState<VideoPreview>
     return Color(int.parse(hex, radix: 16));
   }
 
+  // ignore: unused_element
   Matrix4 _getLayerTransform(Layer layer, double currentTime) {
     if (layer.keyframes.isNotEmpty) {
       final notifier = ref.read(editorProvider.notifier);
       final transform = notifier.getTransformAtTime(layer.id, currentTime);
-      // ignore: deprecated_member_use
-      return Matrix4.identity()
-        ..translate(transform.x, transform.y, 0.0)
-        ..rotateZ(transform.rotation * math.pi / 180)
-        ..scale(transform.scaleX, transform.scaleY, 1.0);
+      return Matrix4.translationValues(transform.x, transform.y, 0.0)
+        ..multiply(Matrix4.rotationZ(transform.rotation * math.pi / 180))
+        ..multiply(Matrix4.diagonal3Values(transform.scaleX, transform.scaleY, 1.0));
     }
     final scale = layer.style['scale']?.toDouble() ?? 1.0;
     final rotation = layer.style['rotation']?.toDouble() ?? 0.0;
     final offsetX = layer.style['offsetX']?.toDouble() ?? 0.0;
     final offsetY = layer.style['offsetY']?.toDouble() ?? 0.0;
-    // ignore: deprecated_member_use
-    return Matrix4.identity()
-      ..translate(offsetX, offsetY, 0.0)
-      ..rotateZ(rotation * math.pi / 180)
-      ..scale(scale, scale, 1.0);
+    return Matrix4.translationValues(offsetX, offsetY, 0.0)
+      ..multiply(Matrix4.rotationZ(rotation * math.pi / 180))
+      ..multiply(Matrix4.diagonal3Values(scale, scale, 1.0));
   }
 
   Widget _applyBlendMode(Widget child, String blendModeName) {
@@ -734,34 +734,13 @@ class _VideoPreviewState extends ConsumerState<VideoPreview>
   }
 
   Widget _applyMask(Widget child, LayerMask mask) {
-    if (mask.type == MaskType.none || mask.value == 0) return child;
-    switch (mask.type) {
-      case MaskType.rectangle:
-        return ClipRRect(
-          borderRadius: BorderRadius.circular(mask.value * 50),
-          child: child,
-        );
-      case MaskType.circle:
-        return ClipOval(child: child);
-      case MaskType.triangle:
-        return ClipPath(clipper: _TriangleClipper(), child: child);
-      case MaskType.heart:
-        return ClipPath(clipper: _HeartClipper(), child: child);
-      case MaskType.star:
-        return ClipPath(clipper: _StarClipper(), child: child);
-      case MaskType.splitHorizontal:
-        return ClipPath(
-          clipper: _SplitClipper(axis: Axis.horizontal, value: mask.value),
-          child: child,
-        );
-      case MaskType.splitVertical:
-        return ClipPath(
-          clipper: _SplitClipper(axis: Axis.vertical, value: mask.value),
-          child: child,
-        );
-      default:
-        return child;
-    }
+    if (mask.type == MaskType.none) return child;
+    if (mask.value == 0) return const SizedBox.shrink(); // Hide completely if size is 0
+
+    return ClipPath(
+      clipper: MaskClipper(mask),
+      child: child,
+    );
   }
 
   Widget _buildCanvasBackground(Project project, double width, double height) {
@@ -772,14 +751,147 @@ class _VideoPreviewState extends ConsumerState<VideoPreview>
     return bg.buildBackground();
   }
 
-  Widget _buildVideoLayer(double width, double height) {
-    return _VideoLayerRenderer(
+  Widget _buildVideoLayer(Layer layer, double width, double height) {
+    Widget videoWidget = _VideoLayerRenderer(
       width: width,
       height: height,
       controller: _videoController,
       isInitialized: _isVideoInitialized,
       applyMask: _applyMask,
       applyBlendMode: _applyBlendMode,
+    );
+
+    // Opacity: merge style['opacity'] and transform.opacity
+    final styleOpacity = (layer.style['opacity'] as num?)?.toDouble() ?? 1.0;
+    final finalOpacity = (styleOpacity * layer.transform.opacity).clamp(0.0, 1.0);
+
+    // ── Color Matrix (preset + dynamic adjustments) ──────────────────────────
+    List<double> currentMatrix = ColorMatrixUtils.forId(layer.filterId);
+
+    double blurSigma = 0.0;
+    double vignetteIntensity = 0.0;
+
+    for (final effect in layer.effects) {
+      if (!effect.enabled) continue;
+      final val = (effect.params['value'] as num?)?.toDouble() ?? 0.0;
+      switch (effect.type) {
+        case 'brightness':
+          currentMatrix = ColorMatrixUtils.multiply(currentMatrix, ColorMatrixUtils.brightness(val));
+          break;
+        case 'contrast':
+          currentMatrix = ColorMatrixUtils.multiply(currentMatrix, ColorMatrixUtils.contrast(val));
+          break;
+        case 'saturation':
+          currentMatrix = ColorMatrixUtils.multiply(currentMatrix, ColorMatrixUtils.saturation(val));
+          break;
+        case 'grayscale':
+          currentMatrix = ColorMatrixUtils.multiply(currentMatrix, ColorMatrixUtils.grayscalePreset);
+          break;
+        case 'blur':
+          blurSigma = (val * 20.0).clamp(0.0, 20.0);
+          break;
+        case 'vignette':
+          vignetteIntensity = val.clamp(0.0, 1.0);
+          break;
+      }
+    }
+
+    // Apply ColorGrading (HSL + Wheels)
+    if (layer.colorGrading.hue != 0) {
+      currentMatrix = ColorMatrixUtils.multiply(currentMatrix, ColorMatrixUtils.hue(layer.colorGrading.hue));
+    }
+    if (layer.colorGrading.saturation != 0) {
+      currentMatrix = ColorMatrixUtils.multiply(currentMatrix, ColorMatrixUtils.saturation(1.0 + (layer.colorGrading.saturation / 100.0)));
+    }
+    if (layer.colorGrading.lightness != 0) {
+      currentMatrix = ColorMatrixUtils.multiply(currentMatrix, ColorMatrixUtils.brightness(layer.colorGrading.lightness / 100.0));
+    }
+    // Apply Curves
+    if (!layer.colorGrading.isDefault) {
+      if (layer.colorGrading.masterCurve.length > 2 || layer.colorGrading.masterCurve[1].y != 0.5) {
+        currentMatrix = ColorMatrixUtils.multiply(currentMatrix, ColorMatrixUtils.curveApproximation(layer.colorGrading.masterCurve));
+      }
+      if (layer.colorGrading.redCurve.length > 2 || layer.colorGrading.redCurve[1].y != 0.5) {
+        currentMatrix = ColorMatrixUtils.multiply(currentMatrix, ColorMatrixUtils.curveApproximation(layer.colorGrading.redCurve, channelIndex: 0));
+      }
+      if (layer.colorGrading.greenCurve.length > 2 || layer.colorGrading.greenCurve[1].y != 0.5) {
+        currentMatrix = ColorMatrixUtils.multiply(currentMatrix, ColorMatrixUtils.curveApproximation(layer.colorGrading.greenCurve, channelIndex: 1));
+      }
+      if (layer.colorGrading.blueCurve.length > 2 || layer.colorGrading.blueCurve[1].y != 0.5) {
+        currentMatrix = ColorMatrixUtils.multiply(currentMatrix, ColorMatrixUtils.curveApproximation(layer.colorGrading.blueCurve, channelIndex: 2));
+      }
+    }
+
+    if (!layer.colorGrading.isDefault) {
+      currentMatrix = ColorMatrixUtils.multiply(currentMatrix, ColorMatrixUtils.colorWheels(
+        shadowsTint: layer.colorGrading.shadowsTint,
+        shadowsAmount: layer.colorGrading.shadowsAmount / 100.0,
+        midtonesTint: layer.colorGrading.midtonesTint,
+        midtonesAmount: layer.colorGrading.midtonesAmount / 100.0,
+        highlightsTint: layer.colorGrading.highlightsTint,
+        highlightsAmount: layer.colorGrading.highlightsAmount / 100.0,
+      ));
+    }
+
+    // Apply color matrix
+    videoWidget = ColorFiltered(
+      colorFilter: ColorFilter.matrix(currentMatrix),
+      child: videoWidget,
+    );
+
+    // Apply Gaussian blur
+    if (blurSigma > 0) {
+      videoWidget = ImageFiltered(
+        imageFilter: ui.ImageFilter.blur(sigmaX: blurSigma, sigmaY: blurSigma),
+        child: videoWidget,
+      );
+    }
+
+    // Apply vignette overlay
+    if (vignetteIntensity > 0) {
+      videoWidget = Stack(
+        children: [
+          videoWidget,
+          Positioned.fill(
+            child: IgnorePointer(
+              child: Container(
+                decoration: BoxDecoration(
+                  gradient: RadialGradient(
+                    center: Alignment.center,
+                    radius: 1.0,
+                    colors: [
+                      Colors.transparent,
+                      Colors.black.withValues(alpha: vignetteIntensity * 0.85),
+                    ],
+                    stops: const [0.5, 1.0],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      );
+    }
+
+    // Apply rotation and scale from transform
+    final rotation = layer.transform.rotation;
+    final scaleX = layer.transform.scaleX;
+    final scaleY = layer.transform.scaleY;
+    if (rotation != 0 || scaleX != 1.0 || scaleY != 1.0) {
+      videoWidget = Transform(
+        alignment: Alignment.center,
+        transform: Matrix4.rotationZ(rotation * math.pi / 180)
+          ..multiply(Matrix4.diagonal3Values(scaleX, scaleY, 1.0)),
+        child: videoWidget,
+      );
+    }
+
+    return _applyMask(
+      _applyBlendMode(
+        Opacity(opacity: finalOpacity, child: videoWidget),
+        layer.blendMode,
+      ),
+      layer.mask,
     );
   }
 
@@ -796,26 +908,163 @@ class _VideoPreviewState extends ConsumerState<VideoPreview>
     double currentTime,
     double previewWidth,
     double previewHeight,
+    bool isSelected,
+    bool isLocked,
   ) {
     final file = File(layer.content);
     if (!file.existsSync()) return const SizedBox.shrink();
-    final opacity = (layer.style['opacity'] as num?)?.toDouble() ?? 1.0;
+
+    // Opacity: merge style['opacity'] and transform.opacity
+    final styleOpacity = (layer.style['opacity'] as num?)?.toDouble() ?? 1.0;
+    final finalOpacity = (styleOpacity * layer.transform.opacity).clamp(0.0, 1.0);
+
     final w = layer.style['width']?.toDouble() ?? previewWidth;
     final h = layer.style['height']?.toDouble() ?? previewHeight;
-    return _applyMask(
-      _applyBlendMode(
-        Opacity(
-          opacity: opacity,
-          child: Transform(
-            transform: _getLayerTransform(layer, currentTime),
-            child: Image.file(file, width: w, height: h, fit: BoxFit.contain),
+
+    // ── Color Matrix (preset + dynamic adjustments) ──────────────────────────
+    List<double> currentMatrix = ColorMatrixUtils.forId(layer.filterId);
+
+    double blurSigma = 0.0;
+    double vignetteIntensity = 0.0;
+
+    for (final effect in layer.effects) {
+      if (!effect.enabled) continue;
+      final val = (effect.params['value'] as num?)?.toDouble() ?? 0.0;
+      switch (effect.type) {
+        case 'brightness':
+          currentMatrix = ColorMatrixUtils.multiply(currentMatrix, ColorMatrixUtils.brightness(val));
+          break;
+        case 'contrast':
+          currentMatrix = ColorMatrixUtils.multiply(currentMatrix, ColorMatrixUtils.contrast(val));
+          break;
+        case 'saturation':
+          currentMatrix = ColorMatrixUtils.multiply(currentMatrix, ColorMatrixUtils.saturation(val));
+          break;
+        case 'grayscale':
+          currentMatrix = ColorMatrixUtils.multiply(currentMatrix, ColorMatrixUtils.grayscalePreset);
+          break;
+        case 'blur':
+          blurSigma = (val * 20.0).clamp(0.0, 20.0);
+          break;
+        case 'vignette':
+          vignetteIntensity = val.clamp(0.0, 1.0);
+          break;
+        // noise requires shader — stored in model, rendered in future phase
+      }
+    }
+
+    // Apply ColorGrading (HSL + Wheels)
+    if (layer.colorGrading.hue != 0) {
+      currentMatrix = ColorMatrixUtils.multiply(currentMatrix, ColorMatrixUtils.hue(layer.colorGrading.hue));
+    }
+    if (layer.colorGrading.saturation != 0) {
+      currentMatrix = ColorMatrixUtils.multiply(currentMatrix, ColorMatrixUtils.saturation(1.0 + (layer.colorGrading.saturation / 100.0)));
+    }
+    if (layer.colorGrading.lightness != 0) {
+      currentMatrix = ColorMatrixUtils.multiply(currentMatrix, ColorMatrixUtils.brightness(layer.colorGrading.lightness / 100.0));
+    }
+    if (!layer.colorGrading.isDefault) {
+      if (layer.colorGrading.masterCurve.length > 2 || layer.colorGrading.masterCurve[1].y != 0.5) {
+        currentMatrix = ColorMatrixUtils.multiply(currentMatrix, ColorMatrixUtils.curveApproximation(layer.colorGrading.masterCurve));
+      }
+      if (layer.colorGrading.redCurve.length > 2 || layer.colorGrading.redCurve[1].y != 0.5) {
+        currentMatrix = ColorMatrixUtils.multiply(currentMatrix, ColorMatrixUtils.curveApproximation(layer.colorGrading.redCurve, channelIndex: 0));
+      }
+      if (layer.colorGrading.greenCurve.length > 2 || layer.colorGrading.greenCurve[1].y != 0.5) {
+        currentMatrix = ColorMatrixUtils.multiply(currentMatrix, ColorMatrixUtils.curveApproximation(layer.colorGrading.greenCurve, channelIndex: 1));
+      }
+      if (layer.colorGrading.blueCurve.length > 2 || layer.colorGrading.blueCurve[1].y != 0.5) {
+        currentMatrix = ColorMatrixUtils.multiply(currentMatrix, ColorMatrixUtils.curveApproximation(layer.colorGrading.blueCurve, channelIndex: 2));
+      }
+    }
+
+    if (!layer.colorGrading.isDefault) {
+      currentMatrix = ColorMatrixUtils.multiply(currentMatrix, ColorMatrixUtils.colorWheels(
+        shadowsTint: layer.colorGrading.shadowsTint,
+        shadowsAmount: layer.colorGrading.shadowsAmount / 100.0,
+        midtonesTint: layer.colorGrading.midtonesTint,
+        midtonesAmount: layer.colorGrading.midtonesAmount / 100.0,
+        highlightsTint: layer.colorGrading.highlightsTint,
+        highlightsAmount: layer.colorGrading.highlightsAmount / 100.0,
+      ));
+    }
+
+    // ── Build image ──────────────────────────────────────────────────────────
+    Widget imageWidget = Image.file(file, width: w, height: h, fit: BoxFit.contain);
+
+    // Apply color matrix
+    imageWidget = ColorFiltered(
+      colorFilter: ColorFilter.matrix(currentMatrix),
+      child: imageWidget,
+    );
+
+    // Apply Gaussian blur
+    if (blurSigma > 0) {
+      imageWidget = ImageFiltered(
+        imageFilter: ui.ImageFilter.blur(sigmaX: blurSigma, sigmaY: blurSigma),
+        child: imageWidget,
+      );
+    }
+
+    // Apply vignette overlay
+    if (vignetteIntensity > 0) {
+      imageWidget = Stack(
+        children: [
+          imageWidget,
+          Positioned.fill(
+            child: IgnorePointer(
+              child: Container(
+                decoration: BoxDecoration(
+                  gradient: RadialGradient(
+                    center: Alignment.center,
+                    radius: 1.0,
+                    colors: [
+                      Colors.transparent,
+                      Colors.black.withValues(alpha: vignetteIntensity * 0.85),
+                    ],
+                    stops: const [0.5, 1.0],
+                  ),
+                ),
+              ),
+            ),
           ),
+        ],
+      );
+    }
+
+    // Apply rotation and scale from transform
+    final rotation = layer.transform.rotation;
+    final scaleX = layer.transform.scaleX;
+    final scaleY = layer.transform.scaleY;
+    if (rotation != 0 || scaleX != 1.0 || scaleY != 1.0) {
+      imageWidget = Transform(
+        alignment: Alignment.center,
+        transform: Matrix4.rotationZ(rotation * math.pi / 180)
+          ..multiply(Matrix4.diagonal3Values(scaleX, scaleY, 1.0)),
+        child: imageWidget,
+      );
+    }
+
+    return _buildSmartBoundingBoxWrapper(
+      layer: layer,
+      previewWidth: previewWidth,
+      previewHeight: previewHeight,
+      isSelected: isSelected,
+      isLocked: isLocked,
+      defaultX: previewWidth / 2 - w / 2,
+      defaultY: previewHeight / 2 - h / 2,
+      isProportionalOnly: true,
+      fillWidthWhenNoCustom: false,
+      child: _applyMask(
+        _applyBlendMode(
+          Opacity(opacity: finalOpacity, child: imageWidget),
+          layer.blendMode,
         ),
-        layer.blendMode,
+        layer.mask,
       ),
-      layer.mask,
     );
   }
+
 
   Widget _buildStickerLayer(
     Layer layer,
@@ -827,7 +1076,8 @@ class _VideoPreviewState extends ConsumerState<VideoPreview>
     if (emoji.isEmpty) return const SizedBox.shrink();
     final layerProgress =
         (currentTime - layer.startTime) / layer.effectiveDuration;
-    final opacity = (layer.style['opacity'] as num?)?.toDouble() ?? 1.0;
+    final styleOpacity = (layer.style['opacity'] as num?)?.toDouble() ?? 1.0;
+    final opacity = (styleOpacity * layer.transform.opacity).clamp(0.0, 1.0);
     final size = layer.style['size']?.toDouble() ?? 48.0;
     final tx = layer.transform.x;
     final ty = layer.transform.y;
@@ -906,9 +1156,8 @@ class _VideoPreviewState extends ConsumerState<VideoPreview>
           opacity: animOpacity.clamp(0.0, 1.0),
           duration: const Duration(milliseconds: 100),
           child: Transform(
-            transform: Matrix4.identity()
-              ..scale(scaleX, scaleY, 1.0)
-              ..rotateZ(layer.transform.rotation * math.pi / 180),
+            transform: Matrix4.diagonal3Values(scaleX, scaleY, 1.0)
+              ..multiply(Matrix4.rotationZ(layer.transform.rotation * math.pi / 180)),
             alignment: Alignment.center,
             child: stickerWidget,
           ),
@@ -1229,14 +1478,16 @@ class _VideoPreviewState extends ConsumerState<VideoPreview>
     double previewWidth,
     double previewHeight, {
     String? selectedLayerId,
+    bool isLocked = false,
   }) {
     final style = layer.textStyle;
     final scaleFactor = previewWidth / 360.0;
-    final baseFontSize = style?.fontSize ?? 26;
+    final baseFontSize = layer.fontSize ?? style?.fontSize ?? 26;
     final fontSize = baseFontSize * scaleFactor * 1.1;
-    final color = style != null ? _parseColor(style.color) : Colors.white;
+    final colorStr = layer.textColor ?? style?.color;
+    final color = colorStr != null ? _parseColor(colorStr) : Colors.white;
     final fontFamily =
-        style?.fontFamily ?? layer.fontFamily ?? 'UthmanicRegular';
+        layer.fontFamily ?? style?.fontFamily ?? 'UthmanicRegular';
     final opacity = _resolveTextOpacity(layer, style);
     final transformY = layer.transform.y;
     final styleY = (layer.style['y'] as num?)?.toDouble();
@@ -1659,6 +1910,7 @@ class _VideoPreviewState extends ConsumerState<VideoPreview>
         previewWidth: previewWidth,
         previewHeight: previewHeight,
         isSelected: selectedLayerId == layer.id,
+        isLocked: isLocked,
         defaultX: 0,
         defaultY: y - 40,
         defaultWidthRatio: 1.0,
@@ -1674,6 +1926,7 @@ class _VideoPreviewState extends ConsumerState<VideoPreview>
       previewWidth: previewWidth,
       previewHeight: previewHeight,
       isSelected: selectedLayerId == layer.id,
+      isLocked: isLocked,
       defaultX: 0,
       defaultY: y,
       defaultWidthRatio: 1.0,
@@ -1702,12 +1955,14 @@ class _VideoPreviewState extends ConsumerState<VideoPreview>
     double previewHeight,
     List<Layer> activeLayers, {
     String? selectedLayerId,
+    bool isLocked = false,
   }) {
     final style = layer.textStyle;
     final scaleFactor = previewWidth / 360.0;
-    final baseFontSize = style?.fontSize ?? 14;
+    final baseFontSize = layer.fontSize ?? style?.fontSize ?? 14;
     final fontSize = baseFontSize * scaleFactor;
-    final color = style != null ? _parseColor(style.color) : Colors.white70;
+    final colorStr = layer.textColor ?? style?.color;
+    final color = colorStr != null ? _parseColor(colorStr) : Colors.white70;
     final opacity = _resolveTextOpacity(layer, style);
     final transformY = layer.transform.y;
     final styleY = (layer.style['y'] as num?)?.toDouble();
@@ -1725,7 +1980,7 @@ class _VideoPreviewState extends ConsumerState<VideoPreview>
               l.type == 'arabic' && (l.startTime - layer.startTime).abs() < 0.1,
         )
         .firstOrNull;
-    final fontFamily = style?.fontFamily ?? layer.fontFamily ?? 'Inter';
+    final fontFamily = layer.fontFamily ?? style?.fontFamily ?? 'Inter';
     final parsedText = style?.isUppercase == true
         ? displayText.toUpperCase()
         : displayText;
@@ -1797,6 +2052,7 @@ class _VideoPreviewState extends ConsumerState<VideoPreview>
       previewWidth: previewWidth,
       previewHeight: previewHeight,
       isSelected: selectedLayerId == layer.id,
+      isLocked: isLocked,
       defaultX: 0,
       defaultY: y,
       defaultWidthRatio: 1.0,
@@ -1826,12 +2082,14 @@ class _VideoPreviewState extends ConsumerState<VideoPreview>
     double previewHeight,
     List<Layer> activeLayers, {
     String? selectedLayerId,
+    bool isLocked = false,
   }) {
     final style = layer.textStyle;
     final scaleFactor = previewWidth / 360.0;
-    final baseFontSize = style?.fontSize ?? 12;
+    final baseFontSize = layer.fontSize ?? style?.fontSize ?? 12;
     final fontSize = baseFontSize * scaleFactor;
-    final color = style != null ? _parseColor(style.color) : Colors.white70;
+    final colorStr = layer.textColor ?? style?.color;
+    final color = colorStr != null ? _parseColor(colorStr) : Colors.white70;
     final opacity = _resolveTextOpacity(layer, style);
     final transformY = layer.transform.y;
     final styleY = (layer.style['y'] as num?)?.toDouble();
@@ -1872,7 +2130,7 @@ class _VideoPreviewState extends ConsumerState<VideoPreview>
       }
     }
 
-    final fontFamily = style?.fontFamily ?? layer.fontFamily ?? 'Inter';
+    final fontFamily = layer.fontFamily ?? style?.fontFamily ?? 'Inter';
     final parsedText = style?.isUppercase == true
         ? displayText.toUpperCase()
         : displayText;
@@ -1943,6 +2201,7 @@ class _VideoPreviewState extends ConsumerState<VideoPreview>
       previewWidth: previewWidth,
       previewHeight: previewHeight,
       isSelected: selectedLayerId == layer.id,
+      isLocked: isLocked,
       defaultX: 0,
       defaultY: y,
       defaultWidthRatio: 1.0,
@@ -2099,13 +2358,23 @@ class _VideoPreviewState extends ConsumerState<VideoPreview>
 
     // High-frequency UI (everything that depends on currentTime) is scoped here
     // Structural selection (like selected layer) relies on Riverpod
+  String getTrackKey(Layer layer) {
+    if (layer.type == 'arabic') return 'text_arabic_';
+    if (layer.type == 'phonetic') return 'text_phonetic_';
+    if (layer.type == 'translation') return 'text_translation_';
+    return layer.type;
+  }
+
     return ValueListenableBuilder<double>(
       valueListenable: _playbackTime,
       builder: (context, currentTime, child) {
+        final hiddenTracks = ref.watch(editorProvider.select((s) => s.hiddenTracks));
+        final lockedTracks = ref.watch(editorProvider.select((s) => s.lockedTracks));
+
         // High-frequency UI logic: only recalculate active parts
         final layers = project.layers;
         final activeLayers = layers
-            .where((l) => l.activeAt(currentTime))
+            .where((l) => l.activeAt(currentTime) && !hiddenTracks.contains(getTrackKey(l)))
             .toList();
         final recitationTime = _resolveRecitationTime(
           fallbackTimelineTime: currentTime,
@@ -2117,7 +2386,8 @@ class _VideoPreviewState extends ConsumerState<VideoPreview>
                   (l.type == 'arabic' ||
                       l.type == 'translation' ||
                       l.type == 'phonetic') &&
-                  l.activeAt(recitationTime),
+                  l.activeAt(recitationTime) &&
+                  !hiddenTracks.contains(getTrackKey(l)),
             )
             .toList();
         activeLayers.sort((a, b) => a.startTime.compareTo(b.startTime));
@@ -2191,44 +2461,52 @@ class _VideoPreviewState extends ConsumerState<VideoPreview>
                                   ),
 
                                   // Master Video Layer - Performance isolated with RepaintBoundary
-                                  if (project.layers.any(
-                                    (l) =>
-                                        l.type == 'video' &&
-                                        l.activeAt(currentTime),
-                                  ))
-                                    RepaintBoundary(
-                                      child: _buildVideoLayer(
-                                        previewWidth,
-                                        previewHeight,
-                                      ),
-                                    ),
+                                  Builder(
+                                    builder: (context) {
+                                      final activeVideoLayer = project.layers.where(
+                                        (l) => l.type == 'video' && l.activeAt(currentTime)
+                                      ).firstOrNull;
+                                      if (activeVideoLayer != null) {
+                                        return RepaintBoundary(
+                                          child: _buildVideoLayer(
+                                            activeVideoLayer,
+                                            previewWidth,
+                                            previewHeight,
+                                          ),
+                                        );
+                                      }
+                                      return const SizedBox.shrink();
+                                    },
+                                  ),
 
                                   // Overlays
                                   ...activeLayers
                                       .where((l) => l.type == 'image')
                                       .map(
-                                        (layer) => _buildDraggableLayer(
-                                          layer: layer,
-                                          previewWidth: previewWidth,
-                                          previewHeight: previewHeight,
-                                          isSelected:
-                                              selectedLayerId == layer.id,
-                                          child: _buildImageLayer(
-                                            layer,
-                                            currentTime,
-                                            previewWidth,
-                                            previewHeight,
-                                          ),
+                                        (layer) => _buildImageLayer(
+                                          layer,
+                                          currentTime,
+                                          previewWidth,
+                                          previewHeight,
+                                          selectedLayerId == layer.id,
+                                          lockedTracks.contains(getTrackKey(layer)),
                                         ),
                                       ),
                                   ...activeLayers
                                       .where((l) => l.type == 'sticker')
                                       .map(
-                                        (layer) => _buildStickerLayer(
-                                          layer,
-                                          currentTime,
-                                          previewWidth,
-                                          previewHeight,
+                                        (layer) => _buildDraggableLayer(
+                                          layer: layer,
+                                          previewWidth: previewWidth,
+                                          previewHeight: previewHeight,
+                                          isSelected: selectedLayerId == layer.id,
+                                          isLocked: lockedTracks.contains(getTrackKey(layer)),
+                                          child: _buildStickerLayer(
+                                            layer,
+                                            currentTime,
+                                            previewWidth,
+                                            previewHeight,
+                                          ),
                                         ),
                                       ),
                                   ...activeRecitationLayers
@@ -2240,6 +2518,7 @@ class _VideoPreviewState extends ConsumerState<VideoPreview>
                                           previewWidth,
                                           previewHeight,
                                           selectedLayerId: selectedLayerId,
+                                          isLocked: lockedTracks.contains(getTrackKey(layer)),
                                         ),
                                       ),
                                   ...activeRecitationLayers
@@ -2252,6 +2531,7 @@ class _VideoPreviewState extends ConsumerState<VideoPreview>
                                           previewHeight,
                                           activeRecitationLayers,
                                           selectedLayerId: selectedLayerId,
+                                          isLocked: lockedTracks.contains(getTrackKey(layer)),
                                         ),
                                       ),
                                   ...activeRecitationLayers
@@ -2264,6 +2544,7 @@ class _VideoPreviewState extends ConsumerState<VideoPreview>
                                           previewHeight,
                                           activeRecitationLayers,
                                           selectedLayerId: selectedLayerId,
+                                          isLocked: lockedTracks.contains(getTrackKey(layer)),
                                         ),
                                       ),
                                   ...activeLayers
@@ -2276,6 +2557,7 @@ class _VideoPreviewState extends ConsumerState<VideoPreview>
                                           previewHeight: previewHeight,
                                           isSelected:
                                               selectedLayerId == layer.id,
+                                          isLocked: lockedTracks.contains(getTrackKey(layer)),
                                         ),
                                       ),
                                   _buildFilterOverlay(
@@ -2361,6 +2643,7 @@ class _VideoPreviewState extends ConsumerState<VideoPreview>
     required double previewHeight,
     required bool isSelected,
     required Widget child,
+    bool isLocked = false,
   }) {
     // Calculate the layer's actual rendered size for proper clamping
     final x = layer.style['x']?.toDouble() ?? 0.0;
@@ -2371,6 +2654,14 @@ class _VideoPreviewState extends ConsumerState<VideoPreview>
         (layer.style['height'] as num?)?.toDouble() ?? previewHeight * 0.3;
     final maxX = (previewWidth - layerW * 0.1).clamp(0.0, previewWidth);
     final maxY = (previewHeight - layerH * 0.1).clamp(0.0, previewHeight);
+
+    if (isLocked) {
+      return Positioned(
+        left: x,
+        top: y,
+        child: child,
+      );
+    }
 
     return Positioned(
       left: x,
@@ -2413,11 +2704,13 @@ class _VideoPreviewState extends ConsumerState<VideoPreview>
     required double previewWidth,
     required double previewHeight,
     required bool isSelected,
+    bool isLocked = false,
   }) {
     final style = layer.textStyle;
-    final fontSize = style?.fontSize ?? 20;
-    final color = style != null ? _parseColor(style.color) : Colors.white;
-    final fontFamily = style?.fontFamily ?? layer.fontFamily ?? 'Inter';
+    final fontSize = layer.fontSize ?? style?.fontSize ?? 20;
+    final colorStr = layer.textColor ?? style?.color;
+    final color = colorStr != null ? _parseColor(colorStr) : Colors.white;
+    final fontFamily = layer.fontFamily ?? style?.fontFamily ?? 'Inter';
     final layerProgress = layer.effectiveDuration > 0
         ? ((currentTime - layer.startTime) / layer.effectiveDuration).clamp(
             0.0,
@@ -2438,8 +2731,9 @@ class _VideoPreviewState extends ConsumerState<VideoPreview>
         animOpacity = opacity * (layerProgress / 0.3).clamp(0.0, 1.0);
         break;
       case 'fadeOut':
-        if (layerProgress > 0.7)
+        if (layerProgress > 0.7) {
           animOpacity = opacity * ((1.0 - layerProgress) / 0.3).clamp(0.0, 1.0);
+        }
         break;
       case 'fadeInOut':
         if (layerProgress < 0.2) {
@@ -2521,6 +2815,7 @@ class _VideoPreviewState extends ConsumerState<VideoPreview>
       previewWidth: previewWidth,
       previewHeight: previewHeight,
       isSelected: isSelected,
+      isLocked: isLocked,
       defaultX: previewWidth / 2,
       defaultY: previewHeight / 2,
       child: _applyMask(
@@ -2553,6 +2848,8 @@ class _VideoPreviewState extends ConsumerState<VideoPreview>
     double defaultY = 0,
     double defaultWidthRatio = 0.85,
     bool fillWidthWhenNoCustom = false,
+    bool isProportionalOnly = false,
+    bool isLocked = false,
   }) {
     final styleX = layer.style['x'];
     final styleY = layer.style['y'];
@@ -2592,6 +2889,15 @@ class _VideoPreviewState extends ConsumerState<VideoPreview>
           : IntrinsicWidth(child: child),
     );
 
+    // ── Locked: No Interaction ───────────────────────────
+    if (isLocked) {
+      return Positioned(
+        left: x,
+        top: y,
+        child: Transform.scale(scale: scale, child: sizedContent),
+      );
+    }
+
     // ── Unselected: simple drag-to-move wrapper ───────────────────────────
     if (!isSelected) {
       return Positioned(
@@ -2601,23 +2907,26 @@ class _VideoPreviewState extends ConsumerState<VideoPreview>
           behavior: HitTestBehavior.opaque,
           onTapDown: (_) =>
               ref.read(editorProvider.notifier).setSelectedLayer(layer.id),
-          onPanStart: (details) {
+          onScaleStart: (details) {
             ref.read(editorProvider.notifier).setSelectedLayer(layer.id);
             _draggingLayerId = layer.id;
-            _dragStart = details.globalPosition;
+            _dragStart = details.focalPoint;
             _layerStartOffset = Offset(x, y);
+            _layerStartScale = scale;
           },
-          onPanUpdate: (details) {
+          onScaleUpdate: (details) {
             if (_draggingLayerId != layer.id) return;
-            final dx = details.globalPosition.dx - _dragStart.dx;
-            final dy = details.globalPosition.dy - _dragStart.dy;
+            final dx = details.focalPoint.dx - _dragStart.dx;
+            final dy = details.focalPoint.dy - _dragStart.dy;
             final newX = (_layerStartOffset.dx + dx).clamp(-previewWidth, previewWidth * 2);
             final newY = (_layerStartOffset.dy + dy).clamp(-previewHeight, previewHeight * 2);
+            final newScale = (_layerStartScale * details.scale).clamp(0.2, 5.0);
+            
             ref.read(editorProvider.notifier).updateLayer(
-              layer.copyWith(style: {...layer.style, 'x': newX, 'y': newY}),
+              layer.copyWith(style: {...layer.style, 'x': newX, 'y': newY, 'scale': newScale}),
             );
           },
-          onPanEnd: (_) => _draggingLayerId = null,
+          onScaleEnd: (_) => _draggingLayerId = null,
           child: Transform.scale(scale: scale, child: sizedContent),
         ),
       );
@@ -2696,8 +3005,9 @@ class _VideoPreviewState extends ConsumerState<VideoPreview>
         // ── Sized non-positioned child — gives Stack its intrinsic size ──
         borderedContent,
 
-        // ── Font-size pill — top center ─────────────────────────────────
-        Positioned(
+        // ── Font-size pill — top center (Only if not proportional) ──────
+        if (!isProportionalOnly)
+          Positioned(
           top: 0,
           left: 0,
           right: 0,
@@ -2799,8 +3109,9 @@ class _VideoPreviewState extends ConsumerState<VideoPreview>
           ),
         ),
 
-        // ── RIGHT edge pill — widen box ─────────────────────────────────
-        Positioned(
+        // ── RIGHT edge pill — widen box (Only if not proportional) ──────
+        if (!isProportionalOnly)
+          Positioned(
           right: 0,
           top: kOffset,
           bottom: kOffset,
@@ -2817,8 +3128,9 @@ class _VideoPreviewState extends ConsumerState<VideoPreview>
           ),
         ),
 
-        // ── LEFT edge pill — widen box (from left) ──────────────────────
-        Positioned(
+        // ── LEFT edge pill — widen box (Only if not proportional) ──────
+        if (!isProportionalOnly)
+          Positioned(
           left: 0,
           top: kOffset,
           bottom: kOffset,
@@ -2845,23 +3157,26 @@ class _VideoPreviewState extends ConsumerState<VideoPreview>
         behavior: HitTestBehavior.opaque,
         onTapDown: (_) =>
             ref.read(editorProvider.notifier).setSelectedLayer(layer.id),
-        onPanStart: (details) {
+        onScaleStart: (details) {
           ref.read(editorProvider.notifier).setSelectedLayer(layer.id);
           _draggingLayerId = layer.id;
-          _dragStart = details.globalPosition;
+          _dragStart = details.focalPoint;
           _layerStartOffset = Offset(x, y);
+          _layerStartScale = scale;
         },
-        onPanUpdate: (details) {
+        onScaleUpdate: (details) {
           if (_draggingLayerId != layer.id) return;
-          final dx = details.globalPosition.dx - _dragStart.dx;
-          final dy = details.globalPosition.dy - _dragStart.dy;
+          final dx = details.focalPoint.dx - _dragStart.dx;
+          final dy = details.focalPoint.dy - _dragStart.dy;
           final newX = (_layerStartOffset.dx + dx).clamp(-previewWidth, previewWidth * 2);
           final newY = (_layerStartOffset.dy + dy).clamp(-previewHeight, previewHeight * 2);
+          final newScale = (_layerStartScale * details.scale).clamp(0.2, 5.0);
+
           ref.read(editorProvider.notifier).updateLayer(
-            layer.copyWith(style: {...layer.style, 'x': newX, 'y': newY}),
+            layer.copyWith(style: {...layer.style, 'x': newX, 'y': newY, 'scale': newScale}),
           );
         },
-        onPanEnd: (_) => _draggingLayerId = null,
+        onScaleEnd: (_) => _draggingLayerId = null,
         child: Transform.scale(scale: scale, child: selectionBox),
       ),
     );
@@ -2903,80 +3218,77 @@ class _QuranAnimationPainter extends CustomPainter {
       oldDelegate.config != config;
 }
 
-class _TriangleClipper extends CustomClipper<Path> {
-  @override
-  Path getClip(Size size) {
-    final path = Path()
-      ..moveTo(size.width / 2, 0)
-      ..lineTo(size.width, size.height)
-      ..lineTo(0, size.height)
-      ..close();
-    return path;
-  }
+class MaskClipper extends CustomClipper<Path> {
+  final LayerMask mask;
+  MaskClipper(this.mask);
 
   @override
-  bool shouldReclip(covariant _TriangleClipper oldClipper) => false;
-}
-
-class _HeartClipper extends CustomClipper<Path> {
-  @override
   Path getClip(Size size) {
-    final path = Path();
+    Path path = Path();
     final w = size.width, h = size.height;
-    path.moveTo(w / 2, h * 0.3);
-    path.cubicTo(w / 2, 0, 0, 0, 0, h * 0.3);
-    path.cubicTo(0, h * 0.6, w / 2, h, w / 2, h);
-    path.cubicTo(w / 2, h, w, h * 0.6, w, h * 0.3);
-    path.cubicTo(w, 0, w / 2, 0, w / 2, h * 0.3);
-    path.close();
-    return path;
-  }
+    final cx = w / 2, cy = h / 2;
 
-  @override
-  bool shouldReclip(covariant _HeartClipper oldClipper) => false;
-}
-
-class _StarClipper extends CustomClipper<Path> {
-  @override
-  Path getClip(Size size) {
-    final path = Path();
-    final cx = size.width / 2, cy = size.height / 2;
-    final outerR = math.min(cx, cy), innerR = outerR * 0.4;
-    for (int i = 0; i < 10; i++) {
-      final r = i.isEven ? outerR : innerR;
-      final angle = i * math.pi / 5 - math.pi / 2;
-      if (i == 0) {
-        path.moveTo(cx + r * math.cos(angle), cy + r * math.sin(angle));
-      } else {
-        path.lineTo(cx + r * math.cos(angle), cy + r * math.sin(angle));
-      }
+    switch (mask.type) {
+      case MaskType.rectangle:
+        path.addRect(Rect.fromLTWH(0, 0, w, h));
+        break;
+      case MaskType.circle:
+        path.addOval(Rect.fromLTWH(0, 0, w, h));
+        break;
+      case MaskType.triangle:
+        path.moveTo(cx, 0);
+        path.lineTo(w, h);
+        path.lineTo(0, h);
+        path.close();
+        break;
+      case MaskType.heart:
+        path.moveTo(cx, h * 0.3);
+        path.cubicTo(cx, 0, 0, 0, 0, h * 0.3);
+        path.cubicTo(0, h * 0.6, cx, h, cx, h);
+        path.cubicTo(cx, h, w, h * 0.6, w, h * 0.3);
+        path.cubicTo(w, 0, cx, 0, cx, h * 0.3);
+        path.close();
+        break;
+      case MaskType.star:
+        final outerR = math.min(cx, cy), innerR = outerR * 0.4;
+        for (int i = 0; i < 10; i++) {
+          final r = i.isEven ? outerR : innerR;
+          final angle = i * math.pi / 5 - math.pi / 2;
+          if (i == 0) {
+            path.moveTo(cx + r * math.cos(angle), cy + r * math.sin(angle));
+          } else {
+            path.lineTo(cx + r * math.cos(angle), cy + r * math.sin(angle));
+          }
+        }
+        path.close();
+        break;
+      case MaskType.splitHorizontal:
+        path.addRect(Rect.fromLTRB(0, cy - (cy * mask.value), w, cy + (cy * mask.value)));
+        break;
+      case MaskType.splitVertical:
+        path.addRect(Rect.fromLTRB(cx - (cx * mask.value), 0, cx + (cx * mask.value), h));
+        break;
+      default:
+        path.addRect(Rect.fromLTWH(0, 0, w, h));
     }
-    path.close();
-    return path;
-  }
 
-  @override
-  bool shouldReclip(covariant _StarClipper oldClipper) => false;
-}
-
-class _SplitClipper extends CustomClipper<Path> {
-  final Axis axis;
-  final double value;
-  _SplitClipper({required this.axis, required this.value});
-  @override
-  Path getClip(Size size) {
-    final path = Path();
-    if (axis == Axis.horizontal) {
-      path.addRect(Rect.fromLTWH(0, 0, size.width, size.height * value));
-    } else {
-      path.addRect(Rect.fromLTWH(0, 0, size.width * value, size.height));
+    // Apply scaling (value) and rotation to the path, except for split masks which use value for width
+    final matrix = Matrix4.identity();
+    matrix.multiply(Matrix4.translationValues(cx, cy, 0.0));
+    if (mask.type != MaskType.splitHorizontal && mask.type != MaskType.splitVertical) {
+      matrix.multiply(Matrix4.diagonal3Values(mask.value, mask.value, 1.0));
     }
-    return path;
+    matrix.multiply(Matrix4.rotationZ(mask.rotation * math.pi / 180.0));
+    matrix.multiply(Matrix4.translationValues(-cx, -cy, 0.0));
+
+    return path.transform(matrix.storage);
   }
 
   @override
-  bool shouldReclip(covariant _SplitClipper oldClipper) =>
-      oldClipper.axis != axis || oldClipper.value != value;
+  bool shouldReclip(covariant MaskClipper oldClipper) =>
+      oldClipper.mask.type != mask.type ||
+      oldClipper.mask.value != mask.value ||
+      oldClipper.mask.rotation != mask.rotation;
 }
 
 // ── Format Badge ─────────────────────────────────────────────────────────────

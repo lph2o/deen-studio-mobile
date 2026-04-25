@@ -294,39 +294,5 @@ class QuranSubtitleGenerator {
     return text;
   }
 
-  static String _normalizeArabicForPrefix(String value) {
-    var out = value;
-    // Remove tatweel + Arabic diacritics / small marks.
-    out = out.replaceAll(RegExp(r'[\u0640\u064B-\u065F\u0670\u06D6-\u06ED]'), '');
-    // Normalize common alif/hamza variants for stable comparisons.
-    out = out
-        .replaceAll('ٱ', 'ا')
-        .replaceAll('آ', 'ا')
-        .replaceAll('أ', 'ا')
-        .replaceAll('إ', 'ا');
-    return out.trimLeft().replaceAll(RegExp(r'\s+'), ' ');
-  }
 
-  static String _dropLeadingWordCount(String value, int wordCount) {
-    int i = 0;
-    int seen = 0;
-    bool inWord = false;
-
-    while (i < value.length) {
-      final ch = value[i];
-      final isSpace = RegExp(r'\s').hasMatch(ch);
-      if (!isSpace && !inWord) {
-        inWord = true;
-        seen++;
-      } else if (isSpace && inWord) {
-        inWord = false;
-        if (seen >= wordCount) {
-          return value.substring(i).trimLeft();
-        }
-      }
-      i++;
-    }
-
-    return seen >= wordCount ? '' : value;
-  }
 }

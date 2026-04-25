@@ -10,6 +10,7 @@ import 'package:deen_studio_01/core/services/video_tool_service.dart';
 import 'package:deen_studio_01/core/services/persistent_media_store.dart';
 import 'package:deen_studio_01/core/theme.dart';
 import '../editor_state.dart';
+import 'color_grading_panel.dart';
 import 'text_editor_panel.dart';
 import 'text_to_speech_sheet.dart';
 import 'layer_tools_dialogs.dart';
@@ -19,6 +20,9 @@ import 'sticker_picker.dart';
 import 'inline_audio_mixer.dart';
 import 'inspector_panel.dart';
 import 'multicam_switcher.dart';
+
+import 'image_interactions/image_filters_sheet.dart';
+import 'image_interactions/visual_effects_sheet.dart';
 import 'multicam_create_dialog.dart';
 import 'reframe_panel.dart';
 import 'export_dialog.dart';
@@ -251,6 +255,50 @@ class _EditorToolbarState extends ConsumerState<EditorToolbar> {
             layer.copyWith(style: {...layer.style, 'opacity': result}),
           );
       _showSnack('Opacité: ${(result * 100).toInt()}%');
+    }
+  }
+
+  Future<void> _replaceImage(Layer layer) async {
+    final result = await FilePicker.platform.pickFiles(type: FileType.image);
+    if (result != null && result.files.single.path != null && mounted) {
+      final persistentPath = await PersistentMediaStore.persistFile(result.files.single.path!);
+      if (mounted) {
+        ref.read(editorProvider.notifier).updateLayer(
+          layer.copyWith(content: persistentPath),
+        );
+      }
+    }
+  }
+
+
+  Future<void> _openImageFilters(Layer layer) async {
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => ImageFiltersSheet(
+        layerId: layer.id,
+        imagePath: layer.content,
+      ),
+    );
+  }
+
+  Future<void> _openImageOpacityDialog(Layer layer) async {
+    final result = await showModalBottomSheet<double>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _StickerOpacitySheet(
+        initialOpacity: (layer.style['opacity'] as num?)?.toDouble() ?? 1.0,
+        title: 'Opacité de l\'image',
+      ),
+    );
+    if (result != null && mounted) {
+      ref.read(editorProvider.notifier).updateLayer(
+        layer.copyWith(style: {...layer.style, 'opacity': result}),
+      );
     }
   }
 
@@ -959,13 +1007,63 @@ class _EditorToolbarState extends ConsumerState<EditorToolbar> {
     );
     chips.add(const SizedBox(width: 6));
 
-    // Visual layers
+    // Visual layers — shared chips for ALL visual types (image, video, sticker)
     if (layer.isVisual) {
       chips.add(
         _ActionChip(
           icon: LucideIcons.moveRight,
           label: 'Transition',
           onTap: () => _openTransitionDialog(layer.id),
+        ),
+      );
+      chips.add(const SizedBox(width: 6));
+
+      // Effets (brightness, contrast, blur, vignette, etc.)
+      chips.add(
+        _ActionChip(
+          icon: LucideIcons.sparkles,
+          label: 'Effets',
+          onTap: () => showVisualEffectsSheet(context, layer.id, initialTab: 0),
+        ),
+      );
+      chips.add(const SizedBox(width: 6));
+
+      // Transform (opacity, rotation, scale)
+      chips.add(
+        _ActionChip(
+          icon: LucideIcons.move,
+          label: 'Transform',
+          onTap: () => showVisualEffectsSheet(context, layer.id, initialTab: 1),
+        ),
+      );
+      chips.add(const SizedBox(width: 6));
+
+      // Mask
+      chips.add(
+        _ActionChip(
+          icon: LucideIcons.scissors,
+          label: 'Masque',
+          onTap: () => showVisualEffectsSheet(context, layer.id, initialTab: 2),
+        ),
+      );
+      chips.add(const SizedBox(width: 6));
+
+      // Blend mode
+      chips.add(
+        _ActionChip(
+          icon: LucideIcons.layers,
+          label: 'Fusion',
+          onTap: () => showVisualEffectsSheet(context, layer.id, initialTab: 3),
+        ),
+      );
+      chips.add(const SizedBox(width: 6));
+
+      // Color Grading
+      chips.add(
+        _ActionChip(
+          icon: Icons.gradient_rounded,
+          label: 'Colorimétrie',
+          onTap: () => showColorGradingPanel(context, layer.id, ref),
         ),
       );
       chips.add(const SizedBox(width: 6));
@@ -1000,6 +1098,33 @@ class _EditorToolbarState extends ConsumerState<EditorToolbar> {
             icon: LucideIcons.rotateCcw,
             label: 'Inverser',
             onTap: () => _reverseVideo(layer),
+          ),
+        );
+        chips.add(const SizedBox(width: 6));
+      }
+
+      if (layer.type == 'image') {
+        chips.add(
+          _ActionChip(
+            icon: Icons.find_replace_rounded,
+            label: 'Remplacer',
+            onTap: () => _replaceImage(layer),
+          ),
+        );
+        chips.add(const SizedBox(width: 6));
+        chips.add(
+          _ActionChip(
+            icon: Icons.auto_awesome_rounded,
+            label: 'Filtres',
+            onTap: () => _openImageFilters(layer),
+          ),
+        );
+        chips.add(const SizedBox(width: 6));
+        chips.add(
+          _ActionChip(
+            icon: Icons.opacity_rounded,
+            label: 'Opacité',
+            onTap: () => _openImageOpacityDialog(layer),
           ),
         );
         chips.add(const SizedBox(width: 6));
@@ -1405,7 +1530,8 @@ class _StickerSizeSheetState extends State<_StickerSizeSheet> {
 
 class _StickerOpacitySheet extends StatefulWidget {
   final double initialOpacity;
-  const _StickerOpacitySheet({required this.initialOpacity});
+  final String title;
+  const _StickerOpacitySheet({required this.initialOpacity, this.title = 'Opacité du sticker'});
   @override
   State<_StickerOpacitySheet> createState() => _StickerOpacitySheetState();
 }
@@ -1421,7 +1547,7 @@ class _StickerOpacitySheetState extends State<_StickerOpacitySheet> {
   @override
   Widget build(BuildContext context) {
     return _BottomSheetContainer(
-      title: 'Opacité du sticker',
+      title: widget.title,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [

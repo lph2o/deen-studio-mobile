@@ -69,7 +69,6 @@ class VerseTiming {
 /// from the Quran.com / QuranCDN API.
 class QuranComApiService {
   static const _cdnBase = 'https://api.qurancdn.com/api/qdc';
-  static const _audioBase = 'https://download.quranicaudio.com';
 
   static const _alquranBase = 'https://api.alquran.cloud/v1';
 
@@ -187,7 +186,7 @@ class QuranComApiService {
     try {
       final editionsList = [
         'quran-uthmani',
-        if (translationIdentifier != null) translationIdentifier,
+        ?translationIdentifier,
         if (includePhonetic) 'en.transliteration',
       ];
       final editionsString = editionsList.join(',');
@@ -233,8 +232,8 @@ class QuranComApiService {
 
       return {
         'arabic': arabic,
-        if (translation != null) 'translation': translation,
-        if (phonetic != null) 'phonetic': phonetic,
+        'translation': ?translation,
+        'phonetic': ?phonetic,
       };
     } catch (e) {
       debugPrint('[QuranComAPI] fetchSurahTexts error: $e');

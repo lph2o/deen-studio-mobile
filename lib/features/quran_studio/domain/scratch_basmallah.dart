@@ -1,3 +1,4 @@
+// ignore_for_file: avoid_print, unused_local_variable
 void main() {
   String apiText = "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ الم";
   

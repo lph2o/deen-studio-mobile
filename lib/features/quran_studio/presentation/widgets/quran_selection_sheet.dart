@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:deen_studio_01/features/quran_studio/presentation/state/quran_studio_notifier.dart';
-import 'package:deen_studio_01/features/quran_studio/domain/quran_com_api_service.dart';
 import 'package:deen_studio_01/features/quran_studio/domain/quran_subtitle_generator_v2.dart';
 import 'package:deen_studio_01/features/editor/presentation/editor_state.dart';
 import 'package:deen_studio_01/core/services/persistent_media_store.dart';
@@ -50,7 +49,9 @@ class _QuranSelectionSheetState extends ConsumerState<QuranSelectionSheet> {
     final studioState = ref.read(quranStudioProvider).value;
     if (studioState == null ||
         studioState.selectedSurah == null ||
-        studioState.selectedReciter == null) return;
+        studioState.selectedReciter == null) {
+      return;
+    }
 
     if (studioState.endAyah - studioState.startAyah > 15) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -105,7 +106,6 @@ class _QuranSelectionSheetState extends ConsumerState<QuranSelectionSheet> {
         }
       }
 
-      final baseOffset = currentStartTime;
 
       for (final clip in clips) {
         final ts = DateTime.now().millisecondsSinceEpoch;

@@ -255,25 +255,23 @@ class _CurvesTabState extends State<_CurvesTab> {
 
           // Curve editor canvas
           Expanded(
-            child: GestureDetector(
-              onTapDown: _onTapCurve,
-              child: Container(
-                decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.3),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+            child: Container(
+              decoration: BoxDecoration(
+                color: Colors.black.withValues(alpha: 0.3),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+              ),
+              child: CustomPaint(
+                painter: _CurvePainter(
+                  curve: _currentCurve,
+                  channelColor: _curveColor,
+                  gridSize: 8,
                 ),
-                child: CustomPaint(
-                  painter: _CurvePainter(
-                    curve: _currentCurve,
-                    channelColor: _curveColor,
-                    gridSize: 8,
-                  ),
-                  child: _CurveGestureDetector(
-                    curve: _currentCurve,
-                    onPointMove: _onMovePoint,
-                    onPointDelete: _onDeletePoint,
-                  ),
+                child: _CurveGestureDetector(
+                  curve: _currentCurve,
+                  onPointMove: _onMovePoint,
+                  onPointDelete: _onDeletePoint,
+                  onPointAdd: _onAddPoint,
                 ),
               ),
             ),
@@ -315,15 +313,7 @@ class _CurvesTabState extends State<_CurvesTab> {
     );
   }
 
-  void _onTapCurve(TapDownDetails details) {
-    final box = context.findRenderObject() as RenderBox?;
-    if (box == null) return;
-    final size = box.size;
-    final padding = 24.0;
-    final localPos = details.localPosition;
-    final x = ((localPos.dx - padding) / (size.width - padding * 2)).clamp(0.0, 1.0);
-    final y = (1 - (localPos.dy - padding) / (size.height - padding * 2)).clamp(0.0, 1.0);
-
+  void _onAddPoint(double x, double y) {
     setState(() {
       final points = List<Point2D>.from(_currentCurve);
       points.add(Point2D(x, y));
@@ -333,7 +323,8 @@ class _CurvesTabState extends State<_CurvesTab> {
     _saveCurves();
   }
 
-  void _onMovePoint(int index, double x, double y) {
+  int _onMovePoint(int index, double x, double y) {
+    int newIndex = index;
     setState(() {
       final points = List<Point2D>.from(_currentCurve);
       points[index] = Point2D(x, y);
@@ -344,10 +335,13 @@ class _CurvesTabState extends State<_CurvesTab> {
         // Ensure first and last points stay at 0 and 1
         if (points.first.x != 0) points[0] = Point2D(0, points.first.y);
         if (points.last.x != 1) points[points.length - 1] = Point2D(1, points.last.y);
+        
+        newIndex = points.indexWhere((p) => p.x == x && p.y == y);
       }
       _editingCurves[_selectedChannel] = points;
     });
     _saveCurves();
+    return newIndex >= 0 ? newIndex : index;
   }
 
   void _onDeletePoint(int index) {
@@ -366,13 +360,15 @@ class _CurvesTabState extends State<_CurvesTab> {
 /// Detects gestures on the curve canvas for point manipulation.
 class _CurveGestureDetector extends StatefulWidget {
   final List<Point2D> curve;
-  final Function(int index, double x, double y) onPointMove;
+  final int Function(int index, double x, double y) onPointMove;
   final Function(int index) onPointDelete;
+  final Function(double x, double y) onPointAdd;
 
   const _CurveGestureDetector({
     required this.curve,
     required this.onPointMove,
     required this.onPointDelete,
+    required this.onPointAdd,
   });
 
   @override
@@ -390,10 +386,11 @@ class _CurveGestureDetectorState extends State<_CurveGestureDetector> {
       builder: (context, constraints) {
         final size = constraints.biggest;
         return GestureDetector(
+          behavior: HitTestBehavior.opaque,
           onPanStart: (d) => _findNearestPoint(d.localPosition, size),
           onPanUpdate: (d) => _dragPoint(d.localPosition, size),
           onPanEnd: (_) => _dragIndex = null,
-          onTapDown: (d) => _handleTap(d.localPosition, size),
+          onTapUp: (d) => _handleTap(d.localPosition, size),
           child: Stack(
             children: widget.curve.asMap().entries.map((entry) {
               final idx = entry.key;
@@ -427,7 +424,7 @@ class _CurveGestureDetectorState extends State<_CurveGestureDetector> {
   }
 
   void _findNearestPoint(Offset pos, Size size) {
-    double minDist = 20.0; // max snap distance
+    double minDist = 40.0; // max snap distance
     int? closest;
     for (int i = 0; i < widget.curve.length; i++) {
       final px = _padding + widget.curve[i].x * (size.width - _padding * 2);
@@ -445,20 +442,23 @@ class _CurveGestureDetectorState extends State<_CurveGestureDetector> {
     if (_dragIndex == null) return;
     final x = ((pos.dx - _padding) / (size.width - _padding * 2)).clamp(0.0, 1.0);
     final y = (1 - (pos.dy - _padding) / (size.height - _padding * 2)).clamp(0.0, 1.0);
-    widget.onPointMove(_dragIndex!, x, y);
+    _dragIndex = widget.onPointMove(_dragIndex!, x, y);
   }
 
   void _handleTap(Offset pos, Size size) {
     // Only add point if not tapping near an existing point
-    double minDist = 20.0;
+    double minDist = 40.0;
     for (final pt in widget.curve) {
       final px = _padding + pt.x * (size.width - _padding * 2);
       final py = _padding + (1 - pt.y) * (size.height - _padding * 2);
       final dist = (Offset(px, py) - pos).distance;
       if (dist < minDist) return;
     }
-    // Tap-to-add is handled via the parent's onTapDown on the outer GestureDetector.
-    // This method only serves to block point selection when tapping empty areas.
+    
+    // Not near any point, add a new one
+    final x = ((pos.dx - _padding) / (size.width - _padding * 2)).clamp(0.0, 1.0);
+    final y = (1 - (pos.dy - _padding) / (size.height - _padding * 2)).clamp(0.0, 1.0);
+    widget.onPointAdd(x, y);
   }
 }
 
@@ -584,7 +584,7 @@ class _HSLTab extends StatelessWidget {
   Widget build(BuildContext context) {
     return Consumer(
       builder: (context, ref, _) {
-        final layer = ref.read(editorProvider).currentProject?.layers
+        final layer = ref.watch(editorProvider).currentProject?.layers
             .where((l) => l.id == layerId)
             .firstOrNull;
         if (layer == null) return const SizedBox.shrink();
@@ -805,7 +805,7 @@ class _WheelsTab extends StatelessWidget {
   Widget build(BuildContext context) {
     return Consumer(
       builder: (context, ref, _) {
-        final layer = ref.read(editorProvider).currentProject?.layers
+        final layer = ref.watch(editorProvider).currentProject?.layers
             .where((l) => l.id == layerId)
             .firstOrNull;
         if (layer == null) return const SizedBox.shrink();
