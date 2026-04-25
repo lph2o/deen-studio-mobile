@@ -214,6 +214,14 @@ class _EffectsTab extends ConsumerWidget {
             (v) => '${(v * 100).toInt()}%'),
         _effectSlider(context, ref, live, 'Sharpen', 'sharpen', 0, 1, 0,
             (v) => '${(v * 100).toInt()}%'),
+        _effectSlider(context, ref, live, 'Pixelate', 'pixelate', 2, 64, 16,
+            (v) => '${v.toInt()}px'),
+        _effectSlider(context, ref, live, 'VHS', 'vhs', 0, 1, 0.5,
+            (v) => '${(v * 100).toInt()}%'),
+        _effectSlider(context, ref, live, 'Glitch', 'glitch', 0, 1, 0.3,
+            (v) => '${(v * 100).toInt()}%'),
+        _effectSlider(context, ref, live, 'Film Ancien', 'oldFilm', 0, 1, 0.5,
+            (v) => '${(v * 100).toInt()}%'),
         const SizedBox(height: 16),
         OutlinedButton.icon(
           style: OutlinedButton.styleFrom(

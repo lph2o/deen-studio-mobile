@@ -1112,22 +1112,6 @@ class _EditorToolbarState extends ConsumerState<EditorToolbar> {
           ),
         );
         chips.add(const SizedBox(width: 6));
-        chips.add(
-          _ActionChip(
-            icon: Icons.auto_awesome_rounded,
-            label: 'Filtres',
-            onTap: () => _openImageFilters(layer),
-          ),
-        );
-        chips.add(const SizedBox(width: 6));
-        chips.add(
-          _ActionChip(
-            icon: Icons.opacity_rounded,
-            label: 'Opacité',
-            onTap: () => _openImageOpacityDialog(layer),
-          ),
-        );
-        chips.add(const SizedBox(width: 6));
       }
     }
 
@@ -1264,27 +1248,32 @@ class _ToolbarItem extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        decoration: BoxDecoration(
-          color: effectiveColor.withValues(
-            alpha: isPrimary || isDestructive ? 0.1 : 0.12,
-          ),
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(
-            color: effectiveColor.withValues(
-              alpha: isPrimary || isDestructive ? 0.3 : 0.2,
-            ),
-          ),
-        ),
+        width: 64, // Keep width uniform
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        color: Colors.transparent,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              icon,
-              size: 18,
-              color: effectiveColor.withValues(alpha: alpha),
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: effectiveColor.withValues(
+                  alpha: isPrimary || isDestructive ? 0.15 : 0.1,
+                ),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(
+                  color: effectiveColor.withValues(
+                    alpha: isPrimary || isDestructive ? 0.4 : 0.2,
+                  ),
+                ),
+              ),
+              child: Icon(
+                icon,
+                size: 20,
+                color: effectiveColor.withValues(alpha: alpha),
+              ),
             ),
-            const SizedBox(height: 4),
+            const SizedBox(height: 6),
             Text(
               label,
               style: GoogleFonts.inter(
@@ -1294,6 +1283,7 @@ class _ToolbarItem extends StatelessWidget {
               ),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
             ),
           ],
         ),
@@ -1319,26 +1309,34 @@ class _ActionChip extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        decoration: BoxDecoration(
-          color: AppTheme.surfaceHigh.withValues(alpha: 0.6),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: AppTheme.outlineVariant.withValues(alpha: 0.15),
-          ),
-        ),
-        child: Row(
+        width: 64, // Keep width uniform to fit more on screen
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        color: Colors.transparent,
+        child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 14, color: AppTheme.primaryColor),
-            const SizedBox(width: 6),
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: AppTheme.surfaceHigh.withValues(alpha: 0.6),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(
+                  color: AppTheme.outlineVariant.withValues(alpha: 0.15),
+                ),
+              ),
+              child: Icon(icon, size: 18, color: AppTheme.primaryColor),
+            ),
+            const SizedBox(height: 6),
             Text(
               label,
               style: GoogleFonts.inter(
-                fontSize: 11,
+                fontSize: 10,
                 fontWeight: FontWeight.w600,
                 color: AppTheme.onSurface.withValues(alpha: 0.8),
               ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
             ),
           ],
         ),
