@@ -19,21 +19,20 @@ const double _kSnapThreshold = 2.0;
 /// The `trackKey` is the unique identifier used for hidden/locked/muted state:
 ///   - For prefixed tracks (e.g. arabic text): 'text_arabic_'
 ///   - For generic tracks (e.g. audio): 'audio'
+/// Each entry: (label, type, idPrefix, trackKey, color, isOverlay)
+/// isOverlay: null = no overlay filter, false = main only, true = overlay only
 const _trackGroups = [
-  ('ARABE', 'arabic', null, 'text_arabic_', AppTheme.trackArabic),
-  ('PHONETIQUE', 'phonetic', null, 'text_phonetic_', AppTheme.trackPhonetic),
-  (
-    'TRADUCTION',
-    'translation',
-    null,
-    'text_translation_',
-    AppTheme.trackTranslation,
-  ),
-  ('TEXTE', 'text', null, 'text', AppTheme.trackText),
-  ('STICKER', 'sticker', null, 'sticker', AppTheme.trackSticker),
-  ('AUDIO', 'audio', null, 'audio', AppTheme.trackAudio),
-  ('VIDEO', 'video', null, 'video', AppTheme.trackVideo),
-  ('IMAGE', 'image', null, 'image', AppTheme.trackImage),
+  ('ARABE', 'arabic', null, 'text_arabic_', AppTheme.trackArabic, null),
+  ('PHONETIQUE', 'phonetic', null, 'text_phonetic_', AppTheme.trackPhonetic, null),
+  ('TRADUCTION', 'translation', null, 'text_translation_', AppTheme.trackTranslation, null),
+  ('TEXTE', 'text', null, 'text', AppTheme.trackText, null),
+  ('STICKER', 'sticker', null, 'sticker', AppTheme.trackSticker, null),
+  ('AUDIO', 'audio', null, 'audio', AppTheme.trackAudio, null),
+  // Main video track (non-overlay clips only)
+  ('VIDEO', 'video', null, 'video', AppTheme.trackVideo, false),
+  // B-roll / overlay track (clips with style[overlay]=true)
+  ('OVERLAY', 'video', null, 'overlay', AppTheme.trackVideo, true),
+  ('IMAGE', 'image', null, 'image', AppTheme.trackImage, null),
 ];
 
 class Timeline extends ConsumerStatefulWidget {
@@ -45,6 +44,71 @@ class Timeline extends ConsumerStatefulWidget {
 
 class _TimelineState extends ConsumerState<Timeline> {
   final _hScrollController = ScrollController();
+
+  // Pinch-to-zoom tracking
+  int _pointerCount = 0;
+  double _initialPinchDistance = 0;
+  double _initialZoom = 60.0;
+  double _initialScrollOffset = 0.0;
+  double _initialFocalPoint = 0.0;
+  final Map<int, Offset> _activePointers = {};
+
+  void _handlePointerDown(PointerDownEvent event) {
+    _activePointers[event.pointer] = event.localPosition;
+    _pointerCount++;
+    if (_pointerCount == 2) {
+      _startPinch();
+    }
+  }
+
+  void _handlePointerMove(PointerMoveEvent event) {
+    if (_activePointers.containsKey(event.pointer)) {
+      _activePointers[event.pointer] = event.localPosition;
+    }
+    if (_pointerCount >= 2) {
+      _updatePinch();
+    }
+  }
+
+  void _handlePointerUp(PointerEvent event) {
+    _activePointers.remove(event.pointer);
+    _pointerCount--;
+  }
+
+  void _startPinch() {
+    final positions = _activePointers.values.toList();
+    if (positions.length >= 2) {
+      _initialPinchDistance = (positions[0] - positions[1]).distance;
+      _initialZoom = ref.read(editorProvider).zoomLevel;
+      if (_hScrollController.hasClients) {
+        _initialScrollOffset = _hScrollController.offset;
+      }
+      
+      // Calculate horizontal focal point (center between the two fingers)
+      _initialFocalPoint = (positions[0].dx + positions[1].dx) / 2;
+    }
+  }
+
+  void _updatePinch() {
+    final positions = _activePointers.values.toList();
+    if (positions.length >= 2 && _initialPinchDistance > 0) {
+      final currentDistance = (positions[0] - positions[1]).distance;
+      final scale = currentDistance / _initialPinchDistance;
+      
+      final newZoom = (_initialZoom * scale).clamp(10.0, 300.0);
+      ref.read(editorProvider.notifier).setZoomLevel(newZoom);
+      
+      if (_hScrollController.hasClients) {
+        // Find the time at the focal point before the zoom
+        final timeAtFocal = (_initialScrollOffset + _initialFocalPoint) / _initialZoom;
+        
+        // Calculate new scroll offset so that timeAtFocal stays at focalPoint
+        final newOffset = (timeAtFocal * newZoom) - _initialFocalPoint;
+        
+        _hScrollController.jumpTo(newOffset.clamp(0.0, _hScrollController.position.maxScrollExtent));
+      }
+    }
+  }
 
   @override
   void dispose() {
@@ -113,7 +177,13 @@ class _TimelineState extends ConsumerState<Timeline> {
                         }
                         return true;
                       },
-                      child: SingleChildScrollView(
+                      child: Listener(
+                        onPointerDown: _handlePointerDown,
+                        onPointerMove: _handlePointerMove,
+                        onPointerUp: _handlePointerUp,
+                        onPointerCancel: _handlePointerUp,
+                        behavior: HitTestBehavior.translucent,
+                        child: SingleChildScrollView(
                         controller: _hScrollController,
                         scrollDirection: Axis.horizontal,
                         physics: const ClampingScrollPhysics(),
@@ -159,6 +229,7 @@ class _TimelineState extends ConsumerState<Timeline> {
                             ],
                           ),
                         ),
+                      ),
                       ),
                     ),
                     const _PlayheadIndicator(),
@@ -1102,6 +1173,7 @@ class _TimelineTrackRow extends ConsumerWidget {
     final idPrefix = group.$3;
     final trackKey = group.$4;
     final baseColor = group.$5;
+    final isOverlayFilter = group.$6; // null = all, false = main only, true = overlay only
 
     // Structural selection
     final clips = ref.watch(
@@ -1120,6 +1192,12 @@ class _TimelineTrackRow extends ConsumerWidget {
                     !l.id.startsWith('translation_'),
               )
               .toList();
+        } else if (isOverlayFilter != null) {
+          // Split video track into main and overlay sub-tracks
+          return allClips.where((l) {
+            final layerIsOverlay = l.style['overlay'] == true;
+            return layerIsOverlay == isOverlayFilter;
+          }).toList();
         }
         return allClips;
       }),

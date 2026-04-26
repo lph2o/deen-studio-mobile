@@ -417,6 +417,28 @@ class _EditorToolbarState extends ConsumerState<EditorToolbar> {
   }
 
   void _showMediaImportPicker({required bool isVideo}) {
+    final project = ref.read(editorProvider).currentProject;
+    final hasExistingVideo = isVideo &&
+        (project?.layers.any((l) => l.type == 'video') ?? false);
+
+    if (hasExistingVideo) {
+      // Show intent picker first
+      showModalBottomSheet(
+        context: context,
+        backgroundColor: Colors.transparent,
+        builder: (ctx) => _VideoIntentSheet(
+          onIntent: (isOverlay) {
+            Navigator.pop(ctx);
+            _openVideoFilePicker(isOverlay: isOverlay);
+          },
+        ),
+      );
+    } else {
+      _openVideoFilePicker(isOverlay: false);
+    }
+  }
+
+  void _openVideoFilePicker({bool isOverlay = false}) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -449,12 +471,23 @@ class _EditorToolbarState extends ConsumerState<EditorToolbar> {
                 ),
               ),
               Text(
-                'Ajouter ${isVideo ? "une vidéo" : "une image"}',
+                isOverlay ? 'Choisir une vidéo en superposition' : 'Ajouter une vidéo',
                 style: theme.textTheme.titleLarge?.copyWith(
                   fontWeight: FontWeight.w700,
                 ),
               ),
-              const SizedBox(height: 20),
+              if (isOverlay)
+                Padding(
+                  padding: const EdgeInsets.only(top: 6, bottom: 4),
+                  child: Text(
+                    'Placée au curseur, par-dessus la vidéo principale',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: AppTheme.onSurface.withValues(alpha: 0.5),
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              const SizedBox(height: 16),
               Row(
                 children: [
                   Expanded(
@@ -464,7 +497,7 @@ class _EditorToolbarState extends ConsumerState<EditorToolbar> {
                       onTap: () async {
                         Navigator.pop(ctx);
                         final result = await FilePicker.platform.pickFiles(
-                          type: isVideo ? FileType.video : FileType.image,
+                          type: FileType.video,
                         );
                         if (result != null &&
                             result.files.single.path != null &&
@@ -477,8 +510,9 @@ class _EditorToolbarState extends ConsumerState<EditorToolbar> {
                             ref
                                 .read(editorProvider.notifier)
                                 .addMediaLayer(
-                                  type: isVideo ? 'video' : 'image',
+                                  type: 'video',
                                   content: persistentPath,
+                                  isOverlay: isOverlay,
                                 );
                           }
                         }
@@ -494,7 +528,7 @@ class _EditorToolbarState extends ConsumerState<EditorToolbar> {
                         Navigator.pop(ctx);
                         showPixabayPicker(
                           context,
-                          isVideo: isVideo,
+                          isVideo: true,
                           onImported: (path, isVid) {
                             if (mounted) {
                               ref
@@ -502,7 +536,106 @@ class _EditorToolbarState extends ConsumerState<EditorToolbar> {
                                   .addMediaLayer(
                                     type: isVid ? 'video' : 'image',
                                     content: path,
+                                    isOverlay: isOverlay && isVid,
                                   );
+                            }
+                          },
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  void _showImageImportPicker() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        final theme = Theme.of(context);
+        return Container(
+          decoration: BoxDecoration(
+            color: AppTheme.surfaceContainer,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          padding: EdgeInsets.only(
+            top: 8,
+            left: 20,
+            right: 20,
+            bottom: MediaQuery.of(context).padding.bottom + 20,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  margin: const EdgeInsets.only(bottom: 20),
+                  decoration: BoxDecoration(
+                    color: AppTheme.onSurface.withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              Text(
+                'Ajouter une image',
+                style: theme.textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 20),
+              Row(
+                children: [
+                  Expanded(
+                    child: _MediaSourceButton(
+                      icon: LucideIcons.folder,
+                      label: 'Mes fichiers',
+                      onTap: () async {
+                        Navigator.pop(ctx);
+                        final result = await FilePicker.platform.pickFiles(
+                          type: FileType.image,
+                        );
+                        if (result != null &&
+                            result.files.single.path != null &&
+                            mounted) {
+                          final persistentPath =
+                              await PersistentMediaStore.persistFile(
+                                result.files.single.path!,
+                              );
+                          if (mounted) {
+                            ref.read(editorProvider.notifier).addMediaLayer(
+                              type: 'image',
+                              content: persistentPath,
+                            );
+                          }
+                        }
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _MediaSourceButton(
+                      icon: LucideIcons.search,
+                      label: 'Pixabay',
+                      onTap: () {
+                        Navigator.pop(ctx);
+                        showPixabayPicker(
+                          context,
+                          isVideo: false,
+                          onImported: (path, isVid) {
+                            if (mounted) {
+                              ref.read(editorProvider.notifier).addMediaLayer(
+                                type: isVid ? 'video' : 'image',
+                                content: path,
+                              );
                             }
                           },
                         );
@@ -626,7 +759,7 @@ class _EditorToolbarState extends ConsumerState<EditorToolbar> {
           _ToolbarItem(
             icon: LucideIcons.image,
             label: 'Image',
-            onTap: () => _showMediaImportPicker(isVideo: false),
+            onTap: () => _showImageImportPicker(),
             color: AppTheme.trackImage,
           ),
           const SizedBox(width: 8),
@@ -1058,6 +1191,16 @@ class _EditorToolbarState extends ConsumerState<EditorToolbar> {
       );
       chips.add(const SizedBox(width: 6));
 
+      // Chroma Key (Fond Vert)
+      chips.add(
+        _ActionChip(
+          icon: LucideIcons.paintbrush,
+          label: 'Fond Vert',
+          onTap: () => showVisualEffectsSheet(context, layer.id, initialTab: 4),
+        ),
+      );
+      chips.add(const SizedBox(width: 6));
+
       // Color Grading
       chips.add(
         _ActionChip(
@@ -1382,6 +1525,156 @@ class _MediaSourceButton extends StatelessWidget {
                 fontWeight: FontWeight.w600,
                 color: AppTheme.onSurface.withValues(alpha: 0.8),
               ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ─── Video Intent Sheet ───────────────────────────────────────────────────────
+
+/// Shown when a video already exists on the timeline. Lets the user choose
+/// between appending after the last clip or overlaying at the cursor.
+class _VideoIntentSheet extends StatelessWidget {
+  final void Function(bool isOverlay) onIntent;
+
+  const _VideoIntentSheet({required this.onIntent});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppTheme.surfaceContainer,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      padding: EdgeInsets.only(
+        top: 20,
+        left: 20,
+        right: 20,
+        bottom: MediaQuery.of(context).padding.bottom + 24,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Center(
+            child: Container(
+              width: 40,
+              height: 4,
+              margin: const EdgeInsets.only(bottom: 20),
+              decoration: BoxDecoration(
+                color: AppTheme.onSurface.withValues(alpha: 0.2),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+          Text(
+            'Ajouter une vidéo',
+            style: GoogleFonts.inter(
+              fontSize: 18,
+              fontWeight: FontWeight.w700,
+              color: AppTheme.onSurface,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'Comment souhaitez-vous l\'ajouter ?',
+            style: GoogleFonts.inter(
+              fontSize: 13,
+              color: AppTheme.onSurface.withValues(alpha: 0.5),
+            ),
+          ),
+          const SizedBox(height: 24),
+          // Option 1 — append to timeline
+          _IntentOptionTile(
+            icon: LucideIcons.skipForward,
+            iconColor: AppTheme.trackVideo,
+            title: 'Ajouter à la suite',
+            subtitle: 'Placée après la dernière vidéo sur la timeline',
+            onTap: () => onIntent(false),
+          ),
+          const SizedBox(height: 12),
+          // Option 2 — overlay at cursor
+          _IntentOptionTile(
+            icon: LucideIcons.layers,
+            iconColor: AppTheme.accentColor,
+            title: 'Ajouter en superposition',
+            subtitle: 'B-roll / overlay au niveau du curseur',
+            onTap: () => onIntent(true),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _IntentOptionTile extends StatelessWidget {
+  final IconData icon;
+  final Color iconColor;
+  final String title;
+  final String subtitle;
+  final VoidCallback onTap;
+
+  const _IntentOptionTile({
+    required this.icon,
+    required this.iconColor,
+    required this.title,
+    required this.subtitle,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
+          color: AppTheme.surfaceHigh,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: AppTheme.outlineVariant.withValues(alpha: 0.2),
+          ),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: iconColor.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(icon, size: 20, color: iconColor),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: GoogleFonts.inter(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: AppTheme.onSurface,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      color: AppTheme.onSurface.withValues(alpha: 0.5),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(
+              Icons.chevron_right,
+              size: 18,
+              color: AppTheme.onSurface.withValues(alpha: 0.3),
             ),
           ],
         ),

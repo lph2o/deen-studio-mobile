@@ -45,6 +45,7 @@ class _VisualEffectsSheetState extends ConsumerState<VisualEffectsSheet>
     ('Transform', LucideIcons.move),
     ('Masque', LucideIcons.scissors),
     ('Fusion', LucideIcons.layers),
+    ('Fond Vert', LucideIcons.paintbrush),
   ];
 
   @override
@@ -170,10 +171,128 @@ class _VisualEffectsSheetState extends ConsumerState<VisualEffectsSheet>
                 _TransformTab(layer: layer),
                 _MaskTab(layer: layer),
                 _BlendModeTab(layer: layer),
+                _ChromaKeyTab(layer: layer),
               ],
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+// ─── Tab 5: Chroma Key (Fond Vert) ─────────────────────────────────────────────
+
+class _ChromaKeyTab extends ConsumerWidget {
+  final Layer layer;
+  const _ChromaKeyTab({required this.layer});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final state = ref.watch(editorProvider);
+    final live = state.currentProject?.layers.where((l) => l.id == layer.id).firstOrNull ?? layer;
+    final chroma = live.chromaKey;
+
+    return ListView(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+      children: [
+        SwitchListTile(
+          contentPadding: EdgeInsets.zero,
+          activeTrackColor: AppTheme.primaryColor.withValues(alpha: 0.5),
+          activeThumbColor: AppTheme.primaryColor,
+          title: Text('Activer la suppression de fond', style: GoogleFonts.inter(
+            fontSize: 14, fontWeight: FontWeight.w600, color: AppTheme.onSurface,
+          )),
+          subtitle: Text('Supprime la couleur d\'arrière-plan (ex: fond vert)', style: GoogleFonts.inter(
+            fontSize: 12, color: AppTheme.onSurface.withValues(alpha: 0.5),
+          )),
+          value: chroma.enabled,
+          onChanged: (val) {
+            ref.read(editorProvider.notifier).updateLayer(
+              live.copyWith(chromaKey: chroma.copyWith(enabled: val)),
+            );
+          },
+        ),
+        if (chroma.enabled) ...[
+          const SizedBox(height: 16),
+          Text('Couleur à supprimer', style: GoogleFonts.inter(
+            fontSize: 12, fontWeight: FontWeight.w600,
+            color: AppTheme.onSurface.withValues(alpha: 0.4),
+          )),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              _colorPickBtn(context, ref, live, chroma, '#00FF00', 'Vert', Colors.green),
+              const SizedBox(width: 8),
+              _colorPickBtn(context, ref, live, chroma, '#0000FF', 'Bleu', Colors.blue),
+              const SizedBox(width: 8),
+              _colorPickBtn(context, ref, live, chroma, '#FF0000', 'Rouge', Colors.red),
+            ],
+          ),
+          const SizedBox(height: 24),
+          Text('Intensité (Sensibilité)', style: GoogleFonts.inter(
+            fontSize: 12, fontWeight: FontWeight.w600,
+            color: AppTheme.onSurface.withValues(alpha: 0.4),
+          )),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Text('Strict', style: GoogleFonts.inter(fontSize: 11, color: AppTheme.onSurface.withValues(alpha: 0.5))),
+              Expanded(
+                child: Slider(
+                  value: chroma.similarity,
+                  min: 0.0,
+                  max: 1.0,
+                  activeColor: AppTheme.primaryColor,
+                  inactiveColor: AppTheme.primaryColor.withValues(alpha: 0.2),
+                  onChanged: (val) {
+                    ref.read(editorProvider.notifier).updateLayer(
+                      live.copyWith(chromaKey: chroma.copyWith(similarity: val)),
+                    );
+                  },
+                ),
+              ),
+              Text('Large', style: GoogleFonts.inter(fontSize: 11, color: AppTheme.onSurface.withValues(alpha: 0.5))),
+            ],
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _colorPickBtn(
+    BuildContext context, WidgetRef ref, Layer live, ChromaKey chroma,
+    String hex, String label, Color color
+  ) {
+    final isSelected = chroma.keyColor.toUpperCase() == hex.toUpperCase();
+    return Expanded(
+      child: GestureDetector(
+        onTap: () {
+          ref.read(editorProvider.notifier).updateLayer(
+            live.copyWith(chromaKey: chroma.copyWith(keyColor: hex)),
+          );
+        },
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          decoration: BoxDecoration(
+            color: isSelected ? AppTheme.primaryColor.withValues(alpha: 0.1) : AppTheme.surfaceHighest,
+            border: Border.all(
+              color: isSelected ? AppTheme.primaryColor : AppTheme.outlineVariant.withValues(alpha: 0.2),
+              width: isSelected ? 2 : 1,
+            ),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Column(
+            children: [
+              Container(width: 20, height: 20, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
+              const SizedBox(height: 6),
+              Text(label, style: GoogleFonts.inter(
+                fontSize: 12, fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                color: isSelected ? AppTheme.primaryColor : AppTheme.onSurface,
+              )),
+            ],
+          ),
+        ),
       ),
     );
   }

@@ -119,6 +119,13 @@ class _VideoPreviewState extends ConsumerState<VideoPreview>
   DateTime? _lastAudioSwitchAt;
   double _initialPlaybackTime = 0.0;
 
+  // Overlay video controllers (B-roll / PIP layers with style['overlay']==true)
+  final Map<String, VideoPlayerController> _overlayControllers = {};
+  final Set<String> _overlayInitialized = {};
+  // Debounce map: tracks last known play state per overlay layer to avoid
+  // calling ctrl.play() / ctrl.pause() on every tick (same pattern as main video)
+  final Map<String, bool?> _overlayPlayingState = {};
+
   // Drag state for canvas layers
   String? _draggingLayerId;
   Offset _layerStartOffset = Offset.zero;
@@ -162,16 +169,24 @@ class _VideoPreviewState extends ConsumerState<VideoPreview>
     if (project == null) return;
 
     // Find either the active video OR the last one in the project
+    // (only non-overlay videos for the main controller)
     final activeVideo = project.layers
-        .where((l) => l.type == 'video' && l.activeAt(state.currentTime))
+        .where((l) => l.type == 'video' && l.style['overlay'] != true && l.activeAt(state.currentTime))
         .lastOrNull;
     final lastVideo = project.layers
-        .where((l) => l.type == 'video' && l.content.isNotEmpty)
+        .where((l) => l.type == 'video' && l.style['overlay'] != true && l.content.isNotEmpty)
         .lastOrNull;
     final targetVideo = activeVideo ?? lastVideo;
 
     if (targetVideo == null) return;
     await _initializeVideoControllerByPath(targetVideo.content);
+
+    // Init overlay controllers for any overlay video layers
+    for (final layer in project.layers.where(
+      (l) => l.type == 'video' && l.style['overlay'] == true && l.content.isNotEmpty,
+    )) {
+      await _initOverlayController(layer);
+    }
   }
 
   Future<void> _initializeVideoControllerByPath(String path) async {
@@ -223,7 +238,92 @@ class _VideoPreviewState extends ConsumerState<VideoPreview>
     for (final controller in _textAnimationControllers.values) {
       controller.dispose();
     }
+    for (final controller in _overlayControllers.values) {
+      controller.dispose();
+    }
     super.dispose();
+  }
+
+  /// Initialize a dedicated VideoPlayerController for an overlay layer.
+  Future<void> _initOverlayController(Layer layer) async {
+    if (_overlayInitialized.contains(layer.id)) return;
+    final file = File(layer.content);
+    if (!await file.exists()) return;
+    try {
+      final ctrl = VideoPlayerController.file(
+        file,
+        videoPlayerOptions: VideoPlayerOptions(mixWithOthers: true),
+      );
+      await ctrl.initialize();
+      await ctrl.setVolume(0.0); // Muted — audio handled by just_audio
+      await ctrl.setLooping(false);
+      _overlayControllers[layer.id] = ctrl;
+      _overlayInitialized.add(layer.id);
+      if (mounted) setState(() {});
+    } catch (e) {
+      debugPrint('[OverlayVideo] Init failed for ${layer.id}: $e');
+    }
+  }
+
+  /// Sync all overlay video controllers to the current playback state.
+  /// Uses the same debounce pattern as the main video controller:
+  /// - Only calls play()/pause() when the state actually changes
+  /// - NEVER seeks during active playback (lets native player run freely)
+  /// - Seeking only happens at start/stop boundaries (see _startPlayback/_stopPlayback)
+  void _syncOverlayControllers(double currentTime, bool isPlaying) {
+    for (final entry in _overlayControllers.entries) {
+      final layerId = entry.key;
+      final ctrl = entry.value;
+      if (!ctrl.value.isInitialized) continue;
+
+      final layer = ref.read(editorProvider).currentProject?.layers
+          .where((l) => l.id == layerId).firstOrNull;
+      if (layer == null) continue;
+
+      final isActive = layer.activeAt(currentTime);
+      final lastState = _overlayPlayingState[layerId];
+
+      if (isActive && isPlaying) {
+        // Only call play() if we haven't already — let native player run freely
+        if (lastState != true) {
+          ctrl.play();
+          _overlayPlayingState[layerId] = true;
+        }
+        // NO seek during playback — this is what causes stuttering
+      } else {
+        // Pause when not active or not playing
+        if (lastState != false) {
+          ctrl.pause();
+          _overlayPlayingState[layerId] = false;
+        }
+      }
+    }
+  }
+
+  /// Seek all overlay controllers to the correct position for currentTime.
+  /// Called only at play-start and scrub/pause boundaries.
+  void _seekOverlayControllers(double currentTime) {
+    for (final entry in _overlayControllers.entries) {
+      final layerId = entry.key;
+      final ctrl = entry.value;
+      if (!ctrl.value.isInitialized) continue;
+
+      final layer = ref.read(editorProvider).currentProject?.layers
+          .where((l) => l.id == layerId).firstOrNull;
+      if (layer == null) continue;
+
+      final inPoint = layer.inPoint ?? 0.0;
+      final posMs = ((currentTime - layer.startTime + inPoint) * 1000)
+          .toInt()
+          .clamp(0, ctrl.value.duration.inMilliseconds > 0
+              ? ctrl.value.duration.inMilliseconds - 1 : 0);
+
+      // Always pause first, then seek to the correct position
+      ctrl.pause();
+      ctrl.seekTo(Duration(milliseconds: posMs));
+      // Mark as paused so _syncOverlayControllers re-triggers play() on next start
+      _overlayPlayingState[layerId] = false;
+    }
   }
 
   double _resolveRecitationTime({
@@ -591,6 +691,7 @@ class _VideoPreviewState extends ConsumerState<VideoPreview>
             .where(
               (l) =>
                   l.type == 'video' &&
+                  l.style['overlay'] != true &&
                   l.startTime > next &&
                   l.startTime < next + 2.0,
             )
@@ -601,6 +702,9 @@ class _VideoPreviewState extends ConsumerState<VideoPreview>
         }
       }
     }
+
+    // Sync overlay video controllers
+    _syncOverlayControllers(next, true);
   }
 
   void _startPlayback() {
@@ -619,7 +723,7 @@ class _VideoPreviewState extends ConsumerState<VideoPreview>
         _videoController != null &&
         _videoController!.value.isInitialized) {
       final videoLayer = project?.layers
-          .where((l) => l.type == 'video' && l.content.isNotEmpty)
+          .where((l) => l.type == 'video' && l.style['overlay'] != true && l.content.isNotEmpty)
           .lastOrNull;
       if (videoLayer != null && videoLayer.activeAt(state.currentTime)) {
         final inPoint = videoLayer.inPoint ?? 0;
@@ -638,6 +742,10 @@ class _VideoPreviewState extends ConsumerState<VideoPreview>
         });
       }
     }
+
+    // Seek overlays to correct position ONCE at play-start, then let them run freely.
+    // _syncOverlayControllers (called from _onTick) will then call .play() once.
+    _seekOverlayControllers(state.currentTime);
   }
 
   void _stopPlayback() {
@@ -656,8 +764,9 @@ class _VideoPreviewState extends ConsumerState<VideoPreview>
       final project = state.currentProject;
       if (project == null) return;
 
+      // Only main (non-overlay) video layers for main controller
       final videoLayers = project.layers
-          .where((l) => l.type == 'video' && l.content.isNotEmpty)
+          .where((l) => l.type == 'video' && l.style['overlay'] != true && l.content.isNotEmpty)
           .toList();
       if (videoLayers.isEmpty) return;
 
@@ -685,6 +794,8 @@ class _VideoPreviewState extends ConsumerState<VideoPreview>
       }
     }
     _audioPlayer.pause();
+    // Seek overlays to current pause position for scrubbing accuracy
+    _seekOverlayControllers(ref.read(editorProvider).currentTime);
   }
 
   void _flashPlayIcon() {
@@ -720,17 +831,79 @@ class _VideoPreviewState extends ConsumerState<VideoPreview>
   }
 
   Widget _applyBlendMode(Widget child, String blendModeName) {
-    if (blendModeName == 'srcOver' || blendModeName.isEmpty) return child;
-    final blendMode = BlendMode.values.byName(blendModeName);
-    // Expertise: ShaderMask is extremely expensive on mobile.
-    // We only apply it if absolutely necessary (non-standard blend mode).
-    return ShaderMask(
-      shaderCallback: (bounds) => const LinearGradient(
-        colors: [Colors.white, Colors.white],
-      ).createShader(bounds),
-      blendMode: blendMode,
-      child: child,
-    );
+    if (blendModeName == 'srcOver' || blendModeName == 'normal' || blendModeName.isEmpty) return child;
+    
+    // On Flutter mobile, hardware Textures (like VideoPlayer) bypass Canvas.saveLayer,
+    // making standard CSS mix-blend-mode impossible. We mathematically approximate
+    // the visual intent of each blend mode using ColorMatrix and Luma Keying.
+    
+    switch (blendModeName) {
+      case 'screen':
+      case 'lighten':
+      case 'colorDodge':
+      case 'plus':
+        // Screen/Lighten: Remove black backgrounds, keep light colors.
+        // We map the sum of RGB to Alpha. Black (0,0,0) becomes transparent.
+        const List<double> screenMatrix = [
+          1.0, 0.0, 0.0, 0.0, 0.0,
+          0.0, 1.0, 0.0, 0.0, 0.0,
+          0.0, 0.0, 1.0, 0.0, 0.0,
+          1.0, 1.0, 1.0, 0.0, 0.0, // Alpha = sum of RGB
+        ];
+        return ColorFiltered(colorFilter: const ColorFilter.matrix(screenMatrix), child: child);
+
+      case 'multiply':
+      case 'darken':
+      case 'colorBurn':
+        // Multiply/Darken: Remove white backgrounds, keep dark colors/shadows.
+        // We use inverse luminance for Alpha. White becomes transparent.
+        const List<double> multiplyMatrix = [
+          1.0, 0.0, 0.0, 0.0, 0.0,
+          0.0, 1.0, 0.0, 0.0, 0.0,
+          0.0, 0.0, 1.0, 0.0, 0.0,
+          -0.3333, -0.3333, -0.3333, 0.0, 255.0, // Alpha = inverse luminance
+        ];
+        return ColorFiltered(colorFilter: const ColorFilter.matrix(multiplyMatrix), child: child);
+
+      case 'overlay':
+      case 'hardLight':
+      case 'softLight':
+        // Overlay: Boost contrast. Light gets lighter, dark gets darker.
+        const List<double> overlayMatrix = [
+          1.5, 0.0, 0.0, 0.0, -64.0,
+          0.0, 1.5, 0.0, 0.0, -64.0,
+          0.0, 0.0, 1.5, 0.0, -64.0,
+          0.0, 0.0, 0.0, 1.0, 0.0,
+        ];
+        return ColorFiltered(colorFilter: const ColorFilter.matrix(overlayMatrix), child: child);
+
+      case 'difference':
+      case 'exclusion':
+        // Difference: Invert the colors of the overlay.
+        const List<double> differenceMatrix = [
+          -1.0, 0.0, 0.0, 0.0, 255.0,
+          0.0, -1.0, 0.0, 0.0, 255.0,
+          0.0, 0.0, -1.0, 0.0, 255.0,
+          0.0, 0.0, 0.0, 1.0, 0.0,
+        ];
+        return ColorFiltered(colorFilter: const ColorFilter.matrix(differenceMatrix), child: child);
+
+      case 'luminosity':
+      case 'color':
+      case 'hue':
+      case 'saturation':
+        // Luminosity: Convert to grayscale to approximate luminosity map.
+        const List<double> luminosityMatrix = [
+          0.2126, 0.7152, 0.0722, 0.0, 0.0,
+          0.2126, 0.7152, 0.0722, 0.0, 0.0,
+          0.2126, 0.7152, 0.0722, 0.0, 0.0,
+          0.0, 0.0, 0.0, 1.0, 0.0,
+        ];
+        return ColorFiltered(colorFilter: const ColorFilter.matrix(luminosityMatrix), child: child);
+
+      default:
+        return child;
+    }
   }
 
   Widget _applyMask(Widget child, LayerMask mask) {
@@ -751,15 +924,61 @@ class _VideoPreviewState extends ConsumerState<VideoPreview>
     return bg.buildBackground();
   }
 
-  Widget _buildVideoLayer(Layer layer, double width, double height) {
-    Widget videoWidget = _VideoLayerRenderer(
-      width: width,
-      height: height,
-      controller: _videoController,
-      isInitialized: _isVideoInitialized,
-      applyMask: _applyMask,
-      applyBlendMode: _applyBlendMode,
+  Widget _applyChromaKey(Widget child, ChromaKey chromaKey) {
+    if (!chromaKey.enabled) return child;
+    
+    // Parse the hex color to determine if we are removing Green, Blue, or Red.
+    String hex = chromaKey.keyColor.replaceAll('#', '');
+    if (hex.length == 6) hex = 'FF$hex';
+    final color = Color(int.parse(hex, radix: 16));
+    
+    final r = color.r;
+    final g = color.g;
+    final b = color.b;
+    
+    List<double> matrix;
+    
+    // Convert similarity (0.0 - 1.0) to a multiplier (2.0 - 6.0)
+    // similarity = 0.0 means STRICT keying (only pure colors removed) -> mult = 2.0
+    // similarity = 1.0 means LOOSE keying (removes variations/shadows) -> mult = 6.0
+    final mult = 2.0 + (chromaKey.similarity * 4.0);
+    
+    if (g > r && g > b) {
+      // Green Screen Luma Key
+      matrix = [
+        1.0, 0.0, 0.0, 0.0, 0.0,
+        0.0, 1.0, 0.0, 0.0, 0.0,
+        0.0, 0.0, 1.0, 0.0, 0.0,
+        mult * 0.75, -mult, mult * 0.25, 0.0, 255.0,
+      ];
+    } else if (b > r && b > g) {
+      // Blue Screen Luma Key
+      matrix = [
+        1.0, 0.0, 0.0, 0.0, 0.0,
+        0.0, 1.0, 0.0, 0.0, 0.0,
+        0.0, 0.0, 1.0, 0.0, 0.0,
+        mult * 0.75, mult * 0.25, -mult, 0.0, 255.0,
+      ];
+    } else {
+      // Red Screen Luma Key
+      matrix = [
+        1.0, 0.0, 0.0, 0.0, 0.0,
+        0.0, 1.0, 0.0, 0.0, 0.0,
+        0.0, 0.0, 1.0, 0.0, 0.0,
+        -mult, mult * 0.5, mult * 0.5, 0.0, 255.0,
+      ];
+    }
+    
+    return ColorFiltered(
+      colorFilter: ColorFilter.matrix(matrix),
+      child: child,
     );
+  }
+
+  Widget _applyVisualProperties(Widget child, Layer layer) {
+    if (layer.chromaKey.enabled) {
+      child = _applyChromaKey(child, layer.chromaKey);
+    }
 
     // Opacity: merge style['opacity'] and transform.opacity
     final styleOpacity = (layer.style['opacity'] as num?)?.toDouble() ?? 1.0;
@@ -834,24 +1053,24 @@ class _VideoPreviewState extends ConsumerState<VideoPreview>
     }
 
     // Apply color matrix
-    videoWidget = ColorFiltered(
+    Widget resultWidget = ColorFiltered(
       colorFilter: ColorFilter.matrix(currentMatrix),
-      child: videoWidget,
+      child: child,
     );
 
     // Apply Gaussian blur
     if (blurSigma > 0) {
-      videoWidget = ImageFiltered(
+      resultWidget = ImageFiltered(
         imageFilter: ui.ImageFilter.blur(sigmaX: blurSigma, sigmaY: blurSigma),
-        child: videoWidget,
+        child: resultWidget,
       );
     }
 
     // Apply vignette overlay
     if (vignetteIntensity > 0) {
-      videoWidget = Stack(
+      resultWidget = Stack(
         children: [
-          videoWidget,
+          resultWidget,
           Positioned.fill(
             child: IgnorePointer(
               child: Container(
@@ -878,20 +1097,108 @@ class _VideoPreviewState extends ConsumerState<VideoPreview>
     final scaleX = layer.transform.scaleX;
     final scaleY = layer.transform.scaleY;
     if (rotation != 0 || scaleX != 1.0 || scaleY != 1.0) {
-      videoWidget = Transform(
+      resultWidget = Transform(
         alignment: Alignment.center,
         transform: Matrix4.rotationZ(rotation * math.pi / 180)
           ..multiply(Matrix4.diagonal3Values(scaleX, scaleY, 1.0)),
-        child: videoWidget,
+        child: resultWidget,
       );
     }
 
     return _applyMask(
-      _applyBlendMode(
-        Opacity(opacity: finalOpacity, child: videoWidget),
-        layer.blendMode,
+      Opacity(
+        opacity: finalOpacity,
+        child: _applyBlendMode(resultWidget, layer.blendMode),
       ),
       layer.mask,
+    );
+  }
+
+  Widget _buildVideoLayer(
+    Layer layer,
+    double width,
+    double height, {
+    bool isSelected = false,
+  }) {
+    Widget videoWidget = _VideoLayerRenderer(
+      width: width,
+      height: height,
+      controller: _videoController,
+      isInitialized: _isVideoInitialized,
+      applyMask: _applyMask,
+      applyBlendMode: _applyBlendMode,
+    );
+
+    final maskedWidget = _applyVisualProperties(videoWidget, layer);
+
+    if (!isSelected) return maskedWidget;
+
+    // Selection border: a thin accent ring around the full-frame video
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        maskedWidget,
+        Positioned.fill(
+          child: IgnorePointer(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                border: Border.all(
+                  color: const Color(0xFF2196F3).withValues(alpha: 0.9),
+                  width: 2.5,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// Renders a B-roll / overlay video layer using its dedicated controller.
+  /// Uses _buildSmartBoundingBoxWrapper (same as images) for full drag/resize/pinch
+  /// interaction with professional handles — and avoids gesture blocking.
+  Widget _buildOverlayVideoLayer(
+    Layer layer,
+    double currentTime,
+    double previewWidth,
+    double previewHeight,
+    bool isSelected,
+    bool isLocked,
+  ) {
+    final ctrl = _overlayControllers[layer.id];
+
+    // If controller isn't ready yet, try to init and return placeholder
+    if (ctrl == null || !ctrl.value.isInitialized) {
+      _initOverlayController(layer); // fire-and-forget
+      return const SizedBox.shrink();
+    }
+
+    final aspectRatio = ctrl.value.aspectRatio > 0 ? ctrl.value.aspectRatio : 16 / 9;
+    final w = (layer.style['width'] as num?)?.toDouble() ?? previewWidth * 0.5;
+    final h = (layer.style['height'] as num?)?.toDouble() ?? w / aspectRatio;
+
+    Widget videoContent = SizedBox(
+      width: w,
+      height: h,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(4),
+        child: VideoPlayer(ctrl),
+      ),
+    );
+
+    videoContent = _applyVisualProperties(videoContent, layer);
+
+    return _buildSmartBoundingBoxWrapper(
+      layer: layer,
+      previewWidth: previewWidth,
+      previewHeight: previewHeight,
+      isSelected: isSelected,
+      isLocked: isLocked,
+      defaultX: (layer.style['x'] as num?)?.toDouble() ?? 20.0,
+      defaultY: (layer.style['y'] as num?)?.toDouble() ?? 20.0,
+      isProportionalOnly: true, // resize via corner handles (proportional)
+      fillWidthWhenNoCustom: false,
+      child: videoContent,
     );
   }
 
@@ -914,136 +1221,12 @@ class _VideoPreviewState extends ConsumerState<VideoPreview>
     final file = File(layer.content);
     if (!file.existsSync()) return const SizedBox.shrink();
 
-    // Opacity: merge style['opacity'] and transform.opacity
-    final styleOpacity = (layer.style['opacity'] as num?)?.toDouble() ?? 1.0;
-    final finalOpacity = (styleOpacity * layer.transform.opacity).clamp(0.0, 1.0);
-
     final w = layer.style['width']?.toDouble() ?? previewWidth;
     final h = layer.style['height']?.toDouble() ?? previewHeight;
 
-    // ── Color Matrix (preset + dynamic adjustments) ──────────────────────────
-    List<double> currentMatrix = ColorMatrixUtils.forId(layer.filterId);
-
-    double blurSigma = 0.0;
-    double vignetteIntensity = 0.0;
-
-    for (final effect in layer.effects) {
-      if (!effect.enabled) continue;
-      final val = (effect.params['value'] as num?)?.toDouble() ?? 0.0;
-      switch (effect.type) {
-        case 'brightness':
-          currentMatrix = ColorMatrixUtils.multiply(currentMatrix, ColorMatrixUtils.brightness(val));
-          break;
-        case 'contrast':
-          currentMatrix = ColorMatrixUtils.multiply(currentMatrix, ColorMatrixUtils.contrast(val));
-          break;
-        case 'saturation':
-          currentMatrix = ColorMatrixUtils.multiply(currentMatrix, ColorMatrixUtils.saturation(val));
-          break;
-        case 'grayscale':
-          currentMatrix = ColorMatrixUtils.multiply(currentMatrix, ColorMatrixUtils.grayscalePreset);
-          break;
-        case 'blur':
-          blurSigma = (val * 20.0).clamp(0.0, 20.0);
-          break;
-        case 'vignette':
-          vignetteIntensity = val.clamp(0.0, 1.0);
-          break;
-        // noise requires shader — stored in model, rendered in future phase
-      }
-    }
-
-    // Apply ColorGrading (HSL + Wheels)
-    if (layer.colorGrading.hue != 0) {
-      currentMatrix = ColorMatrixUtils.multiply(currentMatrix, ColorMatrixUtils.hue(layer.colorGrading.hue));
-    }
-    if (layer.colorGrading.saturation != 0) {
-      currentMatrix = ColorMatrixUtils.multiply(currentMatrix, ColorMatrixUtils.saturation(1.0 + (layer.colorGrading.saturation / 100.0)));
-    }
-    if (layer.colorGrading.lightness != 0) {
-      currentMatrix = ColorMatrixUtils.multiply(currentMatrix, ColorMatrixUtils.brightness(layer.colorGrading.lightness / 100.0));
-    }
-    if (!layer.colorGrading.isDefault) {
-      if (layer.colorGrading.masterCurve.length > 2 || layer.colorGrading.masterCurve[1].y != 0.5) {
-        currentMatrix = ColorMatrixUtils.multiply(currentMatrix, ColorMatrixUtils.curveApproximation(layer.colorGrading.masterCurve));
-      }
-      if (layer.colorGrading.redCurve.length > 2 || layer.colorGrading.redCurve[1].y != 0.5) {
-        currentMatrix = ColorMatrixUtils.multiply(currentMatrix, ColorMatrixUtils.curveApproximation(layer.colorGrading.redCurve, channelIndex: 0));
-      }
-      if (layer.colorGrading.greenCurve.length > 2 || layer.colorGrading.greenCurve[1].y != 0.5) {
-        currentMatrix = ColorMatrixUtils.multiply(currentMatrix, ColorMatrixUtils.curveApproximation(layer.colorGrading.greenCurve, channelIndex: 1));
-      }
-      if (layer.colorGrading.blueCurve.length > 2 || layer.colorGrading.blueCurve[1].y != 0.5) {
-        currentMatrix = ColorMatrixUtils.multiply(currentMatrix, ColorMatrixUtils.curveApproximation(layer.colorGrading.blueCurve, channelIndex: 2));
-      }
-    }
-
-    if (!layer.colorGrading.isDefault) {
-      currentMatrix = ColorMatrixUtils.multiply(currentMatrix, ColorMatrixUtils.colorWheels(
-        shadowsTint: layer.colorGrading.shadowsTint,
-        shadowsAmount: layer.colorGrading.shadowsAmount / 100.0,
-        midtonesTint: layer.colorGrading.midtonesTint,
-        midtonesAmount: layer.colorGrading.midtonesAmount / 100.0,
-        highlightsTint: layer.colorGrading.highlightsTint,
-        highlightsAmount: layer.colorGrading.highlightsAmount / 100.0,
-      ));
-    }
-
     // ── Build image ──────────────────────────────────────────────────────────
     Widget imageWidget = Image.file(file, width: w, height: h, fit: BoxFit.contain);
-
-    // Apply color matrix
-    imageWidget = ColorFiltered(
-      colorFilter: ColorFilter.matrix(currentMatrix),
-      child: imageWidget,
-    );
-
-    // Apply Gaussian blur
-    if (blurSigma > 0) {
-      imageWidget = ImageFiltered(
-        imageFilter: ui.ImageFilter.blur(sigmaX: blurSigma, sigmaY: blurSigma),
-        child: imageWidget,
-      );
-    }
-
-    // Apply vignette overlay
-    if (vignetteIntensity > 0) {
-      imageWidget = Stack(
-        children: [
-          imageWidget,
-          Positioned.fill(
-            child: IgnorePointer(
-              child: Container(
-                decoration: BoxDecoration(
-                  gradient: RadialGradient(
-                    center: Alignment.center,
-                    radius: 1.0,
-                    colors: [
-                      Colors.transparent,
-                      Colors.black.withValues(alpha: vignetteIntensity * 0.85),
-                    ],
-                    stops: const [0.5, 1.0],
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ],
-      );
-    }
-
-    // Apply rotation and scale from transform
-    final rotation = layer.transform.rotation;
-    final scaleX = layer.transform.scaleX;
-    final scaleY = layer.transform.scaleY;
-    if (rotation != 0 || scaleX != 1.0 || scaleY != 1.0) {
-      imageWidget = Transform(
-        alignment: Alignment.center,
-        transform: Matrix4.rotationZ(rotation * math.pi / 180)
-          ..multiply(Matrix4.diagonal3Values(scaleX, scaleY, 1.0)),
-        child: imageWidget,
-      );
-    }
+    imageWidget = _applyVisualProperties(imageWidget, layer);
 
     return _buildSmartBoundingBoxWrapper(
       layer: layer,
@@ -1055,13 +1238,7 @@ class _VideoPreviewState extends ConsumerState<VideoPreview>
       defaultY: previewHeight / 2 - h / 2,
       isProportionalOnly: true,
       fillWidthWhenNoCustom: false,
-      child: _applyMask(
-        _applyBlendMode(
-          Opacity(opacity: finalOpacity, child: imageWidget),
-          layer.blendMode,
-        ),
-        layer.mask,
-      ),
+      child: imageWidget,
     );
   }
 
@@ -2460,24 +2637,49 @@ class _VideoPreviewState extends ConsumerState<VideoPreview>
                                     previewHeight,
                                   ),
 
-                                  // Master Video Layer - Performance isolated with RepaintBoundary
+                                  // Master Video Layer - only main (non-overlay) video
                                   Builder(
                                     builder: (context) {
                                       final activeVideoLayer = project.layers.where(
-                                        (l) => l.type == 'video' && l.activeAt(currentTime)
+                                        (l) => l.type == 'video' &&
+                                            l.style['overlay'] != true &&
+                                            l.activeAt(currentTime)
                                       ).firstOrNull;
                                       if (activeVideoLayer != null) {
                                         return RepaintBoundary(
-                                          child: _buildVideoLayer(
-                                            activeVideoLayer,
-                                            previewWidth,
-                                            previewHeight,
+                                          child: GestureDetector(
+                                            behavior: HitTestBehavior.translucent,
+                                            onTapDown: (_) => ref
+                                                .read(editorProvider.notifier)
+                                                .setSelectedLayer(activeVideoLayer.id),
+                                            child: _buildVideoLayer(
+                                              activeVideoLayer,
+                                              previewWidth,
+                                              previewHeight,
+                                              isSelected: selectedLayerId == activeVideoLayer.id,
+                                            ),
                                           ),
                                         );
                                       }
                                       return const SizedBox.shrink();
                                     },
                                   ),
+
+                                  // B-roll / Overlay video layers
+                                  ...activeLayers
+                                      .where((l) =>
+                                          l.type == 'video' &&
+                                          l.style['overlay'] == true)
+                                      .map(
+                                        (layer) => _buildOverlayVideoLayer(
+                                          layer,
+                                          currentTime,
+                                          previewWidth,
+                                          previewHeight,
+                                          selectedLayerId == layer.id,
+                                          lockedTracks.contains(getTrackKey(layer)),
+                                        ),
+                                      ),
 
                                   // Overlays
                                   ...activeLayers

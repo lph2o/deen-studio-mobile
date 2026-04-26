@@ -703,6 +703,7 @@ class EditorNotifier extends Notifier<EditorState> {
     required String content,
     double? startTime,
     double? duration,
+    bool isOverlay = false,
   }) async {
     final project = state.currentProject;
     if (project == null) return;
@@ -722,13 +723,38 @@ class EditorNotifier extends Notifier<EditorState> {
       }
     }
 
+    // Smart placement logic for video layers:
+    // - Main video (not overlay): append just after the last existing video clip
+    // - Overlay video: place at the current cursor position
+    double resolvedStart = startTime ?? state.currentTime;
+    if (type == 'video' && !isOverlay && startTime == null) {
+      final mainVideoLayers = project.layers.where(
+        (l) => l.type == 'video' && l.style['overlay'] != true,
+      );
+      if (mainVideoLayers.isNotEmpty) {
+        resolvedStart = mainVideoLayers
+            .map((l) => l.startTime + l.effectiveDuration)
+            .reduce((a, b) => a > b ? a : b);
+      }
+    }
+
     final newLayer = Layer(
       id: id,
       type: type,
       content: content,
-      startTime: startTime ?? state.currentTime,
+      startTime: resolvedStart,
       duration: resolvedDuration,
-      style: {},
+      style: isOverlay
+          ? {
+              'overlay': true,
+              // Default position: top-right quadrant, 50% preview width
+              // These are canvas-space pixel values (portrait 9:16 ~360x640)
+              'x': 20.0,
+              'y': 20.0,
+              'width': 180.0,
+              'height': 320.0,
+            }
+          : {},
     );
     _mutate((p) => p.copyWith(layers: [...p.layers, newLayer]));
     state = state.copyWith(selectedLayerId: id);
